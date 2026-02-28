@@ -3,12 +3,18 @@ package com.smartcity.controller;
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.UtilisateurService;
+import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.util.Duration;
+
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Contrôleur pour l'écran d'inscription
@@ -22,83 +28,130 @@ public class RegisterController {
     private TextField emailField;
 
     @FXML
-    private TextField motPasseField;
+    private TextField telephoneField;
+
+    @FXML
+    private PasswordField motPasseField;
+
+    @FXML
+    private PasswordField confirmField;
+
+    @FXML
+    private ComboBox<String> zoneCombo;
 
     @FXML
     private ComboBox<String> roleCombo;
 
     @FXML
-    private ComboBox<String> zoneCombo;
+    private Label statusMessageLabel;
 
-    private UtilisateurService utilisateurService;
+    @FXML
+    private Hyperlink backToLoginLink;
+
+    private final UtilisateurService utilisateurService;
     private MainApp mainApp;
-    private ObservableList<String> roles;
-    private ObservableList<String> zones;
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$");
+    private static final String DEFAULT_ROLE = "Citoyen";
+    private static final List<String> ZONES = List.of("Pikine", "Guédiawaye");
 
     public RegisterController() {
         utilisateurService = new UtilisateurService();
-        roles = FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur");
-        zones = FXCollections.observableArrayList("Pikine", "Guédiawaye");
     }
 
-    /**
-     * Définit la référence à MainApp
-     */
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
     }
 
-    /**
-     * Initialise le contrôleur
-     */
     @FXML
     private void initialize() {
-        roleCombo.setItems(roles);
-        zoneCombo.setItems(zones);
+        zoneCombo.setItems(FXCollections.observableArrayList(ZONES));
+        roleCombo.setItems(FXCollections.observableArrayList(DEFAULT_ROLE));
+        roleCombo.getSelectionModel().select(0);
+        clearStatusMessage();
+        backToLoginLink.setOnAction(evt -> mainApp.showLoginScreen());
     }
 
-    /**
-     * Gère le clic sur le bouton S'inscrire
-     */
     @FXML
     private void handleInscription() {
-        String nom = nomField.getText();
-        String email = emailField.getText();
+        String nom = nomField.getText().trim();
+        String email = emailField.getText().trim();
         String motPasse = motPasseField.getText();
-        String role = roleCombo.getValue();
+        String confirmation = confirmField.getText();
         String zone = zoneCombo.getValue();
+        String role = DEFAULT_ROLE;
 
-        if (nom.isEmpty() || email.isEmpty() || motPasse.isEmpty() || role == null || zone == null) {
-            showAlert("Erreur", "Veuillez remplir tous les champs");
+        clearStatusMessage();
+
+        if (nom.isEmpty()) {
+            showErrorMessage("Ce champ est requis");
+            nomField.requestFocus();
+            return;
+        }
+
+        if (email.isEmpty()) {
+            showErrorMessage("Ce champ est requis");
+            emailField.requestFocus();
+            return;
+        }
+
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            showErrorMessage("Format email invalide");
+            emailField.requestFocus();
+            return;
+        }
+
+        if (motPasse.isEmpty()) {
+            showErrorMessage("Ce champ est requis");
+            motPasseField.requestFocus();
+            return;
+        }
+
+        if (motPasse.length() < 6) {
+            showErrorMessage("Le mot de passe doit contenir au moins 6 caractères");
+            motPasseField.requestFocus();
+            return;
+        }
+
+        if (!motPasse.equals(confirmation)) {
+            showErrorMessage("Les mots de passe ne correspondent pas");
+            confirmField.requestFocus();
+            return;
+        }
+
+        if (zone == null || zone.isEmpty()) {
+            showErrorMessage("Merci de sélectionner une zone");
+            zoneCombo.requestFocus();
             return;
         }
 
         Utilisateur utilisateur = new Utilisateur(nom, email, motPasse, role, zone);
 
         if (utilisateurService.inscription(utilisateur)) {
-            showAlert("Succès", "Inscription réussie! Vous pouvez maintenant vous connecter.");
-            mainApp.showLoginScreen();
+            showSuccessMessage("Inscription réussie ! Redirection vers la connexion...");
+            PauseTransition delay = new PauseTransition(Duration.seconds(1));
+            delay.setOnFinished(evt -> mainApp.showLoginScreen());
+            delay.play();
         } else {
-            showAlert("Erreur", "Échec de l'inscription. L'email existe peut-être déjà.");
+            showErrorMessage("Échec de l'inscription. L'email existe peut-être déjà.");
         }
     }
 
-    /**
-     * Gère le clic sur le bouton Retour
-     */
-    @FXML
-    private void handleRetour() {
-        mainApp.showLoginScreen();
+    private void showErrorMessage(String message) {
+        showStatusMessage(message, "#D32F2F");
     }
 
-    /**
-     * Affiche une alerte
-     */
-    private void showAlert(String titre, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titre);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showSuccessMessage(String message) {
+        showStatusMessage(message, "#388E3C");
+    }
+
+    private void showStatusMessage(String message, String color) {
+        statusMessageLabel.setVisible(true);
+        statusMessageLabel.setText(message);
+        statusMessageLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 12; -fx-text-alignment: center;");
+    }
+
+    private void clearStatusMessage() {
+        statusMessageLabel.setVisible(false);
+        statusMessageLabel.setText("");
     }
 }

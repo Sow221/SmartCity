@@ -1,9 +1,9 @@
 package com.smartcity.controller;
 
 import com.smartcity.app.MainApp;
-import com.smartcity.model.Dechet;
+import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
-import com.smartcity.service.DechetService;
+import com.smartcity.service.SignalementService;
 import com.smartcity.utils.SessionManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -23,22 +23,22 @@ import java.util.List;
 public class DashboardController {
 
     @FXML
-    private TableView<Dechet> tableSignalements;
+    private TableView<Signalement> tableSignalements;
 
     @FXML
-    private TableColumn<Dechet, Integer> colId;
+    private TableColumn<Signalement, Integer> colId;
 
     @FXML
-    private TableColumn<Dechet, String> colDescription;
+    private TableColumn<Signalement, String> colDescription;
 
     @FXML
-    private TableColumn<Dechet, String> colCategorie;
+    private TableColumn<Signalement, String> colCategorie;
 
     @FXML
-    private TableColumn<Dechet, String> colZone;
+    private TableColumn<Signalement, String> colZone;
 
     @FXML
-    private TableColumn<Dechet, String> colStatut;
+    private TableColumn<Signalement, String> colStatut;
 
     @FXML
     private PieChart pieChart;
@@ -46,12 +46,12 @@ public class DashboardController {
     @FXML
     private BarChart<String, Number> barChart;
 
-    private DechetService dechetService;
+    private SignalementService signalementService;
     private MainApp mainApp;
-    private ObservableList<Dechet> listeSignalements;
+    private ObservableList<Signalement> listeSignalements;
 
     public DashboardController() {
-        dechetService = new DechetService();
+        signalementService = new SignalementService();
         listeSignalements = FXCollections.observableArrayList();
     }
 
@@ -67,7 +67,7 @@ public class DashboardController {
      */
     @FXML
     private void initialize() {
-        colId.setCellValueFactory(new PropertyValueFactory<>("idDechet"));
+        colId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
         colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
         colCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
         colZone.setCellValueFactory(new PropertyValueFactory<>("zone"));
@@ -79,42 +79,42 @@ public class DashboardController {
     /**
      * Charge les données
      */
-    @FXML
-    private void chargerDonnees() {
+    public void chargerDonnees() {
         Utilisateur utilisateur = SessionManager.getUtilisateurConnecte();
-        List<Dechet> signalements;
+        List<Signalement> signalements;
 
         if (SessionManager.isAdmin()) {
-            signalements = dechetService.getAllSignalements();
+            signalements = signalementService.getAllSignalements();
         } else if (SessionManager.isAgent()) {
-            signalements = dechetService.getSignalementsByZone(utilisateur.getZone());
+            signalements = signalementService.getSignalementsByZone(utilisateur.getZone());
         } else {
-            signalements = dechetService.getSignalementsByUtilisateur(utilisateur.getIdUser());
+            signalements = signalementService.getSignalementsByUtilisateur(utilisateur.getIdUser());
         }
 
         listeSignalements.clear();
         listeSignalements.addAll(signalements);
 
-        mettreAJourGraphiques();
+        if (SessionManager.isAdmin()) {
+            mettreAJourGraphiques();
+        }
     }
 
     /**
      * Met à jour les graphiques
      */
     private void mettreAJourGraphiques() {
-        // PieChart - Signalements par statut
-        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
-                new PieChart.Data("En attente", dechetService.countByStatut("En attente")),
-                new PieChart.Data("En cours", dechetService.countByStatut("En cours")),
-                new PieChart.Data("Collecté", dechetService.countByStatut("Collecté")));
-        pieChart.setData(pieData);
-
-        // BarChart - Signalements par zone
-        barChart.setTitle("Signalements par zone");
+        if (pieChart != null) {
+            // PieChart - Signalements par statut
+            ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
+                    new PieChart.Data("En attente", signalementService.countByStatut("En attente")),
+                    new PieChart.Data("En cours", signalementService.countByStatut("En cours")),
+                    new PieChart.Data("Collecté", signalementService.countByStatut("Collecté")));
+            pieChart.setData(pieData);
+        }
     }
 
     /**
-     * Gère leclic sur le bouton Déconnexion
+     * Gère le clic sur le bouton Déconnexion
      */
     @FXML
     private void handleDeconnexion() {

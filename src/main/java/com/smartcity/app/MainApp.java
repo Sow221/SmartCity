@@ -1,5 +1,8 @@
 package com.smartcity.app;
 
+import com.smartcity.controller.DashboardController;
+import com.smartcity.controller.LoginController;
+import com.smartcity.controller.RegisterController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -7,7 +10,6 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-
 /**
  * Point d'entrée principal de l'application SmartCity Déchets
  * Application de gestion et de suivi des déchets ménagers à Pikine et
@@ -34,6 +36,11 @@ public class MainApp extends Application {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
             Parent root = loader.load();
+
+            // Passer la référence MainApp au contrôleur
+            LoginController controller = loader.getController();
+            controller.setMainApp(this);
+
             Scene scene = new Scene(root);
             primaryStage.setScene(scene);
             primaryStage.show();
@@ -50,6 +57,11 @@ public class MainApp extends Application {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/register.fxml"));
             Parent root = loader.load();
+
+            // Passer la référence MainApp au contrôleur
+            RegisterController controller = loader.getController();
+            controller.setMainApp(this);
+
             Scene scene = new Scene(root);
             primaryStage.setScene(scene);
             primaryStage.show();
@@ -78,6 +90,12 @@ public class MainApp extends Application {
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFile));
             Parent root = loader.load();
+
+            // Passer la référence MainApp au contrôleur
+            DashboardController controller = loader.getController();
+            controller.setMainApp(this);
+            controller.chargerDonnees();
+
             Scene scene = new Scene(root);
             primaryStage.setScene(scene);
             primaryStage.show();

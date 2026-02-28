@@ -8,30 +8,18 @@ import com.smartcity.model.Utilisateur;
 public class SessionManager {
 
     private static Utilisateur utilisateurConnecte;
-    private static SessionManager instance;
-
-    private SessionManager() {
-    }
-
-    /**
-     * Obtient l'instance unique du SessionManager
-     */
-    public static SessionManager getInstance() {
-        if (instance == null) {
-            instance = new SessionManager();
-        }
-        return instance;
-    }
+    private static boolean isLoggedIn = false;
 
     /**
      * Définit l'utilisateur connecté
      */
     public static void setUtilisateurConnecte(Utilisateur utilisateur) {
         utilisateurConnecte = utilisateur;
+        isLoggedIn = true;
     }
 
     /**
-     * Obtient l'utilisateur connecté
+     * Retourne l'utilisateur connecté
      */
     public static Utilisateur getUtilisateurConnecte() {
         return utilisateurConnecte;
@@ -40,35 +28,36 @@ public class SessionManager {
     /**
      * Vérifie si un utilisateur est connecté
      */
-    public static boolean isConnected() {
-        return utilisateurConnecte != null;
+    public static boolean isLoggedIn() {
+        return isLoggedIn;
     }
 
     /**
-     * Vérifie si l'utilisateur est un administrateur
+     * Vérifie si l'utilisateur est admin
      */
     public static boolean isAdmin() {
         return utilisateurConnecte != null && "Administrateur".equals(utilisateurConnecte.getRole());
     }
 
     /**
-     * Vérifie si l'utilisateur est un agent
+     * Vérifie si l'utilisateur est agent
      */
     public static boolean isAgent() {
         return utilisateurConnecte != null && "Agent".equals(utilisateurConnecte.getRole());
     }
 
     /**
-     * Vérifie si l'utilisateur est un citoyen
+     * Vérifie si l'utilisateur est citoyen
      */
     public static boolean isCitoyen() {
         return utilisateurConnecte != null && "Citoyen".equals(utilisateurConnecte.getRole());
     }
 
     /**
-     * Déconnexion de l'utilisateur
+     * Déconnexion
      */
     public static void logout() {
         utilisateurConnecte = null;
+        isLoggedIn = false;
     }
 }

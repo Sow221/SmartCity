@@ -10,7 +10,7 @@ import java.sql.SQLException;
 public class DatabaseConnection {
 
     // Configuration de la base de données
-    private static final String URL = "jdbc:mysql://localhost:3306/smartcity_dechets";
+    private static final String URL = "jdbc:mysql://localhost:3306/db_sc";
     private static final String USER = "root";
     private static final String PASSWORD = "";
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";

@@ -1,0 +1,16 @@
+com\smartcity\model\Utilisateur.class
+com\smartcity\service\UtilisateurService.class
+com\smartcity\service\DechetService.class
+com\smartcity\service\SignalementService.class
+com\smartcity\model\Signalement.class
+com\smartcity\model\Affectation.class
+com\smartcity\controller\GestionDechetsController.class
+com\smartcity\controller\RegisterController.class
+com\smartcity\model\Dechet.class
+com\smartcity\controller\DashboardController.class
+com\smartcity\utils\DatabaseConnection.class
+com\smartcity\utils\SessionManager.class
+com\smartcity\app\MainApp.class
+com\smartcity\controller\LoginController.class
+com\smartcity\model\Collecte.class
+com\smartcity\service\AffectationService.class

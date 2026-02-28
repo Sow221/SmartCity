@@ -13,26 +13,42 @@ import java.util.List;
  */
 public class AffectationService {
 
-    private Connection conn;
-
-    public AffectationService() {
-        conn = DatabaseConnection.getConnection();
+    private Connection getConn() {
+        return DatabaseConnection.getConnection();
     }
 
     /**
-     * Crée une nouvelle affectation
+     * Crée une nouvelle affectation.
+     * idSignalement est UNIQUE : une seule affectation par signalement.
+     * dateAffectation est gérée par MySQL (current_timestamp).
      */
     public boolean creerAffectation(int idSignalement, int idAgent) {
-        String query = "INSERT INTO Affectation (idSignalement, idAgent, dateAffectation) VALUES (?, ?, ?)";
+        String query = "INSERT INTO Affectation (idSignalement, idAgent) VALUES (?, ?)";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             pstmt.setInt(2, idAgent);
-            pstmt.setObject(3, LocalDateTime.now());
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Erreur lors de la création de l'affectation: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Enregistre la date de collecte et un commentaire optionnel
+     * lorsque l'agent marque la collecte comme effectuée.
+     */
+    public boolean marquerCollecte(int idAffectation, String commentaire) {
+        String query = "UPDATE Affectation SET dateCollecte = ?, commentaire = ? WHERE idAffectation = ?";
+
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setString(2, commentaire);
+            pstmt.setInt(3, idAffectation);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erreur lors du marquage de collecte: " + e.getMessage());
             return false;
         }
     }
@@ -44,12 +60,11 @@ public class AffectationService {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation ORDER BY dateAffectation DESC";
 
-        try (Statement stmt = conn.createStatement();
+        try (Statement stmt = getConn().createStatement();
                 ResultSet rs = stmt.executeQuery(query)) {
 
             while (rs.next()) {
-                Affectation affectation = mapResultSetToAffectation(rs);
-                liste.add(affectation);
+                liste.add(mapResultSetToAffectation(rs));
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération: " + e.getMessage());
@@ -58,19 +73,18 @@ public class AffectationService {
     }
 
     /**
-     * Récupère les affectations par agent
+     * Récupère les affectations d'un agent
      */
     public List<Affectation> getAffectationsByAgent(int idAgent) {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation WHERE idAgent = ? ORDER BY dateAffectation DESC";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idAgent);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                Affectation affectation = mapResultSetToAffectation(rs);
-                liste.add(affectation);
+                liste.add(mapResultSetToAffectation(rs));
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération: " + e.getMessage());
@@ -79,12 +93,12 @@ public class AffectationService {
     }
 
     /**
-     * Récupère une affectation par signalement
+     * Récupère l'affectation d'un signalement (unique par contrainte DB)
      */
     public Affectation getAffectationBySignalement(int idSignalement) {
         String query = "SELECT * FROM Affectation WHERE idSignalement = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             ResultSet rs = pstmt.executeQuery();
 
@@ -98,12 +112,19 @@ public class AffectationService {
     }
 
     /**
+     * Vérifie si un signalement est déjà affecté
+     */
+    public boolean estDejaAffecte(int idSignalement) {
+        return getAffectationBySignalement(idSignalement) != null;
+    }
+
+    /**
      * Supprime une affectation
      */
     public boolean supprimerAffectation(int idAffectation) {
         String query = "DELETE FROM Affectation WHERE idAffectation = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idAffectation);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -113,19 +134,25 @@ public class AffectationService {
     }
 
     /**
-     * Mappe un ResultSet vers un objet Affectation
+     * Mappe un ResultSet vers un objet Affectation (toutes les colonnes)
      */
     private Affectation mapResultSetToAffectation(ResultSet rs) throws SQLException {
-        Affectation affectation = new Affectation();
-        affectation.setIdAffectation(rs.getInt("idAffectation"));
-        affectation.setIdSignalement(rs.getInt("idSignalement"));
-        affectation.setIdAgent(rs.getInt("idAgent"));
+        Affectation a = new Affectation();
+        a.setIdAffectation(rs.getInt("idAffectation"));
+        a.setIdSignalement(rs.getInt("idSignalement"));
+        a.setIdAgent(rs.getInt("idAgent"));
 
-        Timestamp timestamp = rs.getTimestamp("dateAffectation");
-        if (timestamp != null) {
-            affectation.setDateAffectation(timestamp.toLocalDateTime());
+        Timestamp tsAffectation = rs.getTimestamp("dateAffectation");
+        if (tsAffectation != null) {
+            a.setDateAffectation(tsAffectation.toLocalDateTime());
         }
 
-        return affectation;
+        Timestamp tsCollecte = rs.getTimestamp("dateCollecte");
+        if (tsCollecte != null) {
+            a.setDateCollecte(tsCollecte.toLocalDateTime());
+        }
+
+        a.setCommentaire(rs.getString("commentaire"));
+        return a;
     }
 }

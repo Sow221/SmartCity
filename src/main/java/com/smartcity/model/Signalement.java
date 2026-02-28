@@ -1,9 +1,9 @@
-package com.smartcity.model;
+﻿package com.smartcity.model;
 
 import java.time.LocalDateTime;
 
 /**
- * Classe modèle pour les signalements de déchets
+ * Classe modele pour les signalements de dechets.
  */
 public class Signalement {
 
@@ -15,6 +15,7 @@ public class Signalement {
     private String statut;
     private String photo;
     private int idUser;
+    private String utilisateurNom;
 
     public Signalement() {
     }
@@ -92,6 +93,14 @@ public class Signalement {
 
     public void setIdUser(int idUser) {
         this.idUser = idUser;
+    }
+
+    public String getUtilisateurNom() {
+        return utilisateurNom;
+    }
+
+    public void setUtilisateurNom(String utilisateurNom) {
+        this.utilisateurNom = utilisateurNom;
     }
 
     @Override

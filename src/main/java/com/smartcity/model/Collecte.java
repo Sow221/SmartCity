@@ -8,7 +8,7 @@ public class Collecte {
     private int idCollecte;
     private int idDechet;
     private int idAgent;
-    private String dateCollecte;
+    private java.time.LocalDateTime dateCollecte;
     private String statut; // En attente, En cours, Collecté
     private String commentaire;
 
@@ -16,7 +16,7 @@ public class Collecte {
     public Collecte() {
     }
 
-    public Collecte(int idDechet, int idAgent, String dateCollecte, String statut, String commentaire) {
+    public Collecte(int idDechet, int idAgent, java.time.LocalDateTime dateCollecte, String statut, String commentaire) {
         this.idDechet = idDechet;
         this.idAgent = idAgent;
         this.dateCollecte = dateCollecte;
@@ -49,11 +49,11 @@ public class Collecte {
         this.idAgent = idAgent;
     }
 
-    public String getDateCollecte() {
+        public java.time.LocalDateTime getDateCollecte() {
         return dateCollecte;
     }
 
-    public void setDateCollecte(String dateCollecte) {
+    public void setDateCollecte(java.time.LocalDateTime dateCollecte) {
         this.dateCollecte = dateCollecte;
     }
 
@@ -79,7 +79,7 @@ public class Collecte {
                 "idCollecte=" + idCollecte +
                 ", idDechet=" + idDechet +
                 ", idAgent=" + idAgent +
-                ", dateCollecte='" + dateCollecte + '\'' +
+                ", dateCollecte=" + dateCollecte +
                 ", statut='" + statut + '\'' +
                 '}';
     }

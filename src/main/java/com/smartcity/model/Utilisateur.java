@@ -1,5 +1,7 @@
 package com.smartcity.model;
 
+import java.time.LocalDateTime;
+
 /**
  * Classe modèle pour l'utilisateur
  */
@@ -11,9 +13,13 @@ public class Utilisateur {
     private String motPasse;
     private String role; // Citoyen, Agent, Administrateur
     private String zone; // Pikine, Guédiawaye
+    private String telephone;
+    private LocalDateTime dateInscription;
+    private boolean actif;
 
     // Constructeurs
     public Utilisateur() {
+        this.actif = true;
     }
 
     public Utilisateur(String nom, String email, String motPasse, String role, String zone) {
@@ -22,6 +28,12 @@ public class Utilisateur {
         this.motPasse = motPasse;
         this.role = role;
         this.zone = zone;
+        this.actif = true;
+    }
+
+    public Utilisateur(String nom, String email, String motPasse, String role, String zone, String telephone) {
+        this(nom, email, motPasse, role, zone);
+        this.telephone = telephone;
     }
 
     // Getters et Setters
@@ -73,6 +85,30 @@ public class Utilisateur {
         this.zone = zone;
     }
 
+    public String getTelephone() {
+        return telephone;
+    }
+
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+
+    public LocalDateTime getDateInscription() {
+        return dateInscription;
+    }
+
+    public void setDateInscription(LocalDateTime dateInscription) {
+        this.dateInscription = dateInscription;
+    }
+
+    public boolean isActif() {
+        return actif;
+    }
+
+    public void setActif(boolean actif) {
+        this.actif = actif;
+    }
+
     @Override
     public String toString() {
         return "Utilisateur{" +
@@ -81,6 +117,8 @@ public class Utilisateur {
                 ", email='" + email + '\'' +
                 ", role='" + role + '\'' +
                 ", zone='" + zone + '\'' +
+                ", telephone='" + telephone + '\'' +
+                ", actif=" + actif +
                 '}';
     }
 }

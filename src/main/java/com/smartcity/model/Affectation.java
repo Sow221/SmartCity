@@ -11,8 +11,15 @@ public class Affectation {
     private int idSignalement;
     private int idAgent;
     private LocalDateTime dateAffectation;
+    private LocalDateTime dateCollecte;
+    private String commentaire;
 
     public Affectation() {
+    }
+
+    public Affectation(int idSignalement, int idAgent) {
+        this.idSignalement = idSignalement;
+        this.idAgent = idAgent;
     }
 
     public Affectation(int idSignalement, int idAgent, LocalDateTime dateAffectation) {
@@ -53,6 +60,22 @@ public class Affectation {
         this.dateAffectation = dateAffectation;
     }
 
+    public LocalDateTime getDateCollecte() {
+        return dateCollecte;
+    }
+
+    public void setDateCollecte(LocalDateTime dateCollecte) {
+        this.dateCollecte = dateCollecte;
+    }
+
+    public String getCommentaire() {
+        return commentaire;
+    }
+
+    public void setCommentaire(String commentaire) {
+        this.commentaire = commentaire;
+    }
+
     @Override
     public String toString() {
         return "Affectation{" +
@@ -60,6 +83,8 @@ public class Affectation {
                 ", idSignalement=" + idSignalement +
                 ", idAgent=" + idAgent +
                 ", dateAffectation=" + dateAffectation +
+                ", dateCollecte=" + dateCollecte +
+                ", commentaire='" + commentaire + '\'' +
                 '}';
     }
 }

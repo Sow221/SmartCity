@@ -11,9 +11,9 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
 import javafx.util.Duration;
 
-import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -40,19 +40,19 @@ public class RegisterController {
     private ComboBox<String> zoneCombo;
 
     @FXML
-    private ComboBox<String> roleCombo;
-
-    @FXML
     private Label statusMessageLabel;
 
     @FXML
     private Hyperlink backToLoginLink;
 
+    @FXML
+    private Button inscriptionButton;
+
     private final UtilisateurService utilisateurService;
     private MainApp mainApp;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$");
     private static final String DEFAULT_ROLE = "Citoyen";
-    private static final List<String> ZONES = List.of("Pikine", "Guédiawaye");
+    private static final String[] ZONES = {"Pikine", "Guédiawaye"};
 
     public RegisterController() {
         utilisateurService = new UtilisateurService();
@@ -65,16 +65,19 @@ public class RegisterController {
     @FXML
     private void initialize() {
         zoneCombo.setItems(FXCollections.observableArrayList(ZONES));
-        roleCombo.setItems(FXCollections.observableArrayList(DEFAULT_ROLE));
-        roleCombo.getSelectionModel().select(0);
         clearStatusMessage();
         backToLoginLink.setOnAction(evt -> mainApp.showLoginScreen());
+        
+        // Effets de survol du bouton
+        inscriptionButton.setOnMouseEntered(e -> inscriptionButton.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;"));
+        inscriptionButton.setOnMouseExited(e -> inscriptionButton.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;"));
     }
 
     @FXML
     private void handleInscription() {
         String nom = nomField.getText().trim();
         String email = emailField.getText().trim();
+        String telephone = telephoneField != null ? telephoneField.getText().trim() : "";
         String motPasse = motPasseField.getText();
         String confirmation = confirmField.getText();
         String zone = zoneCombo.getValue();
@@ -124,7 +127,8 @@ public class RegisterController {
             return;
         }
 
-        Utilisateur utilisateur = new Utilisateur(nom, email, motPasse, role, zone);
+        Utilisateur utilisateur = new Utilisateur(nom, email, motPasse, role, zone,
+                telephone.isEmpty() ? null : telephone);
 
         if (utilisateurService.inscription(utilisateur)) {
             showSuccessMessage("Inscription réussie ! Redirection vers la connexion...");

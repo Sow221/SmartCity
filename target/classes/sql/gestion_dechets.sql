@@ -1,9 +1,9 @@
 -- Script SQL pour la base de données SmartCity Déchets
 -- Création de la base de données
 
-CREATE DATABASE IF NOT EXISTS db_sc;
+CREATE DATABASE IF NOT EXISTS db_smartcity;
 
-USE db_sc;
+USE db_smartcity;
 
 -- Table Utilisateur (Citoyen, Agent, Administrateur)
 CREATE TABLE IF NOT EXISTS Utilisateur (
@@ -12,7 +12,10 @@ CREATE TABLE IF NOT EXISTS Utilisateur (
     email VARCHAR(100) UNIQUE NOT NULL,
     motPasse VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL,
-    zone VARCHAR(50)
+    zone VARCHAR(50),
+    telephone VARCHAR(30),
+    actif TINYINT(1) NOT NULL DEFAULT 1,
+    dateInscription DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table Signalement (Déchets)
@@ -38,18 +41,31 @@ CREATE TABLE IF NOT EXISTS Affectation (
     FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser)
 );
 
+-- Table Dechet (pour signalements - version alternative)
+CREATE TABLE IF NOT EXISTS dechet (
+    idDechet INT AUTO_INCREMENT PRIMARY KEY,
+    description TEXT,
+    categorie VARCHAR(50),
+    zone VARCHAR(50),
+    quartier VARCHAR(100),
+    photo VARCHAR(255),
+    statut VARCHAR(20),
+    dateSignalement DATETIME,
+    idUtilisateur INT,
+    FOREIGN KEY (idUtilisateur) REFERENCES Utilisateur(idUser)
+);
+
 -- Insertion d'un administrateur par défaut (mot de passe: admin123)
 INSERT INTO Utilisateur (nom, email, motPasse, role, zone) 
-VALUES ('Administrateur', 'admin@smartcity.sn', '$2a$10$8K1p/a0dL3.XjvLdL.5v/.mJ5P8Z5vQ5vQ5vQ5vQ5vQ5vQ5vQ5u', 'Administrateur', 'Pikine');
+VALUES ('Administrateur', 'admin@smartcity.sn', 'admin123', 'Administrateur', 'Pikine');
 
--- Insertion d'agents par défaut
+-- Insertion d'agents par défaut (mot de passe: agent123)
 INSERT INTO Utilisateur (nom, email, motPasse, role, zone) 
-VALUES ('Agent Pikine', 'agentpikine@smartcity.sn', '$2a$10$8K1p/a0dL3.XjvLdL.5v/.mJ5P8Z5vQ5vQ5vQ5vQ5vQ5vQ5vQ5u', 'Agent', 'Pikine');
+VALUES ('Agent Pikine', 'agentpikine@smartcity.sn', 'agent123', 'Agent', 'Pikine');
 
 INSERT INTO Utilisateur (nom, email, motPasse, role, zone) 
-VALUES ('Agent Guédiawaye', 'agentguédiawaye@smartcity.sn', '$2a$10$8K1p/a0dL3.XjvLdL.5v/.mJ5P8Z5vQ5vQ5vQ5vQ5vQ5vQ5vQ5u', 'Agent', 'Guédiawaye');
+VALUES ('Agent Guédiawaye', 'agentguediawaye@smartcity.sn', 'agent123', 'Agent', 'Guédiawaye');
 
--- Insertion d'un citoyen test
+-- Insertion d'un citoyen test (mot de passe: citizen123)
 INSERT INTO Utilisateur (nom, email, motPasse, role, zone) 
-VALUES ('Citoyen Test', 'citoyen@smartcity.sn', '$2a$10$8K1p/a0dL3.XjvLdL.5v/.mJ5P8Z5vQ5vQ5vQ5vQ5vQ5vQ5vQ5u', 'Citoyen', 'Pikine');
-
+VALUES ('Citoyen Test', 'citoyen@smartcity.sn', 'citizen123', 'Citoyen', 'Pikine');

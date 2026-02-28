@@ -13,10 +13,8 @@ import java.util.List;
  */
 public class SignalementService {
 
-    private Connection conn;
-
-    public SignalementService() {
-        conn = DatabaseConnection.getConnection();
+    private Connection getConn() {
+        return DatabaseConnection.getConnection();
     }
 
     /**
@@ -26,11 +24,11 @@ public class SignalementService {
         String query = "INSERT INTO Signalement (description, categorie, zone, dateSignalement, statut, photo, idUser) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
             pstmt.setString(3, signalement.getZone());
-            pstmt.setObject(4, LocalDateTime.now());
+            pstmt.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
             pstmt.setString(5, "En attente");
             pstmt.setString(6, signalement.getPhoto());
             pstmt.setInt(7, signalement.getIdUser());
@@ -49,12 +47,11 @@ public class SignalementService {
         List<Signalement> liste = new ArrayList<>();
         String query = "SELECT * FROM Signalement ORDER BY dateSignalement DESC";
 
-        try (Statement stmt = conn.createStatement();
+        try (Statement stmt = getConn().createStatement();
                 ResultSet rs = stmt.executeQuery(query)) {
 
             while (rs.next()) {
-                Signalement signalement = mapResultSetToSignalement(rs);
-                liste.add(signalement);
+                liste.add(mapResultSetToSignalement(rs));
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération: " + e.getMessage());
@@ -69,13 +66,12 @@ public class SignalementService {
         List<Signalement> liste = new ArrayList<>();
         String query = "SELECT * FROM Signalement WHERE zone = ? ORDER BY dateSignalement DESC";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, zone);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                Signalement signalement = mapResultSetToSignalement(rs);
-                liste.add(signalement);
+                liste.add(mapResultSetToSignalement(rs));
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération: " + e.getMessage());
@@ -90,13 +86,12 @@ public class SignalementService {
         List<Signalement> liste = new ArrayList<>();
         String query = "SELECT * FROM Signalement WHERE idUser = ? ORDER BY dateSignalement DESC";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idUser);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                Signalement signalement = mapResultSetToSignalement(rs);
-                liste.add(signalement);
+                liste.add(mapResultSetToSignalement(rs));
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération: " + e.getMessage());
@@ -110,7 +105,7 @@ public class SignalementService {
     public boolean updateStatut(int idSignalement, String nouveauStatut) {
         String query = "UPDATE Signalement SET statut = ? WHERE idSignalement = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, nouveauStatut);
             pstmt.setInt(2, idSignalement);
             return pstmt.executeUpdate() > 0;
@@ -126,7 +121,7 @@ public class SignalementService {
     public boolean supprimerSignalement(int idSignalement) {
         String query = "DELETE FROM Signalement WHERE idSignalement = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -141,7 +136,7 @@ public class SignalementService {
     public int countByStatut(String statut) {
         String query = "SELECT COUNT(*) FROM Signalement WHERE statut = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, statut);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
@@ -159,7 +154,7 @@ public class SignalementService {
     public int countByZone(String zone) {
         String query = "SELECT COUNT(*) FROM Signalement WHERE zone = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, zone);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {

@@ -7,6 +7,7 @@ import com.smartcity.utils.SessionManager;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -33,6 +34,9 @@ public class LoginController {
     private Hyperlink createAccountLink;
 
     @FXML
+    private Button connexionButton;
+
+    @FXML
     private Label statusMessageLabel;
 
     private final UtilisateurService utilisateurService;
@@ -53,6 +57,16 @@ public class LoginController {
         clearStatusMessage();
         forgotPasswordLink.setOnAction(evt -> showErrorMessage("Mot de passe oublié ? Contactez support@smartcity.sn"));
         createAccountLink.setOnAction(evt -> mainApp.showRegisterScreen());
+    }
+
+    @FXML
+    private void onBoutonHover() {
+        connexionButton.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;");
+    }
+
+    @FXML
+    private void onBoutonExit() {
+        connexionButton.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;");
     }
 
     @FXML

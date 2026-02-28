@@ -1,4 +1,4 @@
-﻿package com.smartcity.service;
+package com.smartcity.service;
 
 import com.smartcity.model.Utilisateur;
 import com.smartcity.utils.DatabaseConnection;

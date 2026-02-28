@@ -1,5 +1,8 @@
 package com.smartcity.app;
 
+import com.smartcity.controller.AdminDashboardController;
+import com.smartcity.controller.AgentDashboardController;
+import com.smartcity.controller.CitizenDashboardController;
 import com.smartcity.controller.DashboardController;
 import com.smartcity.controller.LoginController;
 import com.smartcity.controller.RegisterController;
@@ -10,70 +13,55 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+
 /**
- * Point d'entrée principal de l'application SmartCity Déchets
- * Application de gestion et de suivi des déchets ménagers à Pikine et
- * Guédiawaye
+ * Point d'entree principal de l'application SmartCity Dechets.
  */
 public class MainApp extends Application {
 
     private static Stage primaryStage;
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) {
         primaryStage = stage;
-        primaryStage.setTitle("SmartCity - Gestion des Déchets");
-        primaryStage.setWidth(900);
-        primaryStage.setHeight(600);
-
+        primaryStage.setTitle("SmartCity - Gestion des Dechets");
+        primaryStage.setWidth(1100);
+        primaryStage.setHeight(650);
         showLoginScreen();
     }
 
-    /**
-     * Affiche l'écran de connexion
-     */
     public void showLoginScreen() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
             Parent root = loader.load();
 
-            // Passer la référence MainApp au contrôleur
             LoginController controller = loader.getController();
             controller.setMainApp(this);
 
-            Scene scene = new Scene(root);
-            primaryStage.setScene(scene);
+            primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("Erreur lors du chargement de la vue login.fxml");
+            System.err.println("Erreur lors du chargement de login.fxml");
         }
     }
 
-    /**
-     * Affiche l'écran d'inscription
-     */
     public void showRegisterScreen() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/register.fxml"));
             Parent root = loader.load();
 
-            // Passer la référence MainApp au contrôleur
             RegisterController controller = loader.getController();
             controller.setMainApp(this);
 
-            Scene scene = new Scene(root);
-            primaryStage.setScene(scene);
+            primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("Erreur lors du chargement de la vue register.fxml");
+            System.err.println("Erreur lors du chargement de register.fxml");
         }
     }
 
-    /**
-     * Affiche le tableau de bord selon le rôle
-     */
     public void showDashboard(String role) {
         try {
             String fxmlFile;
@@ -90,18 +78,31 @@ public class MainApp extends Application {
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFile));
             Parent root = loader.load();
+            Object controller = loader.getController();
 
-            // Passer la référence MainApp au contrôleur
-            DashboardController controller = loader.getController();
-            controller.setMainApp(this);
-            controller.chargerDonnees();
+            if (controller instanceof DashboardController) {
+                DashboardController dashboardController = (DashboardController) controller;
+                dashboardController.setMainApp(this);
+                dashboardController.chargerDonnees();
+            } else if (controller instanceof AgentDashboardController) {
+                AgentDashboardController agentDashboardController = (AgentDashboardController) controller;
+                agentDashboardController.setMainApp(this);
+                agentDashboardController.chargerDonnees();
+            } else if (controller instanceof AdminDashboardController) {
+                AdminDashboardController adminDashboardController = (AdminDashboardController) controller;
+                adminDashboardController.setMainApp(this);
+                adminDashboardController.chargerDonnees();
+            } else if (controller instanceof CitizenDashboardController) {
+                CitizenDashboardController citizenDashboardController = (CitizenDashboardController) controller;
+                citizenDashboardController.setMainApp(this);
+                citizenDashboardController.chargerDonnees();
+            }
 
-            Scene scene = new Scene(root);
-            primaryStage.setScene(scene);
+            primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("Erreur lors du chargement du tableau de bord");
+            System.err.println("Erreur lors du chargement du dashboard");
         }
     }
 

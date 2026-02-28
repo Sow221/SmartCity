@@ -9,6 +9,7 @@ public class SessionManager {
 
     private static Utilisateur utilisateurConnecte;
     private static boolean isLoggedIn = false;
+    private static boolean darkMode = false;
 
     /**
      * Définit l'utilisateur connecté
@@ -59,5 +60,17 @@ public class SessionManager {
     public static void logout() {
         utilisateurConnecte = null;
         isLoggedIn = false;
+    }
+
+    public static boolean isDarkMode() {
+        return darkMode;
+    }
+
+    public static void setDarkMode(boolean enabled) {
+        darkMode = enabled;
+    }
+
+    public static void toggleDarkMode() {
+        darkMode = !darkMode;
     }
 }

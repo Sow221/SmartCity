@@ -9,8 +9,8 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>SmartCity Déchets</name>
-    <description>Application de gestion et de suivi des déchets ménagers à Pikine et Guédiawaye</description>
+    <name>SmartCity Dechets</name>
+    <description>Application de gestion et de suivi des dechets menagers a Pikine et Guediawaye</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -30,6 +30,11 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 

@@ -1,0 +1,622 @@
+package com.smartcity.controller;
+
+import com.smartcity.app.MainApp;
+import com.smartcity.model.Signalement;
+import com.smartcity.model.Utilisateur;
+import com.smartcity.service.SignalementService;
+import com.smartcity.service.UtilisateurService;
+import com.smartcity.utils.SessionManager;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Controleur du dashboard administrateur.
+ */
+public class AdminDashboardController {
+
+    @FXML private BorderPane rootPane;
+    @FXML private Label adminNameLabel;
+    @FXML private Label adminMessageLabel;
+    @FXML private Button themeToggleButton;
+
+    @FXML private Button btnAdminDashboard;
+    @FXML private Button btnGestionUtilisateurs;
+    @FXML private Button btnGestionAgents;
+    @FXML private Button btnGestionSignalements;
+    @FXML private Button btnStatistiques;
+
+    @FXML private VBox pageAdminDashboard;
+    @FXML private VBox pageAdminUsers;
+    @FXML private VBox pageAdminAgents;
+    @FXML private VBox pageAdminSignalements;
+    @FXML private VBox pageAdminStats;
+
+    @FXML private Label adminCardTotalSignalements;
+    @FXML private Label adminCardEnAttente;
+    @FXML private Label adminCardEnCours;
+    @FXML private Label adminCardCollectes;
+    @FXML private Label adminCardTotalUtilisateurs;
+
+    @FXML private PieChart statsPieChart;
+    @FXML private BarChart<String, Number> statsBarChart;
+
+    @FXML private TableView<Utilisateur> tableUtilisateurs;
+    @FXML private TableColumn<Utilisateur, Integer> colUserId;
+    @FXML private TableColumn<Utilisateur, String> colUserNom;
+    @FXML private TableColumn<Utilisateur, String> colUserEmail;
+    @FXML private TableColumn<Utilisateur, String> colUserRole;
+    @FXML private TableColumn<Utilisateur, String> colUserZone;
+    @FXML private Button btnModifierUtilisateur;
+    @FXML private Button btnSupprimerUtilisateur;
+
+    @FXML private TableView<AgentStatsRow> tableAgents;
+    @FXML private TableColumn<AgentStatsRow, Integer> colAgentId;
+    @FXML private TableColumn<AgentStatsRow, String> colAgentNom;
+    @FXML private TableColumn<AgentStatsRow, String> colAgentZone;
+    @FXML private TableColumn<AgentStatsRow, Integer> colAgentTraites;
+    @FXML private Button btnModifierAgent;
+    @FXML private Button btnSupprimerAgent;
+
+    @FXML private ComboBox<String> filterZoneCombo;
+    @FXML private ComboBox<String> filterStatutCombo;
+    @FXML private ComboBox<String> filterCategorieCombo;
+    @FXML private TableView<Signalement> tableSignalements;
+    @FXML private TableColumn<Signalement, Integer> colSignalementId;
+    @FXML private TableColumn<Signalement, String> colSignalementDescription;
+    @FXML private TableColumn<Signalement, String> colSignalementCategorie;
+    @FXML private TableColumn<Signalement, String> colSignalementZone;
+    @FXML private TableColumn<Signalement, String> colSignalementDate;
+    @FXML private TableColumn<Signalement, String> colSignalementStatut;
+    @FXML private TableColumn<Signalement, String> colSignalementUtilisateur;
+
+    private final UtilisateurService utilisateurService = new UtilisateurService();
+    private final SignalementService signalementService = new SignalementService();
+    private final ObservableList<Utilisateur> utilisateurs = FXCollections.observableArrayList();
+    private final ObservableList<AgentStatsRow> agents = FXCollections.observableArrayList();
+    private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final String ALL_ZONES = "Toutes";
+    private static final String ALL_STATUTS = "Tous";
+    private static final String ALL_CATEGORIES = "Toutes";
+
+    private MainApp mainApp;
+
+    public void setMainApp(MainApp mainApp) {
+        this.mainApp = mainApp;
+    }
+
+    @FXML
+    private void initialize() {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null || !SessionManager.isAdmin()) {
+            showAdminMessage("Acces reserve au role Administrateur.", false);
+            return;
+        }
+
+        adminNameLabel.setText(current.getNom());
+        configureUsersTable();
+        configureAgentsTable();
+        configureSignalementsTable();
+        configureFilters();
+
+        btnModifierUtilisateur.disableProperty().bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
+        btnSupprimerUtilisateur.disableProperty().bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
+        btnModifierAgent.disableProperty().bind(tableAgents.getSelectionModel().selectedItemProperty().isNull());
+        btnSupprimerAgent.disableProperty().bind(tableAgents.getSelectionModel().selectedItemProperty().isNull());
+
+        tableUtilisateurs.setItems(utilisateurs);
+        tableAgents.setItems(agents);
+        tableSignalements.setItems(signalements);
+
+        applyTheme();
+        showAdminDashboardPage();
+        chargerDonnees();
+    }
+
+    @FXML
+    private void handleToggleTheme() {
+        SessionManager.toggleDarkMode();
+        applyTheme();
+    }
+
+    @FXML
+    public void chargerDonnees() {
+        refreshCards();
+        refreshUtilisateurs();
+        refreshAgents();
+        refreshSignalements();
+        refreshCharts();
+    }
+
+    @FXML
+    private void handleDeconnexion() {
+        SessionManager.logout();
+        if (mainApp != null) {
+            mainApp.showLoginScreen();
+        }
+    }
+
+    @FXML
+    private void handleShowAdminDashboard() {
+        showAdminDashboardPage();
+    }
+
+    @FXML
+    private void handleShowGestionUtilisateurs() {
+        showPage(pageAdminUsers, btnGestionUtilisateurs);
+    }
+
+    @FXML
+    private void handleShowGestionAgents() {
+        showPage(pageAdminAgents, btnGestionAgents);
+    }
+
+    @FXML
+    private void handleShowGestionSignalements() {
+        showPage(pageAdminSignalements, btnGestionSignalements);
+    }
+
+    @FXML
+    private void handleShowStatistiques() {
+        showPage(pageAdminStats, btnStatistiques);
+    }
+
+    @FXML
+    private void handleAjouterUtilisateur() {
+        Optional<Utilisateur> result = openUtilisateurDialog("Ajouter utilisateur", null, false);
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Utilisateur nouveau = result.get();
+        if (utilisateurService.emailExiste(nouveau.getEmail())) {
+            showAdminMessage("Email deja utilise.", false);
+            return;
+        }
+
+        if (utilisateurService.inscription(nouveau)) {
+            showAdminMessage("Utilisateur ajoute avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de l'ajout utilisateur.", false);
+        }
+    }
+
+    @FXML
+    private void handleModifierUtilisateur() {
+        Utilisateur selected = tableUtilisateurs.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        Optional<Utilisateur> result = openUtilisateurDialog("Modifier utilisateur", selected, false);
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Utilisateur updated = result.get();
+        updated.setIdUser(selected.getIdUser());
+
+        if (utilisateurService.updateUtilisateurAdmin(updated)) {
+            showAdminMessage("Utilisateur modifie avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de la modification utilisateur.", false);
+        }
+    }
+
+    @FXML
+    private void handleSupprimerUtilisateur() {
+        Utilisateur selected = tableUtilisateurs.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        if (!confirm("Confirmer", "Supprimer l'utilisateur " + selected.getNom() + " ?")) {
+            return;
+        }
+
+        if (utilisateurService.deleteUtilisateur(selected.getIdUser())) {
+            showAdminMessage("Utilisateur desactive avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de la suppression utilisateur.", false);
+        }
+    }
+
+    @FXML
+    private void handleAjouterAgent() {
+        Optional<Utilisateur> result = openUtilisateurDialog("Ajouter agent", null, true);
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Utilisateur agent = result.get();
+        agent.setRole("Agent");
+
+        if (utilisateurService.emailExiste(agent.getEmail())) {
+            showAdminMessage("Email deja utilise.", false);
+            return;
+        }
+
+        if (utilisateurService.inscription(agent)) {
+            showAdminMessage("Agent ajoute avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de l'ajout agent.", false);
+        }
+    }
+
+    @FXML
+    private void handleModifierAgent() {
+        AgentStatsRow selected = tableAgents.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        Utilisateur base = utilisateurService.getUtilisateurById(selected.id());
+        if (base == null) {
+            showAdminMessage("Agent introuvable.", false);
+            return;
+        }
+
+        Optional<Utilisateur> result = openUtilisateurDialog("Modifier agent", base, true);
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Utilisateur updated = result.get();
+        updated.setIdUser(base.getIdUser());
+        updated.setRole("Agent");
+
+        if (utilisateurService.updateUtilisateurAdmin(updated)) {
+            showAdminMessage("Agent modifie avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de la modification agent.", false);
+        }
+    }
+
+    @FXML
+    private void handleSupprimerAgent() {
+        AgentStatsRow selected = tableAgents.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+
+        if (!confirm("Confirmer", "Supprimer l'agent " + selected.nom() + " ?")) {
+            return;
+        }
+
+        if (utilisateurService.deleteUtilisateur(selected.id())) {
+            showAdminMessage("Agent desactive avec succes.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de la suppression agent.", false);
+        }
+    }
+
+    @FXML
+    private void handleFiltrerSignalements() {
+        String zone = getFilterValue(filterZoneCombo, ALL_ZONES);
+        String statut = getFilterValue(filterStatutCombo, ALL_STATUTS);
+        String categorie = getFilterValue(filterCategorieCombo, ALL_CATEGORIES);
+
+        signalements.setAll(signalementService.getSignalementsFiltres(zone, statut, categorie));
+        showAdminMessage("Filtres appliques.", true);
+    }
+
+    private void refreshCards() {
+        int total = signalementService.countAll();
+        int attente = signalementService.countByStatut("En attente");
+        int encours = signalementService.countByStatut("En cours");
+        int collectes = countCollectesGlobal();
+        int totalUsers = utilisateurService.countAllActifs();
+
+        adminCardTotalSignalements.setText(String.valueOf(total));
+        adminCardEnAttente.setText(String.valueOf(attente));
+        adminCardEnCours.setText(String.valueOf(encours));
+        adminCardCollectes.setText(String.valueOf(collectes));
+        adminCardTotalUtilisateurs.setText(String.valueOf(totalUsers));
+    }
+
+    private void refreshUtilisateurs() {
+        utilisateurs.setAll(utilisateurService.getAllUtilisateurs());
+    }
+
+    private void refreshAgents() {
+        List<Utilisateur> utilisateursAgents = utilisateurService.getUtilisateursByRole("Agent");
+        agents.clear();
+        for (Utilisateur u : utilisateursAgents) {
+            int traites = signalementService.countTraitesByAgent(u.getIdUser());
+            agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), valueOrDash(u.getZone()), traites));
+        }
+    }
+
+    private void refreshSignalements() {
+        signalements.setAll(signalementService.getAllSignalements());
+    }
+
+    private void refreshCharts() {
+        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
+                new PieChart.Data("En attente", signalementService.countByStatut("En attente")),
+                new PieChart.Data("En cours", signalementService.countByStatut("En cours")),
+                new PieChart.Data("Collecte", countCollectesGlobal())
+        );
+
+        statsPieChart.setData(FXCollections.observableArrayList(pieData));
+
+        XYChart.Series<String, Number> zoneSeriesStats = new XYChart.Series<>();
+        zoneSeriesStats.setName("Signalements");
+        zoneSeriesStats.getData().add(new XYChart.Data<>("Pikine", signalementService.countByZone("Pikine")));
+        zoneSeriesStats.getData().add(new XYChart.Data<>("Guediawaye", signalementService.countByZone("Guediawaye")));
+        statsBarChart.getData().clear();
+        statsBarChart.getData().add(zoneSeriesStats);
+    }
+
+    private Optional<Utilisateur> openUtilisateurDialog(String title, Utilisateur initial, boolean roleLockedAgent) {
+        Dialog<Utilisateur> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText(null);
+
+        ButtonType saveType = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        TextField nomField = new TextField(initial != null ? initial.getNom() : "");
+        TextField emailField = new TextField(initial != null ? initial.getEmail() : "");
+        PasswordField motPasseField = new PasswordField();
+        motPasseField.setText(initial != null ? valueOrDash(initial.getMotPasse()).equals("-") ? "" : initial.getMotPasse() : "");
+        ComboBox<String> roleCombo = new ComboBox<>(FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur"));
+        roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : (roleLockedAgent ? "Agent" : "Citoyen"));
+        ComboBox<String> zoneCombo = new ComboBox<>(FXCollections.observableArrayList("Pikine", "Guediawaye"));
+        zoneCombo.setValue(initial != null ? valueOrDash(initial.getZone()) : "Pikine");
+        TextField telephoneField = new TextField(initial != null ? valueOrDash(initial.getTelephone()).equals("-") ? "" : initial.getTelephone() : "");
+
+        if (roleLockedAgent) {
+            roleCombo.setValue("Agent");
+            roleCombo.setDisable(true);
+        }
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Nom"), 0, 0);
+        grid.add(nomField, 1, 0);
+        grid.add(new Label("Email"), 0, 1);
+        grid.add(emailField, 1, 1);
+        grid.add(new Label("Mot de passe"), 0, 2);
+        grid.add(motPasseField, 1, 2);
+        grid.add(new Label("Role"), 0, 3);
+        grid.add(roleCombo, 1, 3);
+        grid.add(new Label("Zone"), 0, 4);
+        grid.add(zoneCombo, 1, 4);
+        grid.add(new Label("Telephone"), 0, 5);
+        grid.add(telephoneField, 1, 5);
+
+        dialog.getDialogPane().setContent(grid);
+
+        Node saveButton = dialog.getDialogPane().lookupButton(saveType);
+        saveButton.addEventFilter(ActionEvent.ACTION, event -> {
+            if (nomField.getText().isBlank() || emailField.getText().isBlank() ||
+                    motPasseField.getText().isBlank() || roleCombo.getValue() == null || zoneCombo.getValue() == null) {
+                showAdminMessage("Tous les champs obligatoires doivent etre renseignes.", false);
+                event.consume();
+            }
+        });
+
+        dialog.setResultConverter(buttonType -> {
+            if (buttonType != saveType) {
+                return null;
+            }
+
+            Utilisateur u = new Utilisateur();
+            u.setNom(nomField.getText().trim());
+            u.setEmail(emailField.getText().trim());
+            u.setMotPasse(motPasseField.getText());
+            u.setRole(roleCombo.getValue());
+            u.setZone(zoneCombo.getValue());
+            u.setTelephone(telephoneField.getText().trim().isEmpty() ? null : telephoneField.getText().trim());
+            return u;
+        });
+
+        return dialog.showAndWait();
+    }
+
+    private void configureUsersTable() {
+        colUserId.setCellValueFactory(new PropertyValueFactory<>("idUser"));
+        colUserNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
+        colUserEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
+        colUserRole.setCellValueFactory(new PropertyValueFactory<>("role"));
+        colUserZone.setCellValueFactory(cell -> new SimpleStringProperty(valueOrDash(cell.getValue().getZone())));
+
+        centerColumn(colUserId);
+        centerColumn(colUserNom);
+        centerColumn(colUserEmail);
+        centerColumn(colUserRole);
+        centerColumn(colUserZone);
+    }
+
+    private void configureAgentsTable() {
+        colAgentId.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().id()).asObject());
+        colAgentNom.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
+        colAgentZone.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
+        colAgentTraites.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().nombreTraites()).asObject());
+
+        centerColumn(colAgentId);
+        centerColumn(colAgentNom);
+        centerColumn(colAgentZone);
+        centerColumn(colAgentTraites);
+    }
+
+    private void configureSignalementsTable() {
+        colSignalementId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
+        colSignalementDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
+        colSignalementCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
+        colSignalementZone.setCellValueFactory(new PropertyValueFactory<>("zone"));
+        colSignalementDate.setCellValueFactory(cell -> new SimpleStringProperty(
+                cell.getValue().getDateSignalement() == null ? "" : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
+        colSignalementStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
+        colSignalementUtilisateur.setCellValueFactory(cell -> new SimpleStringProperty(
+                valueOrDash(cell.getValue().getUtilisateurNom())));
+
+        centerColumn(colSignalementId);
+        centerColumn(colSignalementDescription);
+        centerColumn(colSignalementCategorie);
+        centerColumn(colSignalementZone);
+        centerColumn(colSignalementDate);
+        centerColumn(colSignalementStatut);
+        centerColumn(colSignalementUtilisateur);
+
+        colSignalementStatut.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("-fx-alignment: CENTER;");
+                    return;
+                }
+                setText(item);
+                String color = "#F57C00";
+                if ("En cours".equalsIgnoreCase(item)) {
+                    color = "#1565C0";
+                } else if (item.toLowerCase().startsWith("collect")) {
+                    color = "#2E7D32";
+                }
+                setStyle("-fx-alignment: CENTER; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
+            }
+        });
+    }
+
+    private void configureFilters() {
+        filterZoneCombo.setItems(FXCollections.observableArrayList(ALL_ZONES, "Pikine", "Guediawaye"));
+        filterZoneCombo.setValue(ALL_ZONES);
+
+        filterStatutCombo.setItems(FXCollections.observableArrayList(ALL_STATUTS, "En attente", "En cours", "Collecte"));
+        filterStatutCombo.setValue(ALL_STATUTS);
+
+        filterCategorieCombo.setItems(FXCollections.observableArrayList(
+                ALL_CATEGORIES, "Plastique", "Papier", "Organique", "Verre"));
+        filterCategorieCombo.setValue(ALL_CATEGORIES);
+    }
+
+    private void showAdminDashboardPage() {
+        showPage(pageAdminDashboard, btnAdminDashboard);
+    }
+
+    private void showPage(VBox pageToShow, Button activeButton) {
+        VBox[] pages = {pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements, pageAdminStats};
+        for (VBox page : pages) {
+            boolean visible = page == pageToShow;
+            page.setVisible(visible);
+            page.setManaged(visible);
+        }
+
+        Button[] buttons = {btnAdminDashboard, btnGestionUtilisateurs, btnGestionAgents, btnGestionSignalements, btnStatistiques};
+        for (Button btn : buttons) {
+            btn.getStyleClass().remove("sidebar-button-active");
+            if (btn == activeButton) {
+                btn.getStyleClass().add("sidebar-button-active");
+            }
+        }
+    }
+
+    private void centerColumn(TableColumn<?, ?> column) {
+        column.setStyle("-fx-alignment: CENTER;");
+    }
+
+    private boolean confirm(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        return alert.showAndWait().filter(btn -> btn == ButtonType.OK).isPresent();
+    }
+
+    private String getFilterValue(ComboBox<String> combo, String allValue) {
+        if (combo == null || combo.getValue() == null || allValue.equals(combo.getValue())) {
+            return null;
+        }
+        return combo.getValue();
+    }
+
+    private String valueOrDash(String value) {
+        return (value == null || value.isBlank()) ? "-" : value;
+    }
+
+    private int countCollectesGlobal() {
+        return signalementService.countByStatut("Collecte");
+    }
+
+    private void showAdminMessage(String message, boolean success) {
+        if (adminMessageLabel == null) {
+            return;
+        }
+        adminMessageLabel.setText(message);
+        adminMessageLabel.setStyle(success ? "-fx-background-color: rgba(67,160,71,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;" : "-fx-background-color: rgba(239,83,80,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;");
+    }
+
+    private void applyTheme() {
+        if (rootPane == null) {
+            return;
+        }
+        rootPane.getStyleClass().remove("dark-mode");
+        if (SessionManager.isDarkMode()) {
+            rootPane.getStyleClass().add("dark-mode");
+            if (themeToggleButton != null) {
+                themeToggleButton.setText("Mode Clair");
+            }
+        } else if (themeToggleButton != null) {
+            themeToggleButton.setText("Mode Sombre");
+        }
+    }
+
+    public static class AgentStatsRow {
+        private final int id;
+        private final String nom;
+        private final String zone;
+        private final int nombreTraites;
+
+        public AgentStatsRow(int id, String nom, String zone, int nombreTraites) {
+            this.id = id;
+            this.nom = nom;
+            this.zone = zone;
+            this.nombreTraites = nombreTraites;
+        }
+
+        public int id() {
+            return id;
+        }
+
+        public String nom() {
+            return nom;
+        }
+
+        public String zone() {
+            return zone;
+        }
+
+        public int nombreTraites() {
+            return nombreTraites;
+        }
+    }
+}
+

@@ -1,4 +1,4 @@
-﻿package com.smartcity.model;
+package com.smartcity.model;
 
 import java.time.LocalDateTime;
 

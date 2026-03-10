@@ -40,13 +40,11 @@ public class AdminDashboardController {
     @FXML private Button btnGestionUtilisateurs;
     @FXML private Button btnGestionAgents;
     @FXML private Button btnGestionSignalements;
-    @FXML private Button btnStatistiques;
 
     @FXML private VBox pageAdminDashboard;
     @FXML private VBox pageAdminUsers;
     @FXML private VBox pageAdminAgents;
     @FXML private VBox pageAdminSignalements;
-    @FXML private VBox pageAdminStats;
 
     @FXML private Label adminCardTotalSignalements;
     @FXML private Label adminCardEnAttente;
@@ -172,11 +170,6 @@ public class AdminDashboardController {
     @FXML
     private void handleShowGestionSignalements() {
         showPage(pageAdminSignalements, btnGestionSignalements);
-    }
-
-    @FXML
-    private void handleShowStatistiques() {
-        showPage(pageAdminStats, btnStatistiques);
     }
 
     @FXML
@@ -523,14 +516,14 @@ public class AdminDashboardController {
     }
 
     private void showPage(VBox pageToShow, Button activeButton) {
-        VBox[] pages = {pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements, pageAdminStats};
+        VBox[] pages = {pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements};
         for (VBox page : pages) {
             boolean visible = page == pageToShow;
             page.setVisible(visible);
             page.setManaged(visible);
         }
 
-        Button[] buttons = {btnAdminDashboard, btnGestionUtilisateurs, btnGestionAgents, btnGestionSignalements, btnStatistiques};
+        Button[] buttons = {btnAdminDashboard, btnGestionUtilisateurs, btnGestionAgents, btnGestionSignalements};
         for (Button btn : buttons) {
             btn.getStyleClass().remove("sidebar-button-active");
             if (btn == activeButton) {

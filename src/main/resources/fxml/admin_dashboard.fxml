@@ -43,7 +43,6 @@
             <Button fx:id="btnGestionUtilisateurs" text="Gestion Utilisateurs" styleClass="sidebar-button" onAction="#handleShowGestionUtilisateurs"/>
             <Button fx:id="btnGestionAgents" text="Gestion Agents" styleClass="sidebar-button" onAction="#handleShowGestionAgents"/>
             <Button fx:id="btnGestionSignalements" text="Gestion Signalements" styleClass="sidebar-button" onAction="#handleShowGestionSignalements"/>
-            <Button fx:id="btnStatistiques" text="Statistiques" styleClass="sidebar-button" onAction="#handleShowStatistiques"/>
         </VBox>
     </left>
 
@@ -81,7 +80,17 @@
                         </VBox>
                     </HBox>
 
-                    <Label text="Consultez la page Statistiques pour l'analyse detaillee (graphiques)." style="-fx-text-fill: #546e7a; -fx-font-size: 14px;"/>
+                    <HBox spacing="20" VBox.vgrow="ALWAYS">
+                        <PieChart fx:id="statsPieChart" prefWidth="400" prefHeight="300" HBox.hgrow="ALWAYS"/>
+                        <BarChart fx:id="statsBarChart" prefWidth="400" prefHeight="300" HBox.hgrow="ALWAYS">
+                            <xAxis>
+                                <CategoryAxis label="Zone"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis label="Nombre"/>
+                            </yAxis>
+                        </BarChart>
+                    </HBox>
                 </VBox>
 
                 <VBox fx:id="pageAdminUsers" spacing="15" styleClass="page-box" visible="false" managed="false">
@@ -137,20 +146,6 @@
                     </TableView>
                 </VBox>
 
-                <VBox fx:id="pageAdminStats" spacing="15" styleClass="page-box" visible="false" managed="false">
-                    <Label text="Statistiques" styleClass="page-title"/>
-                    <HBox spacing="20" VBox.vgrow="ALWAYS">
-                        <PieChart fx:id="statsPieChart" prefWidth="400" prefHeight="300" HBox.hgrow="ALWAYS"/>
-                        <BarChart fx:id="statsBarChart" prefWidth="400" prefHeight="300" HBox.hgrow="ALWAYS">
-                            <xAxis>
-                                <CategoryAxis label="Zone"/>
-                            </xAxis>
-                            <yAxis>
-                                <NumberAxis label="Nombre"/>
-                            </yAxis>
-                        </BarChart>
-                    </HBox>
-                </VBox>
             </StackPane>
         </VBox>
     </center>

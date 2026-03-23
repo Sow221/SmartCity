@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="com.smartcity.controller.ReportsController"
+            stylesheets="@../css/design-system.css"
+            styleClass="app-root">
+    <fx:id>rootPane</fx:id>
+    <top>
+        <VBox spacing="10" styleClass="reports-header">
+            <HBox alignment="CENTER_LEFT" spacing="20">
+                <Label text="📊 Rapports &amp; Analytics SmartCity" styleClass="reports-title" />
+                
+                <Region HBox.hgrow="ALWAYS" />
+                
+                <VBox spacing="5">
+                    <Label text="Période d'analyse :" styleClass="form-label" />
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <DatePicker fx:id="startDatePicker" prefWidth="140" />
+                        <Label text="à" styleClass="text-muted" />
+                        <DatePicker fx:id="endDatePicker" prefWidth="140" />
+                    </HBox>
+                </VBox>
+                
+                <VBox spacing="5">
+                    <Label text="Type de rapport :" styleClass="form-label" />
+                    <ComboBox fx:id="reportTypeCombo" prefWidth="200" />
+                </VBox>
+                
+                <VBox spacing="5">
+                    <Button fx:id="generateReportButton" text="🔄 Générer" onAction="#generateReport" 
+                            styleClass="btn-primary" prefWidth="100" />
+                    <Button fx:id="exportReportButton" text="📤 Exporter" onAction="#exportReport"
+                            styleClass="btn-success" prefWidth="100" />
+                </VBox>
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.6" orientation="HORIZONTAL">
+            <!-- Section graphiques -->
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <HBox spacing="10" VBox.vgrow="ALWAYS">
+                    <!-- Graphique en secteurs -->
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Répartition par Statut" styleClass="reports-section-title" />
+                        <PieChart fx:id="statusPieChart" prefHeight="250" prefWidth="300" 
+                                  styleClass="rounded-lg" />
+                    </VBox>
+                    
+                    <!-- Graphique en barres -->
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Analyse par Zone" styleClass="reports-section-title" />
+                        <BarChart fx:id="zoneBarChart" prefHeight="250" prefWidth="300"
+                                  styleClass="rounded-lg">
+                            <xAxis>
+                                <CategoryAxis fx:id="zoneXAxis" />
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis fx:id="zoneYAxis" />
+                            </yAxis>
+                        </BarChart>
+                    </VBox>
+                </HBox>
+                
+                <!-- Graphique des tendances -->
+                <VBox spacing="5" VBox.vgrow="ALWAYS">
+                    <Label text="Évolution Temporelle" styleClass="reports-section-title" />
+                    <LineChart fx:id="trendLineChart" prefHeight="200"
+                               styleClass="rounded-lg">
+                        <xAxis>
+                            <CategoryAxis fx:id="trendXAxis" />
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis fx:id="trendYAxis" />
+                        </yAxis>
+                    </LineChart>
+                </VBox>
+            </VBox>
+
+            <!-- Section rapport et statistiques -->
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <!-- Tableau des statistiques -->
+                <VBox spacing="5" VBox.vgrow="NEVER">
+                    <Label text="📈 Métriques Clés" styleClass="reports-section-title" />
+                    <TableView fx:id="statsTable" prefHeight="200" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="metricColumn" text="Métrique" prefWidth="150" />
+                            <TableColumn fx:id="valueColumn" text="Valeur" prefWidth="100" />
+                        </columns>
+                    </TableView>
+                </VBox>
+                
+                <!-- Zone de rapport textuel -->
+                <VBox spacing="5" VBox.vgrow="ALWAYS">
+                    <Label text="📋 Rapport Détaillé" styleClass="reports-section-title" />
+                    <TextArea fx:id="reportTextArea" prefHeight="300" wrapText="true" editable="false"
+                              styleClass="text-area" style="-fx-font-family: 'Courier New'; -fx-font-size: 12px;" />
+                </VBox>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" spacing="10" styleClass="reports-footer">
+            <Label text="💡 Astuce : Sélectionnez différents types de rapports pour obtenir des analyses variées" 
+                   styleClass="reports-hint" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label text="SmartCity Analytics v2.0" styleClass="text-muted, text-sm" />
+        </HBox>
+    </bottom>
+</BorderPane>

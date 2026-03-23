@@ -114,7 +114,7 @@ public class DashboardController {
         if (SessionManager.isAdmin()) {
             signalements = signalementService.getAllSignalements();
         } else if (SessionManager.isAgent()) {
-            signalements = signalementService.getSignalementsByZone(utilisateur.getZone());
+            signalements = signalementService.getSignalementsByZone(utilisateur.getIdZone());
         } else {
             signalements = signalementService.getSignalementsByUtilisateur(utilisateur.getIdUser());
         }

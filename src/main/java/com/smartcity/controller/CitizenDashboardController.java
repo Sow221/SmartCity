@@ -5,6 +5,7 @@ import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
+import com.smartcity.service.ZoneService;
 import com.smartcity.utils.SessionManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -16,6 +17,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.scene.web.WebView;
+import netscape.javascript.JSObject;
 
 import java.io.File;
 import java.time.format.DateTimeFormatter;
@@ -51,6 +54,9 @@ public class CitizenDashboardController {
     @FXML private ComboBox<String> categorieSignalementCombo;
     @FXML private ComboBox<String> zoneSignalementCombo;
     @FXML private TextField photoSignalementField;
+    @FXML private TextField latitudeField;
+    @FXML private TextField longitudeField;
+    @FXML private WebView mapWebView;
 
     @FXML private TableView<Signalement> tableMesSignalements;
     @FXML private TableColumn<Signalement, Integer> colMesId;
@@ -67,6 +73,7 @@ public class CitizenDashboardController {
 
     private final SignalementService signalementService = new SignalementService();
     private final UtilisateurService utilisateurService = new UtilisateurService();
+    private final ZoneService zoneService = new ZoneService();
     private final ObservableList<Signalement> mesSignalements = FXCollections.observableArrayList();
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -169,7 +176,10 @@ public class CitizenDashboardController {
         Signalement signalement = new Signalement();
         signalement.setDescription(descriptionSignalementArea.getText().trim());
         signalement.setCategorie(categorieSignalementCombo.getValue());
-        signalement.setZone(zoneSignalementCombo.getValue());
+        int idZone = zoneSignalementCombo.getValue().equals("Pikine") ? 1 : 2;
+        signalement.setIdZone(idZone);
+        signalement.setLatitude(latitudeField.getText().isBlank() ? 0.0 : Double.parseDouble(latitudeField.getText().trim()));
+        signalement.setLongitude(longitudeField.getText().isBlank() ? 0.0 : Double.parseDouble(longitudeField.getText().trim()));
         signalement.setPhoto(photoSignalementField.getText().isBlank() ? null : photoSignalementField.getText().trim());
         signalement.setIdUser(current.getIdUser());
 
@@ -179,6 +189,8 @@ public class CitizenDashboardController {
             categorieSignalementCombo.setValue(null);
             zoneSignalementCombo.setValue(null);
             photoSignalementField.clear();
+            latitudeField.clear();
+            longitudeField.clear();
             chargerDonnees();
             showPage(pageMesSignalements, btnMesSignalements);
         } else {
@@ -192,7 +204,10 @@ public class CitizenDashboardController {
         categorieSignalementCombo.setValue(null);
         zoneSignalementCombo.setValue(null);
         photoSignalementField.clear();
-        showCitizenMessage("Formulaire reinitialise.", true);
+        latitudeField.clear();
+        longitudeField.clear();
+        mapWebView.setVisible(false);
+        mapWebView.setManaged(false);
     }
 
     @FXML
@@ -212,14 +227,13 @@ public class CitizenDashboardController {
         updated.setIdUser(current.getIdUser());
         updated.setNom(profilNomField.getText().trim());
         updated.setEmail(profilEmailField.getText().trim());
-        updated.setZone(profilZoneCombo.getValue());
-        updated.setTelephone(profilTelephoneField.getText().isBlank() ? null : profilTelephoneField.getText().trim());
+        int idZone = profilZoneCombo.getValue().equals("Pikine") ? 1 : 2;
+        updated.setIdZone(idZone);
 
         if (utilisateurService.updateUtilisateur(updated)) {
             current.setNom(updated.getNom());
             current.setEmail(updated.getEmail());
-            current.setZone(updated.getZone());
-            current.setTelephone(updated.getTelephone());
+            current.setIdZone(updated.getIdZone());
             citizenNameLabel.setText(current.getNom());
             showCitizenMessage("Profil mis a jour avec succes.", true);
         } else {
@@ -252,6 +266,64 @@ public class CitizenDashboardController {
             }
         } else {
             showCitizenMessage("Echec de la suppression du compte.", false);
+        }
+    }
+
+    @FXML
+    private void handleToggleMap() {
+        boolean visible = mapWebView.isVisible();
+        mapWebView.setVisible(!visible);
+        mapWebView.setManaged(!visible);
+        if (!visible) {
+            // Load interactive map with Leaflet
+            String html = "<!DOCTYPE html>\n" +
+                    "<html>\n" +
+                    "<head>\n" +
+                    "    <title>Selection de localisation</title>\n" +
+                    "    <meta charset='utf-8' />\n" +
+                    "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n" +
+                    "    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />\n" +
+                    "    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>\n" +
+                    "    <style>\n" +
+                    "        #map { height: 100vh; }\n" +
+                    "    </style>\n" +
+                    "</head>\n" +
+                    "<body>\n" +
+                    "    <div id='map'></div>\n" +
+                    "    <script>\n" +
+                    "        var map = L.map('map').setView([-14.7, -17.4], 10); // Pikine/Guediawaye\n" +
+                    "        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
+                    "            attribution: '© OpenStreetMap contributors'\n" +
+                    "        }).addTo(map);\n" +
+                    "        var marker;\n" +
+                    "        map.on('click', function(e) {\n" +
+                    "            if (marker) {\n" +
+                    "                map.removeLayer(marker);\n" +
+                    "            }\n" +
+                    "            marker = L.marker(e.latlng).addTo(map);\n" +
+                    "            // Send to JavaFX\n" +
+                    "            if (window.javafx) {\n" +
+                    "                window.javafx.setLocation(e.latlng.lat, e.latlng.lng);\n" +
+                    "            }\n" +
+                    "        });\n" +
+                    "    </script>\n" +
+                    "</body>\n" +
+                    "</html>";
+            mapWebView.getEngine().loadContent(html);
+            // Set up JavaScript bridge
+            mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+                if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                    JSObject window = (JSObject) mapWebView.getEngine().executeScript("window");
+                    window.setMember("javafx", new JSBridge());
+                }
+            });
+        }
+    }
+
+    public class JSBridge {
+        public void setLocation(double lat, double lng) {
+            latitudeField.setText(String.valueOf(lat));
+            longitudeField.setText(String.valueOf(lng));
         }
     }
 
@@ -294,8 +366,7 @@ public class CitizenDashboardController {
 
         profilNomField.setText(current.getNom());
         profilEmailField.setText(current.getEmail());
-        profilZoneCombo.setValue(current.getZone());
-        profilTelephoneField.setText(current.getTelephone() == null ? "" : current.getTelephone());
+        profilZoneCombo.setValue(zoneService.getZoneById(current.getIdZone()).getNomZone());
     }
 
     private void configureMesSignalementsTable() {
@@ -379,4 +450,3 @@ public class CitizenDashboardController {
         }
     }
 }
-

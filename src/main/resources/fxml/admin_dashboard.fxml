@@ -21,7 +21,7 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.smartcity.controller.AdminDashboardController"
             prefWidth="1100" prefHeight="650"
-            stylesheets="@../css/dashboard.css"
+            stylesheets="@../css/design-system.css"
             styleClass="app-root">
 
     <top>

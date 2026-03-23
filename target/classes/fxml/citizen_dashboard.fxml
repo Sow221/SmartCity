@@ -15,12 +15,13 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.web.WebView?>
 
 <BorderPane fx:id="rootPane" xmlns="http://javafx.com/javafx/17"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.smartcity.controller.CitizenDashboardController"
             prefWidth="1000" prefHeight="600"
-            stylesheets="@../css/dashboard.css"
+            stylesheets="@../css/design-system.css"
             styleClass="app-root">
 
     <top>
@@ -93,9 +94,18 @@
                             <TextField fx:id="photoSignalementField" prefWidth="300"/>
                             <Button text="Ajouter photo" prefWidth="150" prefHeight="35" onAction="#handleChoisirPhoto" styleClass="secondary-button"/>
                         </HBox>
+
+                        <Label text="Latitude" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <TextField fx:id="latitudeField" prefWidth="300" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                        <Label text="Longitude" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <TextField fx:id="longitudeField" prefWidth="300" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
                     </GridPane>
 
+                    <WebView fx:id="mapWebView" prefWidth="600" prefHeight="300" visible="false" managed="false"/>
+
                     <HBox spacing="12" alignment="CENTER">
+                        <Button text="Afficher carte" prefWidth="140" prefHeight="40" onAction="#handleToggleMap" styleClass="secondary-button"/>
                         <Button text="Enregistrer" prefWidth="200" prefHeight="40" onAction="#handleEnregistrerSignalement" styleClass="action-button"/>
                         <Button text="Annuler" prefWidth="140" prefHeight="40" onAction="#handleAnnulerSignalement" styleClass="secondary-button"/>
                     </HBox>
@@ -141,5 +151,3 @@
     </center>
 
 </BorderPane>
-
-

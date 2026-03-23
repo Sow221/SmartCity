@@ -28,9 +28,6 @@ public class RegisterController {
     private TextField emailField;
 
     @FXML
-    private TextField telephoneField;
-
-    @FXML
     private PasswordField motPasseField;
 
     @FXML
@@ -77,45 +74,30 @@ public class RegisterController {
     private void handleInscription() {
         String nom = nomField.getText().trim();
         String email = emailField.getText().trim();
-        String telephone = telephoneField != null ? telephoneField.getText().trim() : "";
-        String motPasse = motPasseField.getText();
-        String confirmation = confirmField.getText();
         String zone = zoneCombo.getValue();
+        String motPasse = motPasseField.getText();
+        String confirm = confirmField.getText();
         String role = DEFAULT_ROLE;
 
-        clearStatusMessage();
-
         if (nom.isEmpty()) {
-            showErrorMessage("Ce champ est requis");
+            showErrorMessage("Le nom est obligatoire");
             nomField.requestFocus();
             return;
         }
 
-        if (email.isEmpty()) {
-            showErrorMessage("Ce champ est requis");
+        if (email.isEmpty() || !EMAIL_PATTERN.matcher(email).matches()) {
+            showErrorMessage("Email invalide");
             emailField.requestFocus();
             return;
         }
 
-        if (!EMAIL_PATTERN.matcher(email).matches()) {
-            showErrorMessage("Format email invalide");
-            emailField.requestFocus();
-            return;
-        }
-
-        if (motPasse.isEmpty()) {
-            showErrorMessage("Ce champ est requis");
+        if (motPasse.isEmpty() || motPasse.length() < 6) {
+            showErrorMessage("Mot de passe trop court (min 6 caractères)");
             motPasseField.requestFocus();
             return;
         }
 
-        if (motPasse.length() < 6) {
-            showErrorMessage("Le mot de passe doit contenir au moins 6 caractères");
-            motPasseField.requestFocus();
-            return;
-        }
-
-        if (!motPasse.equals(confirmation)) {
+        if (!motPasse.equals(confirm)) {
             showErrorMessage("Les mots de passe ne correspondent pas");
             confirmField.requestFocus();
             return;
@@ -127,8 +109,9 @@ public class RegisterController {
             return;
         }
 
-        Utilisateur utilisateur = new Utilisateur(nom, email, motPasse, role, zone,
-                telephone.isEmpty() ? null : telephone);
+        int idZone = zone.equals("Pikine") ? 1 : 2;
+
+        Utilisateur utilisateur = new Utilisateur(null, nom, email, motPasse, role, idZone);
 
         if (utilisateurService.inscription(utilisateur)) {
             showSuccessMessage("Inscription réussie ! Redirection vers la connexion...");

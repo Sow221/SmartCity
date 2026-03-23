@@ -57,6 +57,10 @@ public class LoginController {
         clearStatusMessage();
         forgotPasswordLink.setOnAction(evt -> showErrorMessage("Mot de passe oublié ? Contactez support@smartcity.sn"));
         createAccountLink.setOnAction(evt -> mainApp.showRegisterScreen());
+
+        // Validation en temps réel
+        emailField.textProperty().addListener((observable, oldValue, newValue) -> validateEmail());
+        motPasseField.textProperty().addListener((observable, oldValue, newValue) -> validatePassword());
     }
 
     @FXML
@@ -112,6 +116,28 @@ public class LoginController {
             delay.play();
         } else {
             showErrorMessage("Email ou mot de passe incorrect");
+        }
+    }
+
+    private void validateEmail() {
+        String email = emailField.getText().trim();
+        if (email.isEmpty()) {
+            showErrorMessage("Ce champ est requis");
+        } else if (!EMAIL_PATTERN.matcher(email).matches()) {
+            showErrorMessage("Format email invalide");
+        } else {
+            clearStatusMessage();
+        }
+    }
+
+    private void validatePassword() {
+        String password = motPasseField.getText();
+        if (password.isEmpty()) {
+            showErrorMessage("Ce champ est requis");
+        } else if (password.length() < 6) {
+            showErrorMessage("Le mot de passe doit contenir au moins 6 caractères");
+        } else {
+            clearStatusMessage();
         }
     }
 

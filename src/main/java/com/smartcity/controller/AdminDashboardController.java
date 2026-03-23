@@ -5,6 +5,7 @@ import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
+import com.smartcity.service.ZoneService;
 import com.smartcity.utils.SessionManager;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -86,6 +87,7 @@ public class AdminDashboardController {
 
     private final UtilisateurService utilisateurService = new UtilisateurService();
     private final SignalementService signalementService = new SignalementService();
+    private final ZoneService zoneService = new ZoneService();
     private final ObservableList<Utilisateur> utilisateurs = FXCollections.observableArrayList();
     private final ObservableList<AgentStatsRow> agents = FXCollections.observableArrayList();
     private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
@@ -340,7 +342,7 @@ public class AdminDashboardController {
         agents.clear();
         for (Utilisateur u : utilisateursAgents) {
             int traites = signalementService.countTraitesByAgent(u.getIdUser());
-            agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), valueOrDash(u.getZone()), traites));
+            agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), zoneService.getZoneById(u.getIdZone()).getNomZone(), traites));
         }
     }
 
@@ -376,12 +378,11 @@ public class AdminDashboardController {
         TextField nomField = new TextField(initial != null ? initial.getNom() : "");
         TextField emailField = new TextField(initial != null ? initial.getEmail() : "");
         PasswordField motPasseField = new PasswordField();
-        motPasseField.setText(initial != null ? valueOrDash(initial.getMotPasse()).equals("-") ? "" : initial.getMotPasse() : "");
+        motPasseField.setText(initial != null ? valueOrDash(initial.getMotDePasse()).equals("-") ? "" : initial.getMotDePasse() : "");
         ComboBox<String> roleCombo = new ComboBox<>(FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur"));
         roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : (roleLockedAgent ? "Agent" : "Citoyen"));
         ComboBox<String> zoneCombo = new ComboBox<>(FXCollections.observableArrayList("Pikine", "Guediawaye"));
-        zoneCombo.setValue(initial != null ? valueOrDash(initial.getZone()) : "Pikine");
-        TextField telephoneField = new TextField(initial != null ? valueOrDash(initial.getTelephone()).equals("-") ? "" : initial.getTelephone() : "");
+        zoneCombo.setValue(initial != null ? zoneService.getZoneById(initial.getIdZone()).getNomZone() : "Pikine");
 
         if (roleLockedAgent) {
             roleCombo.setValue("Agent");
@@ -401,8 +402,6 @@ public class AdminDashboardController {
         grid.add(roleCombo, 1, 3);
         grid.add(new Label("Zone"), 0, 4);
         grid.add(zoneCombo, 1, 4);
-        grid.add(new Label("Telephone"), 0, 5);
-        grid.add(telephoneField, 1, 5);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -423,10 +422,10 @@ public class AdminDashboardController {
             Utilisateur u = new Utilisateur();
             u.setNom(nomField.getText().trim());
             u.setEmail(emailField.getText().trim());
-            u.setMotPasse(motPasseField.getText());
+            u.setMotDePasse(motPasseField.getText());
             u.setRole(roleCombo.getValue());
-            u.setZone(zoneCombo.getValue());
-            u.setTelephone(telephoneField.getText().trim().isEmpty() ? null : telephoneField.getText().trim());
+            int idZone = zoneCombo.getValue().equals("Pikine") ? 1 : 2;
+            u.setIdZone(idZone);
             return u;
         });
 
@@ -438,7 +437,7 @@ public class AdminDashboardController {
         colUserNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
         colUserEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
         colUserRole.setCellValueFactory(new PropertyValueFactory<>("role"));
-        colUserZone.setCellValueFactory(cell -> new SimpleStringProperty(valueOrDash(cell.getValue().getZone())));
+        colUserZone.setCellValueFactory(cell -> new SimpleStringProperty(zoneService.getZoneById(cell.getValue().getIdZone()).getNomZone()));
 
         centerColumn(colUserId);
         centerColumn(colUserNom);
@@ -463,7 +462,7 @@ public class AdminDashboardController {
         colSignalementId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
         colSignalementDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
         colSignalementCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
-        colSignalementZone.setCellValueFactory(new PropertyValueFactory<>("zone"));
+        colSignalementZone.setCellValueFactory(new PropertyValueFactory<>("zoneNom"));
         colSignalementDate.setCellValueFactory(cell -> new SimpleStringProperty(
                 cell.getValue().getDateSignalement() == null ? "" : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
         colSignalementStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
@@ -612,4 +611,3 @@ public class AdminDashboardController {
         }
     }
 }
-

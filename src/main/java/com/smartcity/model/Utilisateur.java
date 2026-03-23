@@ -8,32 +8,38 @@ import java.time.LocalDateTime;
 public class Utilisateur {
 
     private int idUser;
+    private String prenom;
     private String nom;
     private String email;
-    private String motPasse;
+    private String motDePasse;
     private String role; // Citoyen, Agent, Administrateur
-    private String zone; // Pikine, Guédiawaye
-    private String telephone;
-    private LocalDateTime dateInscription;
+    private int age;
+    private String localite;
+    private String photoProfil;
+    private int idZone;
     private boolean actif;
+    private LocalDateTime dateInscription;
 
     // Constructeurs
     public Utilisateur() {
         this.actif = true;
     }
 
-    public Utilisateur(String nom, String email, String motPasse, String role, String zone) {
+    public Utilisateur(String prenom, String nom, String email, String motDePasse, String role, int idZone) {
+        this.prenom = prenom;
         this.nom = nom;
         this.email = email;
-        this.motPasse = motPasse;
+        this.motDePasse = motDePasse;
         this.role = role;
-        this.zone = zone;
+        this.idZone = idZone;
         this.actif = true;
     }
 
-    public Utilisateur(String nom, String email, String motPasse, String role, String zone, String telephone) {
-        this(nom, email, motPasse, role, zone);
-        this.telephone = telephone;
+    public Utilisateur(String prenom, String nom, String email, String motDePasse, String role, int idZone, int age, String localite, String photoProfil) {
+        this(prenom, nom, email, motDePasse, role, idZone);
+        this.age = age;
+        this.localite = localite;
+        this.photoProfil = photoProfil;
     }
 
     // Getters et Setters
@@ -43,6 +49,14 @@ public class Utilisateur {
 
     public void setIdUser(int idUser) {
         this.idUser = idUser;
+    }
+
+    public String getPrenom() {
+        return prenom;
+    }
+
+    public void setPrenom(String prenom) {
+        this.prenom = prenom;
     }
 
     public String getNom() {
@@ -61,12 +75,12 @@ public class Utilisateur {
         this.email = email;
     }
 
-    public String getMotPasse() {
-        return motPasse;
+    public String getMotDePasse() {
+        return motDePasse;
     }
 
-    public void setMotPasse(String motPasse) {
-        this.motPasse = motPasse;
+    public void setMotDePasse(String motDePasse) {
+        this.motDePasse = motDePasse;
     }
 
     public String getRole() {
@@ -77,28 +91,36 @@ public class Utilisateur {
         this.role = role;
     }
 
-    public String getZone() {
-        return zone;
+    public int getAge() {
+        return age;
     }
 
-    public void setZone(String zone) {
-        this.zone = zone;
+    public void setAge(int age) {
+        this.age = age;
     }
 
-    public String getTelephone() {
-        return telephone;
+    public String getLocalite() {
+        return localite;
     }
 
-    public void setTelephone(String telephone) {
-        this.telephone = telephone;
+    public void setLocalite(String localite) {
+        this.localite = localite;
     }
 
-    public LocalDateTime getDateInscription() {
-        return dateInscription;
+    public String getPhotoProfil() {
+        return photoProfil;
     }
 
-    public void setDateInscription(LocalDateTime dateInscription) {
-        this.dateInscription = dateInscription;
+    public void setPhotoProfil(String photoProfil) {
+        this.photoProfil = photoProfil;
+    }
+
+    public int getIdZone() {
+        return idZone;
+    }
+
+    public void setIdZone(int idZone) {
+        this.idZone = idZone;
     }
 
     public boolean isActif() {
@@ -109,16 +131,16 @@ public class Utilisateur {
         this.actif = actif;
     }
 
+    public LocalDateTime getDateInscription() {
+        return dateInscription;
+    }
+
+    public void setDateInscription(LocalDateTime dateInscription) {
+        this.dateInscription = dateInscription;
+    }
+
     @Override
     public String toString() {
-        return "Utilisateur{" +
-                "idUser=" + idUser +
-                ", nom='" + nom + '\'' +
-                ", email='" + email + '\'' +
-                ", role='" + role + '\'' +
-                ", zone='" + zone + '\'' +
-                ", telephone='" + telephone + '\'' +
-                ", actif=" + actif +
-                '}';
+        return (prenom != null ? prenom + " " : "") + nom + " (" + role + ")";
     }
 }

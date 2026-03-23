@@ -3,33 +3,49 @@ package com.smartcity.service;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.utils.DatabaseConnection;
 
+import org.mindrot.jbcrypt.BCrypt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Service pour la gestion des utilisateurs.
- * Les mots de passe sont conserves en clair selon le besoin du projet.
+ * Les mots de passe sont maintenant hashés avec BCrypt.
  */
 public class UtilisateurService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UtilisateurService.class);
 
     private Connection getConn() {
         return DatabaseConnection.getConnection();
     }
 
     public boolean inscription(Utilisateur utilisateur) {
-        String query = "INSERT INTO Utilisateur (nom, email, motPasse, role, zone, telephone) VALUES (?, ?, ?, ?, ?, ?)";
+        String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
+        String query = "INSERT INTO Utilisateur (prenom, nom, email, motDePasse, role, age, localite, photoProfil, idZone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
-            pstmt.setString(1, utilisateur.getNom());
-            pstmt.setString(2, utilisateur.getEmail());
-            pstmt.setString(3, utilisateur.getMotPasse());
-            pstmt.setString(4, utilisateur.getRole());
-            pstmt.setString(5, utilisateur.getZone());
-            pstmt.setString(6, utilisateur.getTelephone());
-            return pstmt.executeUpdate() > 0;
+            pstmt.setString(1, utilisateur.getPrenom());
+            pstmt.setString(2, utilisateur.getNom());
+            pstmt.setString(3, utilisateur.getEmail());
+            pstmt.setString(4, hashedPassword);
+            pstmt.setString(5, utilisateur.getRole());
+            pstmt.setInt(6, utilisateur.getAge());
+            pstmt.setString(7, utilisateur.getLocalite());
+            pstmt.setString(8, utilisateur.getPhotoProfil());
+            pstmt.setInt(9, utilisateur.getIdZone());
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                logger.info("Inscription réussie pour l'utilisateur: {}", utilisateur.getEmail());
+                return true;
+            } else {
+                return false;
+            }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'inscription: " + e.getMessage());
+            logger.error("Erreur lors de l'inscription pour {}: {}", utilisateur.getEmail(), e.getMessage());
             return false;
         }
     }
@@ -40,11 +56,25 @@ public class UtilisateurService {
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, email);
             ResultSet rs = pstmt.executeQuery();
-            if (rs.next() && motPasse.equals(rs.getString("motPasse"))) {
-                return mapResultSetToUtilisateur(rs);
+            if (rs.next()) {
+                String storedPassword = rs.getString("motDePasse");
+                boolean passwordMatches;
+                if (storedPassword.startsWith("$")) {
+                    // Hashed password
+                    passwordMatches = BCrypt.checkpw(motPasse, storedPassword);
+                } else {
+                    // Plain password (legacy)
+                    passwordMatches = motPasse.equals(storedPassword);
+                }
+                if (passwordMatches) {
+                    logger.info("Connexion réussie pour: {}", email);
+                    return mapResultSetToUtilisateur(rs);
+                } else {
+                    logger.warn("Tentative de connexion échouée pour: {}", email);
+                }
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la connexion: " + e.getMessage());
+            logger.error("Erreur lors de la connexion pour {}: {}", email, e.getMessage());
         }
         return null;
     }
@@ -57,7 +87,6 @@ public class UtilisateurService {
             ResultSet rs = pstmt.executeQuery();
             return rs.next() && rs.getInt(1) > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la verification email: " + e.getMessage());
             return false;
         }
     }
@@ -71,7 +100,6 @@ public class UtilisateurService {
                 utilisateurs.add(mapResultSetToUtilisateur(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la recuperation des utilisateurs: " + e.getMessage());
         }
         return utilisateurs;
     }
@@ -87,7 +115,6 @@ public class UtilisateurService {
                 utilisateurs.add(mapResultSetToUtilisateur(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la recuperation des utilisateurs: " + e.getMessage());
         }
         return utilisateurs;
     }
@@ -102,42 +129,47 @@ public class UtilisateurService {
                 return mapResultSetToUtilisateur(rs);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la recuperation: " + e.getMessage());
         }
         return null;
     }
 
     public boolean updateUtilisateur(Utilisateur utilisateur) {
-        String query = "UPDATE Utilisateur SET nom = ?, email = ?, zone = ?, telephone = ? WHERE idUser = ? AND actif = 1";
+        String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? WHERE idUser = ? AND actif = 1";
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
-            pstmt.setString(1, utilisateur.getNom());
-            pstmt.setString(2, utilisateur.getEmail());
-            pstmt.setString(3, utilisateur.getZone());
-            pstmt.setString(4, utilisateur.getTelephone());
-            pstmt.setInt(5, utilisateur.getIdUser());
+            pstmt.setString(1, utilisateur.getPrenom());
+            pstmt.setString(2, utilisateur.getNom());
+            pstmt.setString(3, utilisateur.getEmail());
+            pstmt.setInt(4, utilisateur.getAge());
+            pstmt.setString(5, utilisateur.getLocalite());
+            pstmt.setString(6, utilisateur.getPhotoProfil());
+            pstmt.setInt(7, utilisateur.getIdZone());
+            pstmt.setInt(8, utilisateur.getIdUser());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise a jour: " + e.getMessage());
+            logger.error("Erreur lors de la mise a jour: {}", e.getMessage());
             return false;
         }
     }
 
     public boolean updateUtilisateurAdmin(Utilisateur utilisateur) {
-        String query = "UPDATE Utilisateur SET nom = ?, email = ?, motPasse = ?, role = ?, zone = ?, telephone = ? " +
+        String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
+        String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, motDePasse = ?, role = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? " +
                 "WHERE idUser = ? AND actif = 1";
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
-            pstmt.setString(1, utilisateur.getNom());
-            pstmt.setString(2, utilisateur.getEmail());
-            pstmt.setString(3, utilisateur.getMotPasse());
-            pstmt.setString(4, utilisateur.getRole());
-            pstmt.setString(5, utilisateur.getZone());
-            pstmt.setString(6, utilisateur.getTelephone());
-            pstmt.setInt(7, utilisateur.getIdUser());
+            pstmt.setString(1, utilisateur.getPrenom());
+            pstmt.setString(2, utilisateur.getNom());
+            pstmt.setString(3, utilisateur.getEmail());
+            pstmt.setString(4, hashedPassword);
+            pstmt.setString(5, utilisateur.getRole());
+            pstmt.setInt(6, utilisateur.getAge());
+            pstmt.setString(7, utilisateur.getLocalite());
+            pstmt.setString(8, utilisateur.getPhotoProfil());
+            pstmt.setInt(9, utilisateur.getIdZone());
+            pstmt.setInt(10, utilisateur.getIdUser());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise a jour admin: " + e.getMessage());
             return false;
         }
     }
@@ -149,7 +181,6 @@ public class UtilisateurService {
             pstmt.setInt(1, idUser);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la desactivation: " + e.getMessage());
             return false;
         }
     }
@@ -161,7 +192,6 @@ public class UtilisateurService {
              ResultSet rs = pstmt.executeQuery()) {
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors du comptage utilisateurs: " + e.getMessage());
             return 0;
         }
     }
@@ -169,23 +199,16 @@ public class UtilisateurService {
     private Utilisateur mapResultSetToUtilisateur(ResultSet rs) throws SQLException {
         Utilisateur u = new Utilisateur();
         u.setIdUser(rs.getInt("idUser"));
+        u.setPrenom(rs.getString("prenom"));
         u.setNom(rs.getString("nom"));
         u.setEmail(rs.getString("email"));
-        u.setMotPasse(rs.getString("motPasse"));
+        u.setMotDePasse(rs.getString("motDePasse"));
         u.setRole(rs.getString("role"));
-        u.setZone(rs.getString("zone"));
-
-        try {
-            u.setTelephone(rs.getString("telephone"));
-        } catch (SQLException e) {
-            u.setTelephone(null);
-        }
-
-        try {
-            u.setActif(rs.getInt("actif") == 1);
-        } catch (SQLException e) {
-            u.setActif(true);
-        }
+        u.setAge(rs.getInt("age"));
+        u.setLocalite(rs.getString("localite"));
+        u.setPhotoProfil(rs.getString("photoProfil"));
+        u.setIdZone(rs.getInt("idZone"));
+        u.setActif(rs.getInt("actif") == 1);
 
         try {
             Timestamp ts = rs.getTimestamp("dateInscription");

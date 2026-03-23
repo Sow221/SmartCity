@@ -257,53 +257,97 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);
 }
 
+/* Dark Mode Styles */
 .app-root.dark-mode {
-    -fx-background-color: #121212;
+    -fx-background-color: linear-gradient(to bottom right, #1a1a1a, #2d2d2d);
 }
 
-.app-root.dark-mode .page-box {
-    -fx-background-color: #1E1E1E;
+.app-root.dark-mode .header {
+    -fx-background-color: #0d4a1f;
 }
 
-.app-root.dark-mode .card,
-.app-root.dark-mode .card-agent,
-.app-root.dark-mode .card-premium {
-    -fx-background-color: #1E1E1E;
-}
-
-.app-root.dark-mode .card-number,
-.app-root.dark-mode .card-number-agent {
-    -fx-text-fill: #00E676;
-}
-
-.app-root.dark-mode .card-label,
-.app-root.dark-mode .page-title,
-.app-root.dark-mode .page-title-agent,
-.app-root.dark-mode .label {
-    -fx-text-fill: #E0E0E0;
-}
-
-.app-root.dark-mode .header,
 .app-root.dark-mode .header-agent {
-    -fx-background-color: #1f1f1f;
+    -fx-background-color: #0d47a1;
 }
 
-.app-root.dark-mode .sidebar,
-.app-root.dark-mode .sidebar-agent {
-    -fx-background-color: #161616;
+.app-root.dark-mode .header-title,
+.app-root.dark-mode .header-user {
+    -fx-text-fill: #e0e0e0;
 }
 
-.app-root.dark-mode .sidebar-button:hover,
-.app-root.dark-mode .sidebar-button-active,
-.app-root.dark-mode .sidebar-agent-button:hover,
-.app-root.dark-mode .sidebar-agent-button-active {
+.app-root.dark-mode .logout-button {
+    -fx-background-color: #c62828;
+}
+
+.app-root.dark-mode .logout-button:hover {
+    -fx-background-color: #b71c1c;
+}
+
+.app-root.dark-mode .theme-toggle-button {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-text-fill: #e0e0e0;
+}
+
+.app-root.dark-mode .sidebar {
     -fx-background-color: #2b2b2b;
+    -fx-border-color: #404040;
+}
+
+.app-root.dark-mode .sidebar-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e0e0e0;
+}
+
+.app-root.dark-mode .sidebar-button:hover {
+    -fx-background-color: #404040;
+}
+
+.app-root.dark-mode .sidebar-button.selected {
+    -fx-background-color: #1b5e20;
+}
+
+.app-root.dark-mode .content-area {
+    -fx-background-color: #1e1e1e;
+}
+
+.app-root.dark-mode .card {
+    -fx-background-color: #2b2b2b;
+    -fx-border-color: #404040;
+}
+
+.app-root.dark-mode .card-title {
+    -fx-text-fill: #e0e0e0;
+}
+
+.app-root.dark-mode .card-value {
+    -fx-text-fill: #ffffff;
+}
+
+.app-root.dark-mode .form-label {
+    -fx-text-fill: #e0e0e0;
+}
+
+.app-root.dark-mode .text-field,
+.app-root.dark-mode .combo-box,
+.app-root.dark-mode .text-area {
+    -fx-background-color: #3a3a3a;
+    -fx-text-fill: #e0e0e0;
+    -fx-border-color: #555555;
+}
+
+.app-root.dark-mode .button {
+    -fx-background-color: #4a4a4a;
+    -fx-text-fill: #e0e0e0;
+}
+
+.app-root.dark-mode .button:hover {
+    -fx-background-color: #5a5a5a;
 }
 
 .app-root.dark-mode .data-table,
 .app-root.dark-mode .data-table-agent {
     -fx-background-color: #1e1e1e;
-    -fx-border-color: #2f2f2f;
+    -fx-border-color: #404040;
     -fx-text-fill: #e0e0e0;
 }
 
@@ -319,4 +363,89 @@
 .app-root.dark-mode .column-header-background,
 .app-root.dark-mode .column-header {
     -fx-background-color: #252525;
+    -fx-text-fill: #e0e0e0;
+}
+
+/* Responsive Design */
+@media (max-width: 800px) {
+    .app-root {
+        -fx-font-size: 12px;
+    }
+    .header {
+        -fx-pref-height: 50px;
+    }
+    .sidebar {
+        -fx-pref-width: 150px;
+    }
+}
+
+@media (max-width: 600px) {
+    .sidebar {
+        -fx-pref-width: 120px;
+    }
+    .content-area {
+        -fx-padding: 10px;
+    }
+}
+
+/* Boutons d'actions rapides */
+.action-rapid-btn {
+    -fx-background-color: linear-gradient(to bottom, #2196F3, #1976D2);
+    -fx-text-fill: white;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.3), 4, 0, 0, 2);
+}
+
+.action-rapid-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #1E88E5, #1565C0);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.action-rapid-btn:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1565C0, #0D47A1);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Animations pour boutons de mission */
+.btn-mission-start {
+    -fx-background-color: linear-gradient(to bottom, #2196F3, #1976D2);
+    -fx-text-fill: white;
+    -fx-background-radius: 6px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.4), 3, 0, 0, 1);
+}
+
+.btn-mission-done {
+    -fx-background-color: linear-gradient(to bottom, #4CAF50, #388E3C);
+    -fx-text-fill: white;
+    -fx-background-radius: 6px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(76, 175, 80, 0.4), 3, 0, 0, 1);
+}
+
+.btn-mission-start:hover, .btn-mission-done:hover {
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0, 0, 2);
+}
+
+.btn-modern {
+    -fx-cursor: hand;
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+    -fx-font-size: 11px;
+}
+
+.success-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-background-radius: 6px;
+    -fx-font-weight: bold;
 }

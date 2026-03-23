@@ -19,7 +19,7 @@
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.smartcity.controller.AgentDashboardController"
             prefWidth="1100" prefHeight="650"
-            stylesheets="@../css/dashboard.css"
+            stylesheets="@../css/design-system.css"
             styleClass="app-root">
 
     <top>
@@ -50,6 +50,18 @@
             <padding>
                 <Insets top="15" right="15" bottom="15" left="15"/>
             </padding>
+            
+            <!-- Barre d'actions rapides -->
+            <HBox spacing="10" alignment="CENTER_LEFT" styleClass="quick-actions-bar">
+                <Label text="🎯 Actions Rapides:" styleClass="quick-actions-label"/>
+                <Button fx:id="btnActionDemarrerProchaine" text="🚀 Démarrer Prochaine" styleClass="action-rapid-btn" onAction="#handleDemarrerProchaineMission"/>
+                <Button fx:id="btnActionVoirEnCours" text="⏳ Voir En Cours" styleClass="action-rapid-btn" onAction="#handleVoirMissionsEnCours"/>
+                <Button fx:id="btnActionItineraireRapide" text="🗺️ Itinéraire Optimal" styleClass="action-rapid-btn" onAction="#handleItineraireRapide"/>
+                <Button fx:id="btnActionActualiser" text="🔄 Actualiser" styleClass="action-rapid-btn" onAction="#chargerDonnees"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lblMissionsCount" text="0 missions actives" styleClass="text-muted, text-sm"/>
+            </HBox>
+            
             <Label fx:id="agentMessageLabel" text="" styleClass="floating-message"/>
 
             <StackPane VBox.vgrow="ALWAYS">
@@ -97,7 +109,8 @@
                             <TableColumn fx:id="colMissionType" text="Type dechet" prefWidth="120"/>
                             <TableColumn fx:id="colMissionDate" text="Date" prefWidth="150"/>
                             <TableColumn fx:id="colMissionStatut" text="Statut" prefWidth="110"/>
-                            <TableColumn fx:id="colMissionAction" text="Action" prefWidth="300"/>
+                            <TableColumn fx:id="colMissionDistance" text="🗺️ GPS" prefWidth="120"/>
+                            <TableColumn fx:id="colMissionAction" text="Action" prefWidth="280"/>
                         </columns>
                     </TableView>
                 </VBox>
@@ -109,18 +122,24 @@
                             <WebView fx:id="mapWebView" prefWidth="700"/>
                         </center>
                         <right>
-                            <VBox spacing="10" prefWidth="250" style="-fx-background-color: #F5F7FA; -fx-padding: 15;">
-                                <Label text="Details mission" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-                                <Label text="ID:"/>
+                            <VBox spacing="10" prefWidth="250" styleClass="page-box" style="-fx-padding: 15;">
+                                <Label text="Details mission" styleClass="text-lg, text-bold"/>
+                                <Label text="ID:" styleClass="form-label"/>
                                 <Label fx:id="mapMissionIdLabel" text="-"/>
-                                <Label text="Zone:"/>
+                                <Label text="Zone:" styleClass="form-label"/>
                                 <Label fx:id="mapMissionZoneLabel" text="-"/>
-                                <Label text="Adresse:"/>
+                                <Label text="Adresse:" styleClass="form-label"/>
                                 <Label fx:id="mapMissionAdresseLabel" text="-" wrapText="true"/>
-                                <Label text="Statut:"/>
+                                <Label text="Statut:" styleClass="form-label"/>
                                 <Label fx:id="mapMissionStatutLabel" text="-"/>
+                                <Label text="📏 Distance:" styleClass="form-label"/>
+                                <Label fx:id="mapDistanceLabel" text="-"/>
+                                <Label text="⏱️ Temps estimé:" styleClass="form-label"/>
+                                <Label fx:id="mapTempsLabel" text="-"/>
+                                <Label text="📍 Position actuelle:" styleClass="form-label"/>
+                                <Label fx:id="lblPositionActuelle" text="🔄 GPS en cours..." wrapText="true" styleClass="text-sm"/>
                                 <Region VBox.vgrow="ALWAYS"/>
-                                <Button text="Itineraire optimal" prefWidth="200" prefHeight="40" onAction="#handleItineraireOptimal" styleClass="button-agent"/>
+                                <Button text="Itineraire optimal" prefWidth="200" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent"/>
                             </VBox>
                         </right>
                     </BorderPane>

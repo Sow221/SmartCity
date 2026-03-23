@@ -10,21 +10,26 @@ public class Signalement {
     private int idSignalement;
     private String description;
     private String categorie;
-    private String zone;
+    private int idZone;
+    private double latitude;
+    private double longitude;
     private LocalDateTime dateSignalement;
     private String statut;
     private String photo;
     private int idUser;
+    private String zoneNom;
     private String utilisateurNom;
 
     public Signalement() {
     }
 
-    public Signalement(String description, String categorie, String zone,
+    public Signalement(String description, String categorie, int idZone, double latitude, double longitude,
             LocalDateTime dateSignalement, String statut, String photo, int idUser) {
         this.description = description;
         this.categorie = categorie;
-        this.zone = zone;
+        this.idZone = idZone;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.dateSignalement = dateSignalement;
         this.statut = statut;
         this.photo = photo;
@@ -55,12 +60,28 @@ public class Signalement {
         this.categorie = categorie;
     }
 
-    public String getZone() {
-        return zone;
+    public int getIdZone() {
+        return idZone;
     }
 
-    public void setZone(String zone) {
-        this.zone = zone;
+    public void setIdZone(int idZone) {
+        this.idZone = idZone;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
     }
 
     public LocalDateTime getDateSignalement() {
@@ -95,6 +116,14 @@ public class Signalement {
         this.idUser = idUser;
     }
 
+    public String getZoneNom() {
+        return zoneNom;
+    }
+
+    public void setZoneNom(String zoneNom) {
+        this.zoneNom = zoneNom;
+    }
+
     public String getUtilisateurNom() {
         return utilisateurNom;
     }
@@ -109,10 +138,9 @@ public class Signalement {
                 "idSignalement=" + idSignalement +
                 ", description='" + description + '\'' +
                 ", categorie='" + categorie + '\'' +
-                ", zone='" + zone + '\'' +
-                ", dateSignalement=" + dateSignalement +
                 ", statut='" + statut + '\'' +
-                ", idUser=" + idUser +
+                ", zoneNom='" + zoneNom + '\'' +
+                ", utilisateurNom='" + utilisateurNom + '\'' +
                 '}';
     }
 }

@@ -19,17 +19,19 @@ public class SignalementService {
     }
 
     public boolean ajouterSignalement(Signalement signalement) {
-        String query = "INSERT INTO Signalement (description, categorie, zone, dateSignalement, statut, photo, idUser) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO Signalement (description, categorie, idZone, latitude, longitude, dateSignalement, statut, photo, idUser) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
-            pstmt.setString(3, signalement.getZone());
-            pstmt.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
-            pstmt.setString(5, "En attente");
-            pstmt.setString(6, signalement.getPhoto());
-            pstmt.setInt(7, signalement.getIdUser());
+            pstmt.setInt(3, signalement.getIdZone());
+            pstmt.setDouble(4, signalement.getLatitude());
+            pstmt.setDouble(5, signalement.getLongitude());
+            pstmt.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setString(7, "En attente");
+            pstmt.setString(8, signalement.getPhoto());
+            pstmt.setInt(9, signalement.getIdUser());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Erreur lors de l'ajout du signalement: " + e.getMessage());
@@ -38,43 +40,48 @@ public class SignalementService {
     }
 
     public List<Signalement> getAllSignalements() {
-        String query = "SELECT s.*, u.nom AS utilisateurNom FROM Signalement s "
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s "
                 + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
                 + "ORDER BY s.dateSignalement DESC";
         return executeSignalementQuery(query);
     }
 
-    public List<Signalement> getSignalementsByZone(String zone) {
-        String query = "SELECT s.*, u.nom AS utilisateurNom FROM Signalement s "
+    public List<Signalement> getSignalementsByZone(int idZone) {
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s "
                 + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
-                + "WHERE s.zone = ? ORDER BY s.dateSignalement DESC";
-        return executeSignalementQuery(query, zone);
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
+                + "WHERE s.idZone = ? ORDER BY s.dateSignalement DESC";
+        return executeSignalementQuery(query, idZone);
     }
 
     public List<Signalement> getSignalementsByUtilisateur(int idUser) {
-        String query = "SELECT s.*, u.nom AS utilisateurNom FROM Signalement s "
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s "
                 + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
                 + "WHERE s.idUser = ? ORDER BY s.dateSignalement DESC";
         return executeSignalementQuery(query, idUser);
     }
 
-    public List<Signalement> getSignalementsByZoneAndDate(String zone, LocalDate date) {
-        String query = "SELECT s.*, u.nom AS utilisateurNom FROM Signalement s "
+    public List<Signalement> getSignalementsByZoneAndDate(int idZone, LocalDate date) {
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s "
                 + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
-                + "WHERE s.zone = ? AND DATE(s.dateSignalement) = ? "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
+                + "WHERE s.idZone = ? AND DATE(s.dateSignalement) = ? "
                 + "ORDER BY s.dateSignalement DESC";
-        return executeSignalementQuery(query, zone, Date.valueOf(date));
+        return executeSignalementQuery(query, idZone, Date.valueOf(date));
     }
 
-    public List<Signalement> getSignalementsFiltres(String zone, String statut, String categorie) {
+    public List<Signalement> getSignalementsFiltres(String zoneNom, String statut, String categorie) {
         StringBuilder query = new StringBuilder(
-                "SELECT s.*, u.nom AS utilisateurNom FROM Signalement s " +
-                        "LEFT JOIN Utilisateur u ON s.idUser = u.idUser WHERE 1=1");
+                "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s " +
+                        "LEFT JOIN Utilisateur u ON s.idUser = u.idUser " +
+                        "LEFT JOIN Zone z ON s.idZone = z.idZone WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
-        if (zone != null && !zone.isBlank()) {
-            query.append(" AND s.zone = ?");
-            params.add(zone);
+        if (zoneNom != null && !zoneNom.isBlank()) {
+            query.append(" AND z.nomZone = ?");
+            params.add(zoneNom);
         }
         if (statut != null && !statut.isBlank()) {
             query.append(" AND s.statut = ?");
@@ -122,8 +129,9 @@ public class SignalementService {
         return countSimple("SELECT COUNT(*) FROM Signalement WHERE statut = ?", statut);
     }
 
-    public int countByZone(String zone) {
-        return countSimple("SELECT COUNT(*) FROM Signalement WHERE zone = ?", zone);
+    public int countByZone(String zoneNom) {
+        String query = "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone WHERE z.nomZone = ?";
+        return countSimple(query, zoneNom);
     }
 
     public int countByUtilisateur(int idUser) {
@@ -137,7 +145,7 @@ public class SignalementService {
     public int countTraitesByAgent(int idAgent) {
         String query = "SELECT COUNT(*) FROM Affectation a "
                 + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-                + "WHERE a.idAgent = ? AND s.statut = 'Collecte'";
+                + "WHERE a.idAgent = ? AND s.statut = 'Terminé'";
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idAgent);
@@ -146,7 +154,7 @@ public class SignalementService {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            return countSimple("SELECT COUNT(*) FROM Signalement WHERE zone = (SELECT zone FROM Utilisateur WHERE idUser = ?) AND statut = 'Collecte'", idAgent);
+            return countSimple("SELECT COUNT(*) FROM Signalement WHERE idZone = (SELECT idZone FROM Utilisateur WHERE idUser = ?) AND statut = 'Terminé'", idAgent);
         }
         return 0;
     }
@@ -188,7 +196,9 @@ public class SignalementService {
         signalement.setIdSignalement(rs.getInt("idSignalement"));
         signalement.setDescription(rs.getString("description"));
         signalement.setCategorie(rs.getString("categorie"));
-        signalement.setZone(rs.getString("zone"));
+        signalement.setIdZone(rs.getInt("idZone"));
+        signalement.setLatitude(rs.getDouble("latitude"));
+        signalement.setLongitude(rs.getDouble("longitude"));
         signalement.setStatut(rs.getString("statut"));
         signalement.setPhoto(rs.getString("photo"));
 
@@ -203,6 +213,13 @@ public class SignalementService {
             signalement.setUtilisateurNom(utilisateurNom != null ? utilisateurNom : "Utilisateur #" + signalement.getIdUser());
         } catch (SQLException e) {
             signalement.setUtilisateurNom("Utilisateur #" + signalement.getIdUser());
+        }
+
+        try {
+            String zoneNom = rs.getString("zoneNom");
+            signalement.setZoneNom(zoneNom != null ? zoneNom : "Zone #" + signalement.getIdZone());
+        } catch (SQLException e) {
+            signalement.setZoneNom("Zone #" + signalement.getIdZone());
         }
 
         return signalement;

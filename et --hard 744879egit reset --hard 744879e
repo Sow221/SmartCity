@@ -1,0 +1,20 @@
+[33m3898533[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Config locale: revenir sur db_smartcity
+[33m01c1ce0[m Align DB name to smartcity + add seed_users.sql + fix zones insert
+[33m81f2303[m Fix inscription: align controller with new user schema
+[33m1231979[m Restore previous register UI layout
+[33m02ec2a1[m Restore previous login UI (keep DB integration)
+[33m6a440c0[m Merge branch 'elmor' into main (align schema Zone + GPS)
+[33mdb4ae57[m -----------
+[33mc9faf9d[m[33m ([m[1;31morigin/elmor[m[33m, [m[1;32melmor[m[33m)[m Correction des bugs
+[33mba4a320[m Adaptability of the backend to the database
+[33m8a04e3c[m ---------
+[33m15db364[m --------------
+[33m4abddf5[m -----------------
+[33m744879e[m fixing the configuration....
+[33m8575682[m ntroduce EcoSmart Urban design system
+[33md40c36d[m authentification sans hash - personnalisation des dahsboard avec isdebar - statistiques - mise en forme
+[33m56d7ede[m Finalisation BD et interface login avec données test
+[33m6bbaad3[m Ajout des packages controller, model, service, utils
+[33me00ecde[m Creation du projet, Structure complète du projet (MAVEN)
+[33m06c54f9[m Initialisation de la structure Maven du projet SmartCity
+[33m4dd8580[m Initial commit

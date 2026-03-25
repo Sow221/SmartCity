@@ -40,7 +40,7 @@ public class AgentDashboardController {
     @FXML private Label agentMessageLabel;
     @FXML private Button themeToggleButton;
 
-        @FXML private Button btnAgentDashboard;
+@FXML private Button btnAgentDashboard;
     @FXML private Button btnMesMissions;
     @FXML private Button btnCarteZones;
     @FXML private Button btnHistorique;

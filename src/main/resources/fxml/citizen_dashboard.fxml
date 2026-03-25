@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane" xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.smartcity.controller.CitizenDashboardController"
+            prefWidth="1000" prefHeight="600"
+            stylesheets="@../css/dashboard.css"
+            styleClass="app-root">
+
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="header">
+            <Label text="Espace Citoyen" styleClass="header-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="citizenNameLabel" styleClass="header-user" text="Citoyen"/>
+            <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
+            <Button text="Deconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
+        </HBox>
+    </top>
+
+    <left>
+        <VBox spacing="10" prefWidth="200" styleClass="sidebar">
+            <padding>
+                <Insets top="15" right="10" bottom="15" left="10"/>
+            </padding>
+            <Button fx:id="btnCitizenDashboard" text="Tableau de bord" styleClass="sidebar-button" onAction="#handleShowCitizenDashboard"/>
+            <Button fx:id="btnAjouterSignalement" text="Ajouter signalement" styleClass="sidebar-button" onAction="#handleShowAjouterSignalement"/>
+            <Button fx:id="btnMesSignalements" text="Mes signalements" styleClass="sidebar-button" onAction="#handleShowMesSignalements"/>
+            <Button fx:id="btnMonProfil" text="Mon profil" styleClass="sidebar-button" onAction="#handleShowMonProfil"/>
+        </VBox>
+    </left>
+
+    <center>
+        <VBox spacing="10" styleClass="content-root">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+            <Label fx:id="citizenMessageLabel" text="" styleClass="floating-message"/>
+
+            <StackPane VBox.vgrow="ALWAYS">
+                <VBox fx:id="pageCitizenDashboard" spacing="20" styleClass="page-box">
+                    <Label text="Vue Generale" styleClass="page-title"/>
+                    <HBox spacing="15">
+                        <VBox styleClass="card" prefWidth="180" prefHeight="100">
+                            <Label fx:id="citizenCardTotal" text="0" styleClass="card-number"/>
+                            <Label text="Total signalements" styleClass="card-label"/>
+                        </VBox>
+                        <VBox styleClass="card" prefWidth="180" prefHeight="100">
+                            <Label fx:id="citizenCardAttente" text="0" styleClass="card-number"/>
+                            <Label text="En attente" styleClass="card-label"/>
+                        </VBox>
+                        <VBox styleClass="card" prefWidth="180" prefHeight="100">
+                            <Label fx:id="citizenCardEnCours" text="0" styleClass="card-number"/>
+                            <Label text="En cours" styleClass="card-label"/>
+                        </VBox>
+                        <VBox styleClass="card" prefWidth="180" prefHeight="100">
+                            <Label fx:id="citizenCardCollectes" text="0" styleClass="card-number"/>
+                            <Label text="Collectes" styleClass="card-label"/>
+                        </VBox>
+                    </HBox>
+                    <PieChart fx:id="citizenPieChart" prefWidth="450" prefHeight="300"/>
+                </VBox>
+
+                <VBox fx:id="pageAjouterSignalement" spacing="15" styleClass="page-box" visible="false" managed="false" alignment="TOP_CENTER">
+                    <Label text="Nouveau Signalement" styleClass="page-title"/>
+                    <GridPane hgap="12" vgap="12" maxWidth="600">
+                        <Label text="Description" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextArea fx:id="descriptionSignalementArea" prefWidth="400" prefHeight="120" wrapText="true" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Categorie" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="categorieSignalementCombo" prefWidth="300" prefHeight="35" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Zone" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="zoneSignalementCombo" prefWidth="300" prefHeight="35" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                        <Label text="Photo" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <HBox spacing="10" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                            <TextField fx:id="photoSignalementField" prefWidth="300"/>
+                            <Button text="Ajouter photo" prefWidth="150" prefHeight="35" onAction="#handleChoisirPhoto" styleClass="secondary-button"/>
+                        </HBox>
+                    </GridPane>
+
+                    <HBox spacing="12" alignment="CENTER">
+                        <Button text="Enregistrer" prefWidth="200" prefHeight="40" onAction="#handleEnregistrerSignalement" styleClass="action-button"/>
+                        <Button text="Annuler" prefWidth="140" prefHeight="40" onAction="#handleAnnulerSignalement" styleClass="secondary-button"/>
+                    </HBox>
+                </VBox>
+
+                <VBox fx:id="pageMesSignalements" spacing="15" styleClass="page-box" visible="false" managed="false">
+                    <Label text="Mes Signalements" styleClass="page-title"/>
+                    <TableView fx:id="tableMesSignalements" prefHeight="420" VBox.vgrow="ALWAYS" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="colMesId" text="ID" prefWidth="80"/>
+                            <TableColumn fx:id="colMesDescription" text="Description" prefWidth="250"/>
+                            <TableColumn fx:id="colMesCategorie" text="Categorie" prefWidth="140"/>
+                            <TableColumn fx:id="colMesZone" text="Zone" prefWidth="130"/>
+                            <TableColumn fx:id="colMesDate" text="Date" prefWidth="170"/>
+                            <TableColumn fx:id="colMesStatut" text="Statut" prefWidth="140"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <VBox fx:id="pageMonProfil" spacing="15" styleClass="page-box" visible="false" managed="false" alignment="TOP_CENTER">
+                    <Label text="Mon Profil" styleClass="page-title"/>
+                    <GridPane hgap="12" vgap="12" maxWidth="520">
+                        <Label text="Nom" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="profilNomField" prefWidth="300" prefHeight="35" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Email" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="profilEmailField" prefWidth="300" prefHeight="35" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Zone" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="profilZoneCombo" prefWidth="300" prefHeight="35" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                        <Label text="Telephone" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="profilTelephoneField" prefWidth="300" prefHeight="35" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    </GridPane>
+
+                    <HBox spacing="12" alignment="CENTER">
+                        <Button text="Modifier" prefWidth="150" prefHeight="40" onAction="#handleModifierProfil" styleClass="action-button"/>
+                        <Button text="Supprimer" prefWidth="150" prefHeight="40" onAction="#handleSupprimerCompte" styleClass="danger-button"/>
+                    </HBox>
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+
+</BorderPane>
+
+

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.smartcity.controller.RegisterController"
+            prefWidth="800" prefHeight="700"
+            style="-fx-background-color: #f0fdf4;">
+
+    <center>
+        <StackPane BorderPane.alignment="CENTER">
+            <VBox alignment="CENTER" spacing="20">
+
+                <!-- Titre avec logo -->
+                <Label text="🏙️ SMARTCITY"
+                       style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #1f2937;">
+                    <font>
+                        <Font name="Segoe UI Bold" size="28"/>
+                    </font>
+                </Label>
+
+                <!-- Sous-titre -->
+                <Label text="Créer un compte"
+                       style="-fx-font-size: 20; -fx-text-fill: #4b5563;">
+                    <font>
+                        <Font name="Segoe UI" size="20"/>
+                    </font>
+                </Label>
+
+                <!-- Carte flottante blanche -->
+                <StackPane style="-fx-background-color: #ffffff; -fx-background-radius: 24; -fx-padding: 40; -fx-max-width: 400;">
+                    <effect>
+                        <DropShadow color="rgba(0,0,0,0.1)" radius="20" blurType="GAUSSIAN"/>
+                    </effect>
+
+                    <VBox alignment="CENTER" spacing="12">
+
+                        <!-- Nom Label -->
+                        <Label text="Nom complet"
+                               style="-fx-font-size: 14; -fx-text-fill: #4b5563;">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Label>
+
+                        <!-- Nom Field -->
+                        <TextField fx:id="nomField"
+                                   promptText="Votre nom complet"
+                                   prefWidth="320"
+                                   prefHeight="48"
+                                   style="-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #e5e7eb; -fx-border-width: 1; -fx-font-size: 15; -fx-font-family: 'Segoe UI'; -fx-padding: 0 15 0 15;">
+                            <font>
+                                <Font name="Segoe UI" size="15"/>
+                            </font>
+                        </TextField>
+
+                        <!-- Email Label -->
+                        <Label text="Email"
+                               style="-fx-font-size: 14; -fx-text-fill: #4b5563;">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Label>
+
+                        <!-- Email Field -->
+                        <TextField fx:id="emailField"
+                                   promptText="exemple@email.com"
+                                   prefWidth="320"
+                                   prefHeight="48"
+                                   style="-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #e5e7eb; -fx-border-width: 1; -fx-font-size: 15; -fx-font-family: 'Segoe UI'; -fx-padding: 0 15 0 15;">
+                            <font>
+                                <Font name="Segoe UI" size="15"/>
+                            </font>
+                        </TextField>
+
+                        <!-- Zone Label -->
+                        <Label text="Zone"
+                               style="-fx-font-size: 14; -fx-text-fill: #4b5563;">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Label>
+
+                        <!-- Zone ComboBox -->
+                        <ComboBox fx:id="zoneCombo"
+                                  prefWidth="320"
+                                  prefHeight="48"
+                                  style="-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #e5e7eb; -fx-border-width: 1; -fx-font-size: 15; -fx-font-family: 'Segoe UI';">
+                            <font>
+                                <Font name="Segoe UI" size="15"/>
+                            </font>
+                        </ComboBox>
+
+                        <!-- Mot de passe Label -->
+                        <Label text="Mot de passe"
+                               style="-fx-font-size: 14; -fx-text-fill: #4b5563;">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Label>
+
+                        <!-- Mot de passe Field -->
+                        <PasswordField fx:id="motPasseField"
+                                       promptText=" Minimum 6 caractères"
+                                       prefWidth="320"
+                                       prefHeight="48"
+                                       style="-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #e5e7eb; -fx-border-width: 1; -fx-font-size: 15; -fx-font-family: 'Segoe UI'; -fx-padding: 0 15 0 15;">
+                            <font>
+                                <Font name="Segoe UI" size="15"/>
+                            </font>
+                        </PasswordField>
+
+                        <!-- Confirmer mot de passe Label -->
+                        <Label text="Confirmer le mot de passe"
+                               style="-fx-font-size: 14; -fx-text-fill: #4b5563;">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Label>
+
+                        <!-- Confirmer mot de passe Field -->
+                        <PasswordField fx:id="confirmField"
+                                       promptText="Confirmez votre mot de passe"
+                                       prefWidth="320"
+                                       prefHeight="48"
+                                       style="-fx-background-radius: 12; -fx-border-radius: 12; -fx-border-color: #e5e7eb; -fx-border-width: 1; -fx-font-size: 15; -fx-font-family: 'Segoe UI'; -fx-padding: 0 15 0 15;">
+                            <font>
+                                <Font name="Segoe UI" size="15"/>
+                            </font>
+                        </PasswordField>
+
+                        <!-- Espace 16px -->
+                        <StackPane prefHeight="16"/>
+
+                        <!-- Bouton S'inscrire -->
+                        <Button fx:id="inscriptionButton"
+                                text="S'INSCRIRE"
+                                prefWidth="320"
+                                prefHeight="50"
+                                onAction="#handleInscription"
+                                style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;">
+                            <font>
+                                <Font name="Segoe UI Bold" size="16"/>
+                            </font>
+                        </Button>
+
+                        <!-- Lien retour -->
+                        <Hyperlink fx:id="backToLoginLink"
+                                   text="← Retour à la connexion"
+                                   style="-fx-text-fill: #3b82f6; -fx-font-size: 14; -fx-font-family: 'Segoe UI';">
+                            <font>
+                                <Font name="Segoe UI" size="14"/>
+                            </font>
+                        </Hyperlink>
+
+                        <!-- Message de statut -->
+                        <Label fx:id="statusMessageLabel"
+                               text=""
+                               wrapText="true"
+                               maxWidth="320"
+                               style="-fx-font-size: 12; -fx-text-alignment: center;"
+                               visible="false">
+                            <font>
+                                <Font name="Segoe UI" size="12"/>
+                            </font>
+                        </Label>
+
+                    </VBox>
+                </StackPane>
+
+                <!-- Footer -->
+                <Label text="© 2026 SmartCity - Pikine &amp; Guédiawaye"
+                       style="-fx-font-size: 12; -fx-text-fill: #4b5563;">
+                    <font>
+                        <Font name="Segoe UI Light" size="12"/>
+                    </font>
+                </Label>
+
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>
+

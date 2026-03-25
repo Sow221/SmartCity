@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Separator?>
+<BorderPane fx:id="rootPane" xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.smartcity.controller.AdminDashboardController"
+            prefWidth="1200" prefHeight="700"
+            stylesheets="@../css/dashboard.css"
+            styleClass="app-root">
+
+    <!-- Header -->
+    <top>
+        <VBox styleClass="header" BorderPane.alignment="CENTER">
+            <HBox alignment="CENTER_LEFT" spacing="20.0">
+                <padding>
+                    <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+                </padding>
+
+                <Label styleClass="app-title" text="SmartCity - Administration">
+                    <font>
+                        <javafx.scene.text.Font size="18.0" />
+                    </font>
+                </Label>
+
+                <Region HBox.hgrow="ALWAYS" />
+
+                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                    <VBox alignment="CENTER_RIGHT">
+                        <Label fx:id="adminNameLabel" styleClass="user-name" />
+                        <Label text="Administrateur" styleClass="user-role" />
+                    </VBox>
+
+                    <Button fx:id="themeToggleButton" onAction="#handleToggleTheme" styleClass="theme-toggle-button" text="🌓 Mode" />
+                    <Button fx:id="logoutButton" onAction="#handleDeconnexion" styleClass="logout-button" text="Déconnexion" />
+                </HBox>
+            </HBox>
+
+            <Label fx:id="pageTitle" styleClass="page-title" text="Tableau de bord administrateur">
+                <padding>
+                    <Insets left="20.0" bottom="10.0" />
+                </padding>
+            </Label>
+        </VBox>
+    </top>
+
+    <!-- Navigation latérale -->
+    <left>
+        <VBox spacing="5.0" styleClass="navigation-menu" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="20.0" left="15.0" right="15.0" top="20.0" />
+            </padding>
+
+            <Label styleClass="nav-section-title" text="MENU PRINCIPAL" />
+
+            <Button fx:id="btnAdminDashboard" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowAdminDashboard" styleClass="nav-button" text="📊 Dashboard" />
+            <Button fx:id="btnGestionSignalements" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowGestionSignalements" styleClass="nav-button" text="📋 Signalements" />
+
+            <Separator styleClass="nav-separator" />
+
+            <Label styleClass="nav-section-title" text="GESTION" />
+
+            <Button fx:id="btnGestionUtilisateurs" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowGestionUtilisateurs" styleClass="nav-button" text="👥 Utilisateurs" />
+            <Button fx:id="btnGestionAgents" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowGestionAgents" styleClass="nav-button" text="🛠️ Agents" />
+            <Button fx:id="btnGestionZones" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowGestionZones" styleClass="nav-button" text="🗺️ Zones" />
+
+            <Separator styleClass="nav-separator" />
+
+            <Label styleClass="nav-section-title" text="SYSTÈME" />
+
+            <Button fx:id="btnStatistiques" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowStatistiques" styleClass="nav-button" text="📈 Statistiques" />
+            <Button fx:id="btnParametres" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleShowParametres" styleClass="nav-button" text="⚙️ Paramètres" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <Label styleClass="app-version" text="Version 1.0.0" />
+        </VBox>
+    </left>
+
+    <!-- Zone centrale -->
+    <center>
+        <VBox spacing="10.0" styleClass="content-root">
+            <padding>
+                <Insets top="15.0" right="15.0" bottom="15.0" left="15.0" />
+            </padding>
+
+            <Label fx:id="adminMessageLabel" styleClass="floating-message" managed="false" visible="false" wrapText="true" />
+
+            <StackPane VBox.vgrow="ALWAYS">
+                <!-- Page Dashboard -->
+                <VBox fx:id="pageAdminDashboard" spacing="20.0" styleClass="page-box">
+                    <Label styleClass="page-title" text="Vue générale" />
+
+                    <!-- Cartes de statistiques -->
+                    <HBox spacing="15.0">
+                        <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                            <Label styleClass="stat-icon" text="📋" />
+                            <Label styleClass="stat-title" text="Total signalements" />
+                            <Label fx:id="adminCardTotalSignalements" styleClass="stat-value" text="0" />
+                        </VBox>
+
+                        <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                            <Label styleClass="stat-icon" text="⏳" />
+                            <Label styleClass="stat-title" text="En attente" />
+                            <Label fx:id="adminCardEnAttente" styleClass="stat-value" text="0" />
+                        </VBox>
+
+                        <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                            <Label styleClass="stat-icon" text="🔄" />
+                            <Label styleClass="stat-title" text="En cours" />
+                            <Label fx:id="adminCardEnCours" styleClass="stat-value" text="0" />
+                        </VBox>
+
+                        <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                            <Label styleClass="stat-icon" text="✅" />
+                            <Label styleClass="stat-title" text="Collectés" />
+                            <Label fx:id="adminCardCollectes" styleClass="stat-value" text="0" />
+                        </VBox>
+
+                        <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                            <Label styleClass="stat-icon" text="👥" />
+                            <Label styleClass="stat-title" text="Utilisateurs" />
+                            <Label fx:id="adminCardTotalUtilisateurs" styleClass="stat-value" text="0" />
+                        </VBox>
+                    </HBox>
+
+                    <!-- Graphiques -->
+                    <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Signalements par statut" />
+                            <PieChart fx:id="statsPieChart" prefHeight="300.0" styleClass="chart" />
+                        </VBox>
+
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Signalements par zone" />
+                            <BarChart fx:id="statsBarChart" prefHeight="300.0" styleClass="chart">
+                                <xAxis>
+                                    <CategoryAxis label="Zone" />
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis label="Nombre" />
+                                </yAxis>
+                            </BarChart>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Signalements récents -->
+                    <VBox spacing="10.0" VBox.vgrow="ALWAYS">
+                        <Label styleClass="section-title" text="Signalements récents" />
+                        <TableView fx:id="recentSignalementsTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+                            <columns>
+                                <TableColumn fx:id="colRecentId" prefWidth="50" text="ID" />
+                                <TableColumn fx:id="colRecentDescription" prefWidth="250" text="Description" />
+                                <TableColumn fx:id="colRecentCategorie" prefWidth="100" text="Catégorie" />
+                                <TableColumn fx:id="colRecentZone" prefWidth="100" text="Zone" />
+                                <TableColumn fx:id="colRecentStatut" prefWidth="100" text="Statut" />
+                                <TableColumn fx:id="colRecentDate" prefWidth="150" text="Date" />
+                                <TableColumn fx:id="colRecentUtilisateur" prefWidth="150" text="Utilisateur" />
+                            </columns>
+                        </TableView>
+                    </VBox>
+                </VBox>
+
+                <!-- Page Gestion des Signalements -->
+                <VBox fx:id="pageGestionSignalements" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Gestion des signalements" />
+
+                    <!-- Filtres -->
+                    <HBox spacing="10.0" styleClass="filters-panel">
+                        <Label styleClass="filter-label" text="Filtres :" />
+
+                        <ComboBox fx:id="filterZoneCombo" prefWidth="150.0" promptText="Zone" styleClass="filter-combo" />
+                        <ComboBox fx:id="filterStatutCombo" prefWidth="150.0" promptText="Statut" styleClass="filter-combo" />
+                        <ComboBox fx:id="filterCategorieCombo" prefWidth="150.0" promptText="Catégorie" styleClass="filter-combo" />
+
+                        <DatePicker fx:id="filterDateDebut" prefWidth="150.0" promptText="Date début" styleClass="filter-date" />
+                        <DatePicker fx:id="filterDateFin" prefWidth="150.0" promptText="Date fin" styleClass="filter-date" />
+
+                        <Button onAction="#handleFiltrerSignalements" styleClass="primary-button" text="Appliquer" />
+                        <Button onAction="#handleReinitialiserFiltres" styleClass="secondary-button" text="Réinitialiser" />
+                    </HBox>
+
+                    <!-- Actions -->
+                    <HBox spacing="10.0">
+                        <Button onAction="#handleAjouterSignalement" styleClass="primary-button" text="➕ Nouveau signalement" />
+                        <Button fx:id="btnModifierSignalement" onAction="#handleModifierSignalement" styleClass="secondary-button" text="✏️ Modifier" />
+                        <Button fx:id="btnSupprimerSignalement" onAction="#handleSupprimerSignalement" styleClass="danger-button" text="🗑️ Supprimer" />
+                        <Button fx:id="btnAffecterAgent" onAction="#handleAffecterAgent" styleClass="action-button" text="👤 Affecter un agent" />
+                    </HBox>
+
+                    <!-- Tableau des signalements -->
+                    <TableView fx:id="tableSignalements" VBox.vgrow="ALWAYS" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="colSignalementId" prefWidth="50" text="ID" />
+                            <TableColumn fx:id="colSignalementDescription" prefWidth="200" text="Description" />
+                            <TableColumn fx:id="colSignalementCategorie" prefWidth="100" text="Catégorie" />
+                            <TableColumn fx:id="colSignalementZone" prefWidth="100" text="Zone" />
+                            <TableColumn fx:id="colSignalementDate" prefWidth="150" text="Date" />
+                            <TableColumn fx:id="colSignalementStatut" prefWidth="100" text="Statut" />
+                            <TableColumn fx:id="colSignalementUtilisateur" prefWidth="150" text="Utilisateur" />
+                            <TableColumn fx:id="colSignalementAgent" prefWidth="150" text="Agent affecté" />
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Page Gestion des Utilisateurs -->
+                <VBox fx:id="pageGestionUtilisateurs" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Gestion des utilisateurs" />
+
+                    <!-- Actions -->
+                    <HBox spacing="10.0">
+                        <Button onAction="#handleAjouterUtilisateur" styleClass="primary-button" text="➕ Ajouter" />
+                        <Button fx:id="btnModifierUtilisateur" onAction="#handleModifierUtilisateur" styleClass="secondary-button" text="✏️ Modifier" />
+                        <Button fx:id="btnSupprimerUtilisateur" onAction="#handleSupprimerUtilisateur" styleClass="danger-button" text="🗑️ Supprimer" />
+                    </HBox>
+
+                    <!-- Filtre par rôle -->
+                    <HBox spacing="10.0">
+                        <Label styleClass="filter-label" text="Filtrer par rôle :" />
+                        <ComboBox fx:id="filterRoleCombo" prefWidth="200.0" promptText="Tous les rôles" styleClass="filter-combo" />
+                    </HBox>
+
+                    <!-- Tableau des utilisateurs -->
+                    <TableView fx:id="tableUtilisateurs" VBox.vgrow="ALWAYS" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="colUserId" prefWidth="50" text="ID" />
+                            <TableColumn fx:id="colUserNom" prefWidth="150" text="Nom" />
+                            <TableColumn fx:id="colUserPrenom" prefWidth="150" text="Prénom" />
+                            <TableColumn fx:id="colUserEmail" prefWidth="200" text="Email" />
+                            <TableColumn fx:id="colUserAge" prefWidth="50" text="Âge" />
+                            <TableColumn fx:id="colUserRole" prefWidth="100" text="Rôle" />
+                            <TableColumn fx:id="colUserLocalite" prefWidth="150" text="Localité" />
+                            <TableColumn fx:id="colUserPhoto" prefWidth="100" text="Photo" />
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Page Gestion des Agents -->
+                <VBox fx:id="pageGestionAgents" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Gestion des agents" />
+
+                    <!-- Actions -->
+                    <HBox spacing="10.0">
+                        <Button onAction="#handleAjouterAgent" styleClass="primary-button" text="➕ Ajouter un agent" />
+                        <Button fx:id="btnModifierAgent" onAction="#handleModifierAgent" styleClass="secondary-button" text="✏️ Modifier" />
+                        <Button fx:id="btnSupprimerAgent" onAction="#handleSupprimerAgent" styleClass="danger-button" text="🗑️ Supprimer" />
+                    </HBox>
+
+                    <!-- Tableau des agents -->
+                    <TableView fx:id="tableAgents" VBox.vgrow="ALWAYS" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="colAgentId" prefWidth="50" text="ID" />
+                            <TableColumn fx:id="colAgentNom" prefWidth="200" text="Nom complet" />
+                            <TableColumn fx:id="colAgentEmail" prefWidth="200" text="Email" />
+                            <TableColumn fx:id="colAgentZone" prefWidth="150" text="Zone affectée" />
+                            <TableColumn fx:id="colAgentEnCours" prefWidth="120" text="En cours" />
+                            <TableColumn fx:id="colAgentTraites" prefWidth="120" text="Traités" />
+                            <TableColumn fx:id="colAgentTotal" prefWidth="100" text="Total" />
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Page Gestion des Zones -->
+                <VBox fx:id="pageGestionZones" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Gestion des zones" />
+
+                    <!-- Actions -->
+                    <HBox spacing="10.0">
+                        <Button onAction="#handleAjouterZone" styleClass="primary-button" text="➕ Ajouter une zone" />
+                        <Button fx:id="btnModifierZone" onAction="#handleModifierZone" styleClass="secondary-button" text="✏️ Modifier" />
+                        <Button fx:id="btnSupprimerZone" onAction="#handleSupprimerZone" styleClass="danger-button" text="🗑️ Supprimer" />
+                    </HBox>
+
+                    <!-- Tableau des zones -->
+                    <TableView fx:id="tableZones" VBox.vgrow="ALWAYS" styleClass="data-table">
+                        <columns>
+                            <TableColumn fx:id="colZoneId" prefWidth="100" text="ID" />
+                            <TableColumn fx:id="colZoneNom" prefWidth="300" text="Nom de la zone" />
+                            <TableColumn fx:id="colZoneSignalements" prefWidth="200" text="Nombre de signalements" />
+                        </columns>
+                    </TableView>
+                </VBox>
+
+                <!-- Page Statistiques -->
+                <VBox fx:id="pageStatistiques" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Statistiques détaillées" />
+
+                    <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Signalements par catégorie" />
+                            <PieChart fx:id="statsPieChartCategories" prefHeight="300.0" styleClass="chart" />
+                        </VBox>
+
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Évolution des signalements" />
+                            <BarChart fx:id="statsBarChartEvolution" prefHeight="300.0" styleClass="chart">
+                                <xAxis>
+                                    <CategoryAxis label="Mois" />
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis label="Nombre" />
+                                </yAxis>
+                            </BarChart>
+                        </VBox>
+                    </HBox>
+
+                    <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Signalements par localité" />
+                            <BarChart fx:id="statsBarChartLocalites" prefHeight="300.0" styleClass="chart">
+                                <xAxis>
+                                    <CategoryAxis label="Localité" />
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis label="Nombre" />
+                                </yAxis>
+                            </BarChart>
+                        </VBox>
+
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS">
+                            <Label styleClass="chart-title" text="Performance des agents" />
+                            <BarChart fx:id="statsBarChartAgents" prefHeight="300.0" styleClass="chart">
+                                <xAxis>
+                                    <CategoryAxis label="Agent" />
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis label="Signalements traités" />
+                                </yAxis>
+                            </BarChart>
+                        </VBox>
+                    </HBox>
+                </VBox>
+
+                <!-- Page Paramètres -->
+                <VBox fx:id="pageParametres" spacing="15.0" styleClass="page-box" visible="false" managed="false">
+                    <Label styleClass="page-title" text="Paramètres" />
+
+                    <VBox spacing="20.0" styleClass="settings-panel">
+                        <TitledPane text="Préférences d'affichage" expanded="true">
+                            <VBox spacing="10.0" padding="10.0">
+                                <CheckBox fx:id="darkModeCheck" text="Mode sombre" onAction="#handleToggleTheme" />
+                                <CheckBox fx:id="notificationsCheck" text="Activer les notifications" />
+                                <Label text="Langue :" />
+                                <ComboBox fx:id="languageCombo" prefWidth="200.0" />
+                            </VBox>
+                        </TitledPane>
+
+                        <TitledPane text="Paramètres de l'application" expanded="true">
+                            <VBox spacing="10.0" padding="10.0">
+                                <Button onAction="#handleExporterDonnees" styleClass="secondary-button" text="📤 Exporter les données" />
+                                <Button onAction="#handleImporterDonnees" styleClass="secondary-button" text="📥 Importer des données" />
+                                <Button onAction="#handleNettoyerBase" styleClass="danger-button" text="🧹 Nettoyer la base de données" />
+                            </VBox>
+                        </TitledPane>
+
+                        <TitledPane text="Informations système" expanded="true">
+                            <VBox spacing="10.0" padding="10.0">
+                                <Label text="Version : 1.0.0" />
+                                <Label text="Base de données : MySQL" />
+                                <Label text="Dernière synchronisation : " />
+                                <Label fx:id="lastSyncLabel" text="Jamais" />
+                                <Button onAction="#handleSynchroniser" styleClass="primary-button" text="🔄 Synchroniser" />
+                            </VBox>
+                        </TitledPane>
+                    </VBox>
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>

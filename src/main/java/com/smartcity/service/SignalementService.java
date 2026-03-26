@@ -8,13 +8,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service pour la gestion des signalements.
  */
 public class SignalementService {
+    private static final Logger logger = LoggerFactory.getLogger(SignalementService.class);
 
-    private Connection getConn() {
+    private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
     }
 
@@ -34,7 +37,7 @@ public class SignalementService {
             pstmt.setInt(9, signalement.getIdUser());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'ajout du signalement: " + e.getMessage());
+            logger.error("Erreur lors de l'ajout du signalement: " + e.getMessage());
             return false;
         }
     }
@@ -74,9 +77,9 @@ public class SignalementService {
 
     public List<Signalement> getSignalementsFiltres(String zoneNom, String statut, String categorie) {
         StringBuilder query = new StringBuilder(
-                "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s " +
-                        "LEFT JOIN Utilisateur u ON s.idUser = u.idUser " +
-                        "LEFT JOIN Zone z ON s.idZone = z.idZone WHERE 1=1");
+                "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom FROM Signalement s "
+                + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (zoneNom != null && !zoneNom.isBlank()) {
@@ -104,7 +107,7 @@ public class SignalementService {
             pstmt.setInt(2, idSignalement);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise a jour: " + e.getMessage());
+            logger.error("Erreur lors de la mise à jour: " + e.getMessage());
             return false;
         }
     }
@@ -116,7 +119,7 @@ public class SignalementService {
             pstmt.setInt(1, idSignalement);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la suppression: " + e.getMessage());
+            logger.error("Erreur lors de la suppression: " + e.getMessage());
             return false;
         }
     }
@@ -167,7 +170,7 @@ public class SignalementService {
             ResultSet rs = pstmt.executeQuery();
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors du comptage: " + e.getMessage());
+            logger.error("Erreur lors du comptage: " + e.getMessage());
             return 0;
         }
     }
@@ -185,7 +188,7 @@ public class SignalementService {
                 liste.add(mapResultSetToSignalement(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la recuperation: " + e.getMessage());
+            logger.error("Erreur lors de la récupération: " + e.getMessage());
         }
 
         return liste;
@@ -208,20 +211,13 @@ public class SignalementService {
         }
 
         signalement.setIdUser(rs.getInt("idUser"));
-        try {
-            String utilisateurNom = rs.getString("utilisateurNom");
-            signalement.setUtilisateurNom(utilisateurNom != null ? utilisateurNom : "Utilisateur #" + signalement.getIdUser());
-        } catch (SQLException e) {
-            signalement.setUtilisateurNom("Utilisateur #" + signalement.getIdUser());
-        }
+        String utilisateurNom = rs.getString("utilisateurNom");
+        signalement.setUtilisateurNom(utilisateurNom != null ? utilisateurNom : "Utilisateur #" + signalement.getIdUser());
 
-        try {
-            String zoneNom = rs.getString("zoneNom");
-            signalement.setZoneNom(zoneNom != null ? zoneNom : "Zone #" + signalement.getIdZone());
-        } catch (SQLException e) {
-            signalement.setZoneNom("Zone #" + signalement.getIdZone());
-        }
+        String zoneNom = rs.getString("zoneNom");
+        signalement.setZoneNom(zoneNom != null ? zoneNom : "Zone #" + signalement.getIdZone());
 
         return signalement;
     }
 }
+

@@ -19,62 +19,111 @@ public class UtilisateurService {
 
     private static final Logger logger = LoggerFactory.getLogger(UtilisateurService.class);
 
-    private Connection getConn() {
-        return DatabaseConnection.getConnection();
+        private Connection getConn() throws SQLException {
+        Connection conn = DatabaseConnection.getConnection();
+        if (conn == null) {
+            throw new SQLException("❌ Impossible d'obtenir une connexion à la base de données");
+        }
+        return conn;
     }
 
-    public boolean inscription(Utilisateur utilisateur) {
+        public boolean inscription(Utilisateur utilisateur) {
+        // Validation des données
+        if (utilisateur == null) {
+            logger.error("Tentative d'inscription avec utilisateur null");
+            return false;
+        }
+        
+        if (utilisateur.getEmail() == null || utilisateur.getEmail().trim().isEmpty()) {
+            logger.error("Email requis pour l'inscription");
+            return false;
+        }
+        
+        if (utilisateur.getMotDePasse() == null || utilisateur.getMotDePasse().length() < 6) {
+            logger.error("Mot de passe trop faible pour: {}", utilisateur.getEmail());
+            return false;
+        }
+        
         String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
         String query = "INSERT INTO Utilisateur (prenom, nom, email, motDePasse, role, age, localite, photoProfil, idZone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
             pstmt.setString(1, utilisateur.getPrenom());
             pstmt.setString(2, utilisateur.getNom());
-            pstmt.setString(3, utilisateur.getEmail());
+            pstmt.setString(3, utilisateur.getEmail().toLowerCase().trim());
             pstmt.setString(4, hashedPassword);
             pstmt.setString(5, utilisateur.getRole());
             pstmt.setInt(6, utilisateur.getAge());
             pstmt.setString(7, utilisateur.getLocalite());
             pstmt.setString(8, utilisateur.getPhotoProfil());
             pstmt.setInt(9, utilisateur.getIdZone());
+            
             int rows = pstmt.executeUpdate();
             if (rows > 0) {
-                logger.info("Inscription réussie pour l'utilisateur: {}", utilisateur.getEmail());
+                logger.info("✅ Inscription réussie pour: {}", utilisateur.getEmail());
                 return true;
             } else {
+                logger.warn("⚠️ Aucune ligne affectée lors de l'inscription");
                 return false;
             }
         } catch (SQLException e) {
-            logger.error("Erreur lors de l'inscription pour {}: {}", utilisateur.getEmail(), e.getMessage());
+            if (e.getMessage().contains("Duplicate entry")) {
+                logger.warn("Email déjà utilisé: {}", utilisateur.getEmail());
+            } else {
+                logger.error("❌ Erreur SQL lors de l'inscription pour {}: {}", utilisateur.getEmail(), e.getMessage());
+            }
             return false;
         }
     }
 
-    public Utilisateur connexion(String email, String motPasse) {
+        public Utilisateur connexion(String email, String motPasse) {
+        if (email == null || email.trim().isEmpty()) {
+            logger.warn("Tentative de connexion sans email");
+            return null;
+        }
+        
+        if (motPasse == null || motPasse.isEmpty()) {
+            logger.warn("Tentative de connexion sans mot de passe pour: {}", email);
+            return null;
+        }
+        
         String query = "SELECT * FROM Utilisateur WHERE email = ? AND actif = 1";
 
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
-            pstmt.setString(1, email);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                String storedPassword = rs.getString("motDePasse");
-                boolean passwordMatches;
-                if (storedPassword.startsWith("$")) {
-                    // Hashed password
-                    passwordMatches = BCrypt.checkpw(motPasse, storedPassword);
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setString(1, email.toLowerCase().trim());
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String storedPassword = rs.getString("motDePasse");
+                    boolean passwordMatches;
+                    
+                    if (storedPassword.startsWith("$")) {
+                        // Hashed password
+                        passwordMatches = BCrypt.checkpw(motPasse, storedPassword);
+                    } else {
+                        // Plain password (legacy) - à migrer
+                        passwordMatches = motPasse.equals(storedPassword);
+                        if (passwordMatches) {
+                            logger.warn("⚠️ Mot de passe non hashé détecté pour: {}", email);
+                        }
+                    }
+                    
+                    if (passwordMatches) {
+                        logger.info("✅ Connexion réussie pour: {}", email);
+                        return mapResultSetToUtilisateur(rs);
+                    } else {
+                        logger.warn("❌ Mot de passe incorrect pour: {}", email);
+                    }
                 } else {
-                    // Plain password (legacy)
-                    passwordMatches = motPasse.equals(storedPassword);
-                }
-                if (passwordMatches) {
-                    logger.info("Connexion réussie pour: {}", email);
-                    return mapResultSetToUtilisateur(rs);
-                } else {
-                    logger.warn("Tentative de connexion échouée pour: {}", email);
+                    logger.warn("❌ Utilisateur non trouvé: {}", email);
                 }
             }
         } catch (SQLException e) {
-            logger.error("Erreur lors de la connexion pour {}: {}", email, e.getMessage());
+            logger.error("❌ Erreur SQL lors de la connexion pour {}: {}", email, e.getMessage());
         }
         return null;
     }

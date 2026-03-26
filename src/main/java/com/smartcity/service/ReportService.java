@@ -15,7 +15,7 @@ import java.util.*;
  */
 public class ReportService {
 
-    private Connection getConn() {
+    private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
     }
 

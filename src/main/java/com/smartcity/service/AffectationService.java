@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class AffectationService {
 
-    private Connection getConn() {
+    private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
     }
 

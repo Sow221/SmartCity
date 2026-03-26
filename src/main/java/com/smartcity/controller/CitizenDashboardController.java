@@ -147,18 +147,27 @@ public class CitizenDashboardController {
         showPage(pageMonProfil, btnMonProfil);
     }
 
-    @FXML
+        @FXML
     private void handleChoisirPhoto() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Choisir une photo");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+        
+        // Démarrer dans le dossier Images par défaut
+        File userHome = new File(System.getProperty("user.home"));
+        File picturesDir = new File(userHome, "Pictures");
+        if (picturesDir.exists()) {
+            chooser.setInitialDirectory(picturesDir);
+        }
+        
         File selected = chooser.showOpenDialog(MainApp.getPrimaryStage());
         if (selected != null) {
-            photoSignalementField.setText(selected.getAbsolutePath());
+            photoSignalementField.setText(selected.getName()); // Juste le nom, pas le chemin complet
+            showCitizenMessage("✅ Photo sélectionnée: " + selected.getName(), true);
         }
     }
 
-    @FXML
+        @FXML
     private void handleEnregistrerSignalement() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) {
@@ -166,10 +175,48 @@ public class CitizenDashboardController {
             return;
         }
 
-        if (descriptionSignalementArea.getText().isBlank() ||
-                categorieSignalementCombo.getValue() == null ||
-                zoneSignalementCombo.getValue() == null) {
-            showCitizenMessage("Description, categorie et zone sont obligatoires.", false);
+        // ✅ Validation améliorée
+        if (descriptionSignalementArea.getText().isBlank()) {
+            showCitizenMessage("❌ Description requise", false);
+            descriptionSignalementArea.requestFocus();
+            return;
+        }
+        
+        if (categorieSignalementCombo.getValue() == null) {
+            showCitizenMessage("❌ Veuillez choisir une catégorie", false);
+            categorieSignalementCombo.requestFocus();
+            return;
+        }
+        
+        if (zoneSignalementCombo.getValue() == null) {
+            showCitizenMessage("❌ Veuillez choisir une zone", false);
+            zoneSignalementCombo.requestFocus();
+            return;
+        }
+
+        // ✅ Coordonnées automatiques si pas saisies
+        double latitude = 0.0;
+        double longitude = 0.0;
+        
+        try {
+            if (!latitudeField.getText().isBlank()) {
+                latitude = Double.parseDouble(latitudeField.getText().trim());
+            } else {
+                // Coordonnées par défaut selon la zone
+                if (zoneSignalementCombo.getValue().equals("Guediawaye")) {
+                    latitude = 14.7765;
+                    longitude = -17.4047;
+                } else {
+                    latitude = 14.7646;
+                    longitude = -17.3920;
+                }
+            }
+            
+            if (!longitudeField.getText().isBlank()) {
+                longitude = Double.parseDouble(longitudeField.getText().trim());
+            }
+        } catch (NumberFormatException e) {
+            showCitizenMessage("❌ Coordonnées invalides. Laissez vides pour utiliser la position par défaut.", false);
             return;
         }
 
@@ -178,36 +225,43 @@ public class CitizenDashboardController {
         signalement.setCategorie(categorieSignalementCombo.getValue());
         int idZone = zoneSignalementCombo.getValue().equals("Pikine") ? 1 : 2;
         signalement.setIdZone(idZone);
-        signalement.setLatitude(latitudeField.getText().isBlank() ? 0.0 : Double.parseDouble(latitudeField.getText().trim()));
-        signalement.setLongitude(longitudeField.getText().isBlank() ? 0.0 : Double.parseDouble(longitudeField.getText().trim()));
+        signalement.setLatitude(latitude);
+        signalement.setLongitude(longitude);
         signalement.setPhoto(photoSignalementField.getText().isBlank() ? null : photoSignalementField.getText().trim());
         signalement.setIdUser(current.getIdUser());
 
         if (signalementService.ajouterSignalement(signalement)) {
-            showCitizenMessage("Signalement enregistre avec succes.", true);
-            descriptionSignalementArea.clear();
-            categorieSignalementCombo.setValue(null);
-            zoneSignalementCombo.setValue(null);
-            photoSignalementField.clear();
-            latitudeField.clear();
-            longitudeField.clear();
+            showCitizenMessage("🎉 Signalement enregistré avec succès !", true);
+            // Nettoyer le formulaire
+            clearForm();
             chargerDonnees();
             showPage(pageMesSignalements, btnMesSignalements);
         } else {
-            showCitizenMessage("Echec de l'enregistrement du signalement.", false);
+            showCitizenMessage("❌ Erreur lors de l'enregistrement. Réessayez.", false);
         }
     }
 
-    @FXML
+        @FXML
     private void handleAnnulerSignalement() {
+        clearForm();
+        showCitizenMessage("📝 Formulaire remis à zéro", true);
+    }
+    
+    /**
+     * Nettoie le formulaire de signalement
+     */
+    private void clearForm() {
         descriptionSignalementArea.clear();
         categorieSignalementCombo.setValue(null);
         zoneSignalementCombo.setValue(null);
         photoSignalementField.clear();
         latitudeField.clear();
         longitudeField.clear();
-        mapWebView.setVisible(false);
-        mapWebView.setManaged(false);
+        
+        if (mapWebView.isVisible()) {
+            mapWebView.setVisible(false);
+            mapWebView.setManaged(false);
+        }
     }
 
     @FXML
@@ -269,61 +323,109 @@ public class CitizenDashboardController {
         }
     }
 
-    @FXML
+        @FXML
     private void handleToggleMap() {
         boolean visible = mapWebView.isVisible();
         mapWebView.setVisible(!visible);
         mapWebView.setManaged(!visible);
+        
         if (!visible) {
-            // Load interactive map with Leaflet
-            String html = "<!DOCTYPE html>\n" +
-                    "<html>\n" +
-                    "<head>\n" +
-                    "    <title>Selection de localisation</title>\n" +
-                    "    <meta charset='utf-8' />\n" +
-                    "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n" +
-                    "    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />\n" +
-                    "    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>\n" +
-                    "    <style>\n" +
-                    "        #map { height: 100vh; }\n" +
-                    "    </style>\n" +
-                    "</head>\n" +
-                    "<body>\n" +
-                    "    <div id='map'></div>\n" +
-                    "    <script>\n" +
-                    "        var map = L.map('map').setView([-14.7, -17.4], 10); // Pikine/Guediawaye\n" +
-                    "        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
-                    "            attribution: '© OpenStreetMap contributors'\n" +
-                    "        }).addTo(map);\n" +
-                    "        var marker;\n" +
-                    "        map.on('click', function(e) {\n" +
-                    "            if (marker) {\n" +
-                    "                map.removeLayer(marker);\n" +
-                    "            }\n" +
-                    "            marker = L.marker(e.latlng).addTo(map);\n" +
-                    "            // Send to JavaFX\n" +
-                    "            if (window.javafx) {\n" +
-                    "                window.javafx.setLocation(e.latlng.lat, e.latlng.lng);\n" +
-                    "            }\n" +
-                    "        });\n" +
-                    "    </script>\n" +
-                    "</body>\n" +
-                    "</html>";
-            mapWebView.getEngine().loadContent(html);
-            // Set up JavaScript bridge
-            mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-                if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                    JSObject window = (JSObject) mapWebView.getEngine().executeScript("window");
-                    window.setMember("javafx", new JSBridge());
-                }
-            });
+            showCitizenMessage("🗺️ Cliquez sur la carte pour choisir la position", true);
+            loadInteractiveMap();
+        } else {
+            showCitizenMessage("📍 Carte fermée - coordonnées conservées", true);
         }
     }
+    
+    /**
+     * Charge la carte interactive avec un meilleur design
+     */
+    private void loadInteractiveMap() {
+        String selectedZone = zoneSignalementCombo.getValue();
+        double defaultLat = selectedZone != null && selectedZone.equals("Guediawaye") ? 14.7765 : 14.7646;
+        double defaultLon = selectedZone != null && selectedZone.equals("Guediawaye") ? -17.4047 : -17.3920;
+        
+        String html = "<!DOCTYPE html>\n" +
+                "<html>\n" +
+                "<head>\n" +
+                "    <title>📍 Choisir l'emplacement</title>\n" +
+                "    <meta charset='utf-8' />\n" +
+                "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n" +
+                "    <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />\n" +
+                "    <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>\n" +
+                "    <style>\n" +
+                "        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }\n" +
+                "        #map { height: 100vh; cursor: crosshair; }\n" +
+                "        .info-panel {\n" +
+                "            position: absolute; top: 10px; right: 10px; z-index: 1000;\n" +
+                "            background: white; padding: 15px; border-radius: 8px;\n" +
+                "            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 200px;\n" +
+                "        }\n" +
+                "        .coordinates { font-size: 12px; color: #666; }\n" +
+                "    </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <div class='info-panel'>\n" +
+                "        <h4 style='margin: 0 0 10px 0; color: #2196F3;'>📍 Position</h4>\n" +
+                "        <div id='coords' class='coordinates'>Cliquez sur la carte</div>\n" +
+                "        <small style='color: #888;'>Zone: " + (selectedZone != null ? selectedZone : "Non sélectionnée") + "</small>\n" +
+                "    </div>\n" +
+                "    <div id='map'></div>\n" +
+                "    <script>\n" +
+                "        var map = L.map('map').setView([" + defaultLat + ", " + defaultLon + "], 14);\n" +
+                "        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
+                "            attribution: '© OpenStreetMap contributors'\n" +
+                "        }).addTo(map);\n" +
+                "        \n" +
+                "        // Marqueur par défaut\n" +
+                "        var marker = L.marker([" + defaultLat + ", " + defaultLon + "]).addTo(map)\n" +
+                "            .bindPopup('📍 Position par défaut - Cliquez ailleurs pour modifier')\n" +
+                "            .openPopup();\n" +
+                "        \n" +
+                "        // Cercle de zone\n" +
+                "        L.circle([" + defaultLat + ", " + defaultLon + "], {\n" +
+                "            radius: 1000, fillColor: '#2196F3', color: '#1976D2', fillOpacity: 0.1\n" +
+                "        }).addTo(map);\n" +
+                "        \n" +
+                "        function updateCoords(lat, lng) {\n" +
+                "            document.getElementById('coords').innerHTML = \n" +
+                "                'Lat: ' + lat.toFixed(6) + '<br/>Lng: ' + lng.toFixed(6);\n" +
+                "            if (window.javafx) {\n" +
+                "                window.javafx.setLocation(lat, lng);\n" +
+                "            }\n" +
+                "        }\n" +
+                "        \n" +
+                "        // Initialiser coordonnées\n" +
+                "        updateCoords(" + defaultLat + ", " + defaultLon + ");\n" +
+                "        \n" +
+                "        map.on('click', function(e) {\n" +
+                "            map.removeLayer(marker);\n" +
+                "            marker = L.marker(e.latlng).addTo(map)\n" +
+                "                .bindPopup('📍 Position sélectionnée')\n" +
+                "                .openPopup();\n" +
+                "            updateCoords(e.latlng.lat, e.latlng.lng);\n" +
+                "        });\n" +
+                "    </script>\n" +
+                "</body>\n" +
+                "</html>";
+        
+        mapWebView.getEngine().loadContent(html);
+        
+        // Configuration du pont JavaScript
+        mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                JSObject window = (JSObject) mapWebView.getEngine().executeScript("window");
+                window.setMember("javafx", new JSBridge());
+            }
+        });
+    }
 
-    public class JSBridge {
+        public class JSBridge {
         public void setLocation(double lat, double lng) {
-            latitudeField.setText(String.valueOf(lat));
-            longitudeField.setText(String.valueOf(lng));
+            // ✅ Mise à jour avec formatage décent
+            latitudeField.setText(String.format("%.6f", lat));
+            longitudeField.setText(String.format("%.6f", lng));
+            showCitizenMessage(String.format("📍 Position mise à jour: %.4f, %.4f", lat, lng), true);
         }
     }
 

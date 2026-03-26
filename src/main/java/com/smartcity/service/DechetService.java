@@ -7,23 +7,18 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Service pour la gestion des déchets/signalements
- */
 public class DechetService {
+    private static final Logger logger = LoggerFactory.getLogger(DechetService.class);
 
-    private Connection getConn() {
+    private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
     }
 
-    /**
-     * Ajoute un nouveau signalement
-     */
     public boolean ajouterSignalement(Dechet dechet) {
-        String query = "INSERT INTO dechet (description, categorie, zone, quartier, photo, statut, dateSignalement, idUtilisateur) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
+        String query = "INSERT INTO dechet (description, categorie, zone, quartier, photo, statut, dateSignalement, idUtilisateur) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, dechet.getDescription());
             pstmt.setString(2, dechet.getCategorie());
@@ -33,110 +28,82 @@ public class DechetService {
             pstmt.setString(6, "En attente");
             pstmt.setTimestamp(7, Timestamp.valueOf(LocalDateTime.now()));
             pstmt.setInt(8, dechet.getIdUtilisateur());
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'ajout du signalement: " + e.getMessage());
+            logger.error("Erreur lors de l'ajout du signalement", e);
             return false;
         }
     }
 
-    /**
-     * Récupère tous les signalements
-     */
     public List<Dechet> getAllSignalements() {
         List<Dechet> liste = new ArrayList<>();
         String query = "SELECT * FROM dechet ORDER BY dateSignalement DESC";
-
-        try (Statement stmt = getConn().createStatement();
-                ResultSet rs = stmt.executeQuery(query)) {
-
+        try (PreparedStatement pstmt = getConn().prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
                 liste.add(mapResultSetToDechet(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération des signalements", e);
         }
         return liste;
     }
 
-    /**
-     * Récupère les signalements par zone
-     */
     public List<Dechet> getSignalementsByZone(String zone) {
         List<Dechet> liste = new ArrayList<>();
         String query = "SELECT * FROM dechet WHERE zone = ? ORDER BY dateSignalement DESC";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, zone);
             ResultSet rs = pstmt.executeQuery();
-
             while (rs.next()) {
                 liste.add(mapResultSetToDechet(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération par zone", e);
         }
         return liste;
     }
 
-    /**
-     * Récupère les signalements par utilisateur
-     */
     public List<Dechet> getSignalementsByUtilisateur(int idUtilisateur) {
         List<Dechet> liste = new ArrayList<>();
         String query = "SELECT * FROM dechet WHERE idUtilisateur = ? ORDER BY dateSignalement DESC";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idUtilisateur);
             ResultSet rs = pstmt.executeQuery();
-
             while (rs.next()) {
                 liste.add(mapResultSetToDechet(rs));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération par utilisateur", e);
         }
         return liste;
     }
 
-    /**
-     * Met à jour le statut d'un signalement
-     */
     public boolean updateStatut(int idDechet, String nouveauStatut) {
         String query = "UPDATE dechet SET statut = ? WHERE idDechet = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, nouveauStatut);
             pstmt.setInt(2, idDechet);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise à jour: " + e.getMessage());
+            logger.error("Erreur lors de la mise à jour du statut", e);
             return false;
         }
     }
 
-    /**
-     * Supprime un signalement
-     */
     public boolean supprimerSignalement(int idDechet) {
         String query = "DELETE FROM dechet WHERE idDechet = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idDechet);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la suppression: " + e.getMessage());
+            logger.error("Erreur lors de la suppression", e);
             return false;
         }
     }
 
-    /**
-     * Compte les signalements par statut
-     */
     public int countByStatut(String statut) {
         String query = "SELECT COUNT(*) FROM dechet WHERE statut = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, statut);
             ResultSet rs = pstmt.executeQuery();
@@ -144,17 +111,13 @@ public class DechetService {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors du comptage: " + e.getMessage());
+            logger.error("Erreur lors du comptage par statut", e);
         }
         return 0;
     }
 
-    /**
-     * Compte les signalements par zone
-     */
     public int countByZone(String zone) {
         String query = "SELECT COUNT(*) FROM dechet WHERE zone = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, zone);
             ResultSet rs = pstmt.executeQuery();
@@ -162,17 +125,13 @@ public class DechetService {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors du comptage: " + e.getMessage());
+            logger.error("Erreur lors du comptage par zone", e);
         }
         return 0;
     }
 
-    /**
-     * Compte les signalements par catégorie
-     */
     public int countByCategorie(String categorie) {
         String query = "SELECT COUNT(*) FROM dechet WHERE categorie = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, categorie);
             ResultSet rs = pstmt.executeQuery();
@@ -180,14 +139,11 @@ public class DechetService {
                 return rs.getInt(1);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors du comptage: " + e.getMessage());
+            logger.error("Erreur lors du comptage par catégorie", e);
         }
         return 0;
     }
 
-    /**
-     * Mappe un ResultSet vers un objet Dechet
-     */
     private Dechet mapResultSetToDechet(ResultSet rs) throws SQLException {
         Dechet dechet = new Dechet();
         dechet.setIdDechet(rs.getInt("idDechet"));
@@ -207,3 +163,4 @@ public class DechetService {
         return dechet;
     }
 }
+

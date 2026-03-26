@@ -818,7 +818,7 @@ public class AgentDashboardController {
         btnMonProfil.setTooltip(new Tooltip("Informations du compte agent"));
     }
 
-        private void showAgentMessage(String message, boolean success) {
+private void showAgentMessage(String message, boolean success) {
         // Amélioration visuelle des messages
         String emoji = success ? "🎉" : "⚠️";
         String fullMessage = emoji + " " + message;
@@ -859,7 +859,6 @@ public class AgentDashboardController {
             this.lon = lon;
         }
     }
-}
 
     private void applyTheme() {
         if (rootPane == null) {
@@ -1043,3 +1042,4 @@ public class AgentDashboardController {
         
         scale.play();
     }
+}

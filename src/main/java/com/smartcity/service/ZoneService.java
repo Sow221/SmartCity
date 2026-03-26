@@ -6,13 +6,16 @@ import com.smartcity.utils.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service pour la gestion des zones.
  */
 public class ZoneService {
+    private static final Logger logger = LoggerFactory.getLogger(ZoneService.class);
 
-    private Connection getConn() {
+    private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
     }
 
@@ -26,7 +29,7 @@ public class ZoneService {
                 zones.add(new Zone(rs.getInt("idZone"), rs.getString("nomZone")));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération des zones: " + e.getMessage());
+            logger.error("Erreur lors de la récupération des zones", e);
         }
         return zones;
     }
@@ -41,7 +44,7 @@ public class ZoneService {
                 return new Zone(rs.getInt("idZone"), rs.getString("nomZone"));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération de la zone: " + e.getMessage());
+            logger.error("Erreur lors de la récupération de la zone", e);
         }
         return null;
     }
@@ -53,7 +56,7 @@ public class ZoneService {
             pstmt.setString(1, zone.getNomZone());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'ajout de la zone: " + e.getMessage());
+            logger.error("Erreur lors de l'ajout de la zone", e);
             return false;
         }
     }

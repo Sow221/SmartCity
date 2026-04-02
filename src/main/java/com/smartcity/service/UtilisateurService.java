@@ -149,6 +149,7 @@ public class UtilisateurService {
                 utilisateurs.add(mapResultSetToUtilisateur(rs));
             }
         } catch (SQLException e) {
+            logger.error("Erreur lors de la récupération de tous les utilisateurs", e);
         }
         return utilisateurs;
     }
@@ -159,25 +160,28 @@ public class UtilisateurService {
 
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setString(1, role);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                utilisateurs.add(mapResultSetToUtilisateur(rs));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    utilisateurs.add(mapResultSetToUtilisateur(rs));
+                }
             }
         } catch (SQLException e) {
+            logger.error("Erreur lors de la récupération des utilisateurs par rôle", e);
         }
         return utilisateurs;
     }
 
     public Utilisateur getUtilisateurById(int idUser) {
         String query = "SELECT * FROM Utilisateur WHERE idUser = ? AND actif = 1";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idUser);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return mapResultSetToUtilisateur(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUtilisateur(rs);
+                }
             }
         } catch (SQLException e) {
+            logger.error("Erreur lors de la récupération de l'utilisateur par id", e);
         }
         return null;
     }

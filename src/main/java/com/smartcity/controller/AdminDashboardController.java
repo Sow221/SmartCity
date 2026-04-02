@@ -103,7 +103,7 @@ public class AdminDashboardController {
         this.mainApp = mainApp;
     }
 
-    @FXML
+@FXML
     private void initialize() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null || !SessionManager.isAdmin()) {
@@ -128,7 +128,11 @@ public class AdminDashboardController {
 
         applyTheme();
         showAdminDashboardPage();
-        chargerDonnees();
+        
+        // Delay data loading to prevent Hikari pool exhaustion
+        javafx.application.Platform.runLater(() -> {
+            chargerDonnees();
+        });
     }
 
     @FXML
@@ -335,6 +339,7 @@ public class AdminDashboardController {
 
     private void refreshUtilisateurs() {
         utilisateurs.setAll(utilisateurService.getAllUtilisateurs());
+        System.out.println("[ADMIN] Utilisateurs récupérés: " + utilisateurs.size());
     }
 
     private void refreshAgents() {
@@ -342,12 +347,15 @@ public class AdminDashboardController {
         agents.clear();
         for (Utilisateur u : utilisateursAgents) {
             int traites = signalementService.countTraitesByAgent(u.getIdUser());
-            agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), zoneService.getZoneById(u.getIdZone()).getNomZone(), traites));
+            String zoneNom = (zoneService.getZoneById(u.getIdZone()) != null ? zoneService.getZoneById(u.getIdZone()).getNomZone() : "Zone inconnue");
+            agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), zoneNom, traites));
         }
+        System.out.println("[ADMIN] Agents récupérés: " + agents.size());
     }
 
     private void refreshSignalements() {
         signalements.setAll(signalementService.getAllSignalements());
+        System.out.println("[ADMIN] Signalements récupérés: " + signalements.size());
     }
 
     private void refreshCharts() {

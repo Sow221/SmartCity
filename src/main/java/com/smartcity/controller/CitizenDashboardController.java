@@ -29,47 +29,82 @@ import java.util.Optional;
  */
 public class CitizenDashboardController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label citizenNameLabel;
-    @FXML private Label citizenMessageLabel;
-    @FXML private Button themeToggleButton;
+    @FXML
+    private BorderPane rootPane;
+    @FXML
+    private Label citizenNameLabel;
+    @FXML
+    private Label citizenMessageLabel;
+    @FXML
+    private Button themeToggleButton;
 
-    @FXML private Button btnCitizenDashboard;
-    @FXML private Button btnAjouterSignalement;
-    @FXML private Button btnMesSignalements;
-    @FXML private Button btnMonProfil;
+    @FXML
+    private Button btnCitizenDashboard;
+    @FXML
+    private Button btnAjouterSignalement;
+    @FXML
+    private Button btnMesSignalements;
+    @FXML
+    private Button btnMonProfil;
 
-    @FXML private VBox pageCitizenDashboard;
-    @FXML private VBox pageAjouterSignalement;
-    @FXML private VBox pageMesSignalements;
-    @FXML private VBox pageMonProfil;
+    @FXML
+    private VBox pageCitizenDashboard;
+    @FXML
+    private VBox pageAjouterSignalement;
+    @FXML
+    private VBox pageMesSignalements;
+    @FXML
+    private VBox pageMonProfil;
 
-    @FXML private Label citizenCardTotal;
-    @FXML private Label citizenCardAttente;
-    @FXML private Label citizenCardEnCours;
-    @FXML private Label citizenCardCollectes;
-    @FXML private PieChart citizenPieChart;
+    @FXML
+    private Label citizenCardTotal;
+    @FXML
+    private Label citizenCardAttente;
+    @FXML
+    private Label citizenCardEnCours;
+    @FXML
+    private Label citizenCardCollectes;
+    @FXML
+    private PieChart citizenPieChart;
 
-    @FXML private TextArea descriptionSignalementArea;
-    @FXML private ComboBox<String> categorieSignalementCombo;
-    @FXML private ComboBox<String> zoneSignalementCombo;
-    @FXML private TextField photoSignalementField;
-    @FXML private TextField latitudeField;
-    @FXML private TextField longitudeField;
-    @FXML private WebView mapWebView;
+    @FXML
+    private TextArea descriptionSignalementArea;
+    @FXML
+    private ComboBox<String> categorieSignalementCombo;
+    @FXML
+    private ComboBox<String> zoneSignalementCombo;
+    @FXML
+    private TextField photoSignalementField;
+    @FXML
+    private TextField latitudeField;
+    @FXML
+    private TextField longitudeField;
+    @FXML
+    private WebView mapWebView;
 
-    @FXML private TableView<Signalement> tableMesSignalements;
-    @FXML private TableColumn<Signalement, Integer> colMesId;
-    @FXML private TableColumn<Signalement, String> colMesDescription;
-    @FXML private TableColumn<Signalement, String> colMesCategorie;
-    @FXML private TableColumn<Signalement, String> colMesZone;
-    @FXML private TableColumn<Signalement, String> colMesDate;
-    @FXML private TableColumn<Signalement, String> colMesStatut;
+    @FXML
+    private TableView<Signalement> tableMesSignalements;
+    @FXML
+    private TableColumn<Signalement, Integer> colMesId;
+    @FXML
+    private TableColumn<Signalement, String> colMesDescription;
+    @FXML
+    private TableColumn<Signalement, String> colMesCategorie;
+    @FXML
+    private TableColumn<Signalement, String> colMesZone;
+    @FXML
+    private TableColumn<Signalement, String> colMesDate;
+    @FXML
+    private TableColumn<Signalement, String> colMesStatut;
 
-    @FXML private TextField profilNomField;
-    @FXML private TextField profilEmailField;
-    @FXML private ComboBox<String> profilZoneCombo;
-    @FXML private TextField profilTelephoneField;
+    @FXML
+    private TextField profilNomField;
+    @FXML
+    private TextField profilEmailField;
+    @FXML
+    private ComboBox<String> profilZoneCombo;
+    @FXML
+    private TextField profilTelephoneField;
 
     private final SignalementService signalementService = new SignalementService();
     private final UtilisateurService utilisateurService = new UtilisateurService();
@@ -94,7 +129,8 @@ public class CitizenDashboardController {
 
         citizenNameLabel.setText(current.getNom());
 
-        categorieSignalementCombo.setItems(FXCollections.observableArrayList("Plastique", "Papier", "Organique", "Verre"));
+        categorieSignalementCombo
+                .setItems(FXCollections.observableArrayList("Plastique", "Papier", "Organique", "Verre"));
         zoneSignalementCombo.setItems(FXCollections.observableArrayList("Pikine", "Guediawaye"));
         profilZoneCombo.setItems(FXCollections.observableArrayList("Pikine", "Guediawaye"));
 
@@ -147,19 +183,20 @@ public class CitizenDashboardController {
         showPage(pageMonProfil, btnMonProfil);
     }
 
-        @FXML
+    @FXML
     private void handleChoisirPhoto() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Choisir une photo");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
-        
+        chooser.getExtensionFilters()
+                .add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+
         // Démarrer dans le dossier Images par défaut
         File userHome = new File(System.getProperty("user.home"));
         File picturesDir = new File(userHome, "Pictures");
         if (picturesDir.exists()) {
             chooser.setInitialDirectory(picturesDir);
         }
-        
+
         File selected = chooser.showOpenDialog(MainApp.getPrimaryStage());
         if (selected != null) {
             photoSignalementField.setText(selected.getName()); // Juste le nom, pas le chemin complet
@@ -167,7 +204,7 @@ public class CitizenDashboardController {
         }
     }
 
-        @FXML
+    @FXML
     private void handleEnregistrerSignalement() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) {
@@ -181,13 +218,13 @@ public class CitizenDashboardController {
             descriptionSignalementArea.requestFocus();
             return;
         }
-        
+
         if (categorieSignalementCombo.getValue() == null) {
             showCitizenMessage("❌ Veuillez choisir une catégorie", false);
             categorieSignalementCombo.requestFocus();
             return;
         }
-        
+
         if (zoneSignalementCombo.getValue() == null) {
             showCitizenMessage("❌ Veuillez choisir une zone", false);
             zoneSignalementCombo.requestFocus();
@@ -197,7 +234,7 @@ public class CitizenDashboardController {
         // ✅ Coordonnées automatiques si pas saisies
         double latitude = 0.0;
         double longitude = 0.0;
-        
+
         try {
             if (!latitudeField.getText().isBlank()) {
                 latitude = Double.parseDouble(latitudeField.getText().trim());
@@ -211,7 +248,7 @@ public class CitizenDashboardController {
                     longitude = -17.3920;
                 }
             }
-            
+
             if (!longitudeField.getText().isBlank()) {
                 longitude = Double.parseDouble(longitudeField.getText().trim());
             }
@@ -241,12 +278,12 @@ public class CitizenDashboardController {
         }
     }
 
-        @FXML
+    @FXML
     private void handleAnnulerSignalement() {
         clearForm();
         showCitizenMessage("📝 Formulaire remis à zéro", true);
     }
-    
+
     /**
      * Nettoie le formulaire de signalement
      */
@@ -257,7 +294,7 @@ public class CitizenDashboardController {
         photoSignalementField.clear();
         latitudeField.clear();
         longitudeField.clear();
-        
+
         if (mapWebView.isVisible()) {
             mapWebView.setVisible(false);
             mapWebView.setManaged(false);
@@ -272,7 +309,8 @@ public class CitizenDashboardController {
             return;
         }
 
-        if (profilNomField.getText().isBlank() || profilEmailField.getText().isBlank() || profilZoneCombo.getValue() == null) {
+        if (profilNomField.getText().isBlank() || profilEmailField.getText().isBlank()
+                || profilZoneCombo.getValue() == null) {
             showCitizenMessage("Nom, email et zone sont obligatoires.", false);
             return;
         }
@@ -323,12 +361,12 @@ public class CitizenDashboardController {
         }
     }
 
-        @FXML
+    @FXML
     private void handleToggleMap() {
         boolean visible = mapWebView.isVisible();
         mapWebView.setVisible(!visible);
         mapWebView.setManaged(!visible);
-        
+
         if (!visible) {
             showCitizenMessage("🗺️ Cliquez sur la carte pour choisir la position", true);
             loadInteractiveMap();
@@ -336,7 +374,7 @@ public class CitizenDashboardController {
             showCitizenMessage("📍 Carte fermée - coordonnées conservées", true);
         }
     }
-    
+
     /**
      * Charge la carte interactive avec un meilleur design
      */
@@ -344,7 +382,7 @@ public class CitizenDashboardController {
         String selectedZone = zoneSignalementCombo.getValue();
         double defaultLat = selectedZone != null && selectedZone.equals("Guediawaye") ? 14.7765 : 14.7646;
         double defaultLon = selectedZone != null && selectedZone.equals("Guediawaye") ? -17.4047 : -17.3920;
-        
+
         String html = "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "<head>\n" +
@@ -362,13 +400,20 @@ public class CitizenDashboardController {
                 "            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 200px;\n" +
                 "        }\n" +
                 "        .coordinates { font-size: 12px; color: #666; }\n" +
+                "        .geoloc-btn {\n" +
+                "            display: inline-block; margin-top: 10px; padding: 6px 12px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.2s;\n"
+                +
+                "        }\n" +
+                "        .geoloc-btn:hover { background: #1976D2; }\n" +
                 "    </style>\n" +
                 "</head>\n" +
                 "<body>\n" +
                 "    <div class='info-panel'>\n" +
                 "        <h4 style='margin: 0 0 10px 0; color: #2196F3;'>📍 Position</h4>\n" +
                 "        <div id='coords' class='coordinates'>Cliquez sur la carte</div>\n" +
-                "        <small style='color: #888;'>Zone: " + (selectedZone != null ? selectedZone : "Non sélectionnée") + "</small>\n" +
+                "        <button class='geoloc-btn' onclick='useGeolocation()'>Utiliser ma position</button>\n" +
+                "        <small style='color: #888;'>Zone: "
+                + (selectedZone != null ? selectedZone : "Non sélectionnée") + "</small>\n" +
                 "    </div>\n" +
                 "    <div id='map'></div>\n" +
                 "    <script>\n" +
@@ -405,12 +450,30 @@ public class CitizenDashboardController {
                 "                .openPopup();\n" +
                 "            updateCoords(e.latlng.lat, e.latlng.lng);\n" +
                 "        });\n" +
+                "        function useGeolocation() {\n" +
+                "            if (navigator.geolocation) {\n" +
+                "                navigator.geolocation.getCurrentPosition(function(position) {\n" +
+                "                    var lat = position.coords.latitude;\n" +
+                "                    var lng = position.coords.longitude;\n" +
+                "                    map.setView([lat, lng], 16);\n" +
+                "                    map.removeLayer(marker);\n" +
+                "                    marker = L.marker([lat, lng]).addTo(map)\n" +
+                "                        .bindPopup('📍 Ma position actuelle')\n" +
+                "                        .openPopup();\n" +
+                "                    updateCoords(lat, lng);\n" +
+                "                }, function(error) {\n" +
+                "                    alert('Impossible d\'obtenir la position : ' + error.message);\n" +
+                "                });\n" +
+                "            } else {\n" +
+                "                alert('La géolocalisation n\'est pas supportée par ce navigateur.');\n" +
+                "            }\n" +
+                "        }\n" +
                 "    </script>\n" +
                 "</body>\n" +
                 "</html>";
-        
+
         mapWebView.getEngine().loadContent(html);
-        
+
         // Configuration du pont JavaScript
         mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
             if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
@@ -420,7 +483,7 @@ public class CitizenDashboardController {
         });
     }
 
-        public class JSBridge {
+    public class JSBridge {
         public void setLocation(double lat, double lng) {
             // ✅ Mise à jour avec formatage décent
             latitudeField.setText(String.format("%.6f", lat));
@@ -448,8 +511,7 @@ public class CitizenDashboardController {
         citizenPieChart.setData(FXCollections.observableArrayList(
                 new PieChart.Data("En attente", attente),
                 new PieChart.Data("En cours", enCours),
-                new PieChart.Data("Collecte", collectes)
-        ));
+                new PieChart.Data("Collecte", collectes)));
     }
 
     private void refreshMesSignalements() {
@@ -477,7 +539,8 @@ public class CitizenDashboardController {
         colMesCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
         colMesZone.setCellValueFactory(new PropertyValueFactory<>("zone"));
         colMesDate.setCellValueFactory(cell -> new SimpleStringProperty(
-                cell.getValue().getDateSignalement() == null ? "" : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
+                cell.getValue().getDateSignalement() == null ? ""
+                        : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
         colMesStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
 
         colMesId.setStyle("-fx-alignment: CENTER;");
@@ -513,14 +576,14 @@ public class CitizenDashboardController {
     }
 
     private void showPage(VBox pageToShow, Button activeButton) {
-        VBox[] pages = {pageCitizenDashboard, pageAjouterSignalement, pageMesSignalements, pageMonProfil};
+        VBox[] pages = { pageCitizenDashboard, pageAjouterSignalement, pageMesSignalements, pageMonProfil };
         for (VBox page : pages) {
             boolean visible = page == pageToShow;
             page.setVisible(visible);
             page.setManaged(visible);
         }
 
-        Button[] buttons = {btnCitizenDashboard, btnAjouterSignalement, btnMesSignalements, btnMonProfil};
+        Button[] buttons = { btnCitizenDashboard, btnAjouterSignalement, btnMesSignalements, btnMonProfil };
         for (Button btn : buttons) {
             btn.getStyleClass().remove("sidebar-button-active");
             if (btn == activeButton) {
@@ -534,7 +597,9 @@ public class CitizenDashboardController {
             return;
         }
         citizenMessageLabel.setText(message);
-        citizenMessageLabel.setStyle(success ? "-fx-background-color: rgba(67,160,71,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;" : "-fx-background-color: rgba(239,83,80,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;");
+        citizenMessageLabel.setStyle(success
+                ? "-fx-background-color: rgba(67,160,71,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;"
+                : "-fx-background-color: rgba(239,83,80,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;");
     }
 
     private void applyTheme() {

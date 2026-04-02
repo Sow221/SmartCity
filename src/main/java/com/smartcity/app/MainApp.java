@@ -12,12 +12,16 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
  * Point d'entree principal de l'application SmartCity Dechets.
  */
 public class MainApp extends Application {
+    private static final Logger logger = LoggerFactory.getLogger(MainApp.class);
 
     private static Stage primaryStage;
 
@@ -41,8 +45,7 @@ public class MainApp extends Application {
             primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Erreur lors du chargement de login.fxml");
+            logger.error("Erreur lors du chargement de login.fxml", e);
         }
     }
 
@@ -57,8 +60,7 @@ public class MainApp extends Application {
             primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Erreur lors du chargement de register.fxml");
+            logger.error("Erreur lors du chargement de register.fxml", e);
         }
     }
 
@@ -101,8 +103,7 @@ public class MainApp extends Application {
             primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Erreur lors du chargement du dashboard");
+            logger.error("Erreur lors du chargement du dashboard", e);
         }
     }
 

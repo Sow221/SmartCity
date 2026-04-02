@@ -8,12 +8,16 @@ import java.sql.*;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
  * Service pour les rapports et analyses
  */
 public class ReportService {
+    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
 
     private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
@@ -140,7 +144,7 @@ public class ReportService {
                 return rs.getDouble("avgTime");
             }
         } catch (SQLException e) {
-            System.err.println("Erreur calcul temps moyen: " + e.getMessage());
+            logger.error("Erreur calcul temps moyen", e);
         }
         
         return 0.0;
@@ -166,7 +170,7 @@ public class ReportService {
                 performance.put(rs.getString("nomZone"), rs.getInt("count"));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur performance par zone: " + e.getMessage());
+            logger.error("Erreur performance par zone", e);
         }
         
         return performance;
@@ -192,7 +196,7 @@ public class ReportService {
                 categories.put(rs.getString("categorie"), rs.getInt("count"));
             }
         } catch (SQLException e) {
-            System.err.println("Erreur top catégories: " + e.getMessage());
+            logger.error("Erreur top catégories", e);
         }
         
         return categories;
@@ -228,7 +232,7 @@ public class ReportService {
                 agents.add(stats);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur agents actifs: " + e.getMessage());
+            logger.error("Erreur agents actifs", e);
         }
         
         return agents;
@@ -266,7 +270,7 @@ public class ReportService {
                 urgents.add(s);
             }
         } catch (SQLException e) {
-            System.err.println("Erreur signalements urgents: " + e.getMessage());
+            logger.error("Erreur signalements urgents", e);
         }
         
         return urgents;
@@ -340,7 +344,7 @@ public class ReportService {
             ResultSet rs = pstmt.executeQuery();
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
-            System.err.println("Erreur requête de comptage: " + e.getMessage());
+            logger.error("Erreur requête de comptage", e);
             return 0;
         }
     }

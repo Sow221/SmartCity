@@ -6,12 +6,16 @@ import com.smartcity.utils.DatabaseConnection;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
  * Service pour la gestion des affectations
  */
 public class AffectationService {
+    private static final Logger logger = LoggerFactory.getLogger(AffectationService.class);
 
     private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
@@ -30,7 +34,7 @@ public class AffectationService {
             pstmt.setInt(2, idAgent);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la création de l'affectation: " + e.getMessage());
+            logger.error("Erreur lors de la création de l'affectation", e);
             return false;
         }
     }
@@ -48,7 +52,7 @@ public class AffectationService {
             pstmt.setInt(3, idAffectation);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors du marquage de collecte: " + e.getMessage());
+            logger.error("Erreur lors du marquage de collecte", e);
             return false;
         }
     }
@@ -59,15 +63,14 @@ public class AffectationService {
     public List<Affectation> getAllAffectations() {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation ORDER BY dateAffectation DESC";
-
-        try (Statement stmt = getConn().createStatement();
-                ResultSet rs = stmt.executeQuery(query)) {
-
-            while (rs.next()) {
-                liste.add(mapResultSetToAffectation(rs));
+        try (Statement stmt = getConn().createStatement()) {
+            try (ResultSet rs = stmt.executeQuery(query)) {
+                while (rs.next()) {
+                    liste.add(mapResultSetToAffectation(rs));
+                }
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération des affectations", e);
         }
         return liste;
     }
@@ -78,16 +81,15 @@ public class AffectationService {
     public List<Affectation> getAffectationsByAgent(int idAgent) {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation WHERE idAgent = ? ORDER BY dateAffectation DESC";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idAgent);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                liste.add(mapResultSetToAffectation(rs));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    liste.add(mapResultSetToAffectation(rs));
+                }
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération des affectations par agent", e);
         }
         return liste;
     }
@@ -97,16 +99,15 @@ public class AffectationService {
      */
     public Affectation getAffectationBySignalement(int idSignalement) {
         String query = "SELECT * FROM Affectation WHERE idSignalement = ?";
-
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToAffectation(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToAffectation(rs);
+                }
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération: " + e.getMessage());
+            logger.error("Erreur lors de la récupération de l'affectation par signalement", e);
         }
         return null;
     }
@@ -128,7 +129,7 @@ public class AffectationService {
             pstmt.setInt(1, idAffectation);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la suppression: " + e.getMessage());
+            logger.error("Erreur lors de la suppression d'une affectation", e);
             return false;
         }
     }

@@ -34,14 +34,21 @@ public class ZoneService {
         return zones;
     }
 
-    public Zone getZoneById(int idZone) {
-        String query = "SELECT * FROM Zone WHERE idZone = ?";
+    private static java.util.Map<Integer, Zone> zoneCache = new java.util.HashMap<>();
 
+    public Zone getZoneById(int idZone) {
+        if (zoneCache.containsKey(idZone)) {
+            return zoneCache.get(idZone);
+        }
+        String query = "SELECT * FROM Zone WHERE idZone = ?";
         try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
             pstmt.setInt(1, idZone);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return new Zone(rs.getInt("idZone"), rs.getString("nomZone"));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Zone zone = new Zone(rs.getInt("idZone"), rs.getString("nomZone"));
+                    zoneCache.put(idZone, zone);
+                    return zone;
+                }
             }
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération de la zone", e);

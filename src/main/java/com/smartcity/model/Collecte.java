@@ -6,7 +6,7 @@ package com.smartcity.model;
 public class Collecte {
 
     private int idCollecte;
-    private int idDechet;
+    private int idSignalement;
     private int idAgent;
     private java.time.LocalDateTime dateCollecte;
     private String statut; // En attente, En cours, Collecté
@@ -16,8 +16,9 @@ public class Collecte {
     public Collecte() {
     }
 
-    public Collecte(int idDechet, int idAgent, java.time.LocalDateTime dateCollecte, String statut, String commentaire) {
-        this.idDechet = idDechet;
+    public Collecte(int idSignalement, int idAgent, java.time.LocalDateTime dateCollecte, String statut,
+            String commentaire) {
+        this.idSignalement = idSignalement;
         this.idAgent = idAgent;
         this.dateCollecte = dateCollecte;
         this.statut = statut;
@@ -33,12 +34,12 @@ public class Collecte {
         this.idCollecte = idCollecte;
     }
 
-    public int getIdDechet() {
-        return idDechet;
+    public int getIdSignalement() {
+        return idSignalement;
     }
 
-    public void setIdDechet(int idDechet) {
-        this.idDechet = idDechet;
+    public void setIdSignalement(int idSignalement) {
+        this.idSignalement = idSignalement;
     }
 
     public int getIdAgent() {
@@ -49,7 +50,7 @@ public class Collecte {
         this.idAgent = idAgent;
     }
 
-        public java.time.LocalDateTime getDateCollecte() {
+    public java.time.LocalDateTime getDateCollecte() {
         return dateCollecte;
     }
 
@@ -77,7 +78,7 @@ public class Collecte {
     public String toString() {
         return "Collecte{" +
                 "idCollecte=" + idCollecte +
-                ", idDechet=" + idDechet +
+                ", idSignalement=" + idSignalement +
                 ", idAgent=" + idAgent +
                 ", dateCollecte=" + dateCollecte +
                 ", statut='" + statut + '\'' +

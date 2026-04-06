@@ -3,6 +3,7 @@ package com.smartcity.controller;
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.UtilisateurService;
+import com.smartcity.service.ZoneService;
 import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -46,13 +47,14 @@ public class RegisterController {
     private Button inscriptionButton;
 
     private final UtilisateurService utilisateurService;
+    private final ZoneService zoneService;
     private MainApp mainApp;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$");
     private static final String DEFAULT_ROLE = "Citoyen";
-    private static final String[] ZONES = {"Pikine", "Guédiawaye"};
 
     public RegisterController() {
         utilisateurService = new UtilisateurService();
+        zoneService = new ZoneService();
     }
 
     public void setMainApp(MainApp mainApp) {
@@ -61,7 +63,10 @@ public class RegisterController {
 
     @FXML
     private void initialize() {
-        zoneCombo.setItems(FXCollections.observableArrayList(ZONES));
+        zoneCombo.setItems(javafx.collections.FXCollections.observableArrayList(
+            zoneService.getAllZones().stream()
+                .map(z -> z.getNomZone())
+                .collect(java.util.stream.Collectors.toList())));
         clearStatusMessage();
         backToLoginLink.setOnAction(evt -> mainApp.showLoginScreen());
         
@@ -109,9 +114,19 @@ public class RegisterController {
             return;
         }
 
-        int idZone = zone.equals("Pikine") ? 1 : 2;
+        int idZone = zoneService.getAllZones().stream()
+            .filter(z -> z.getNomZone().equals(zone))
+            .mapToInt(com.smartcity.model.Zone::getIdZone)
+            .findFirst().orElse(1);
 
-        Utilisateur utilisateur = new Utilisateur(null, nom, email, motPasse, role, idZone);
+        if (utilisateurService.emailExiste(email)) {
+            showErrorMessage("Cet email est déjà utilisé.");
+            emailField.requestFocus();
+            return;
+        }
+
+        // nom complet dans le champ nom (NOT NULL en DB), prenom laissé vide
+        Utilisateur utilisateur = new Utilisateur("", nom, email, motPasse, role, idZone);
 
         if (utilisateurService.inscription(utilisateur)) {
             showSuccessMessage("Inscription réussie ! Redirection vers la connexion...");
@@ -119,7 +134,7 @@ public class RegisterController {
             delay.setOnFinished(evt -> mainApp.showLoginScreen());
             delay.play();
         } else {
-            showErrorMessage("Échec de l'inscription. L'email existe peut-être déjà.");
+            showErrorMessage("Échec de l'inscription. Veuillez réessayer.");
         }
     }
 

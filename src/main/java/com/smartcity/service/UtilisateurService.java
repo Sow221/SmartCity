@@ -130,11 +130,12 @@ public class UtilisateurService {
 
     public boolean emailExiste(String email) {
         String query = "SELECT COUNT(*) FROM Utilisateur WHERE email = ? AND actif = 1";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, email);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         } catch (SQLException e) {
             return false;
         }
@@ -143,11 +144,10 @@ public class UtilisateurService {
     public List<Utilisateur> getAllUtilisateurs() {
         List<Utilisateur> utilisateurs = new ArrayList<>();
         String query = "SELECT * FROM Utilisateur WHERE actif = 1 ORDER BY nom";
-
-        try (Statement stmt = getConn().createStatement(); ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                utilisateurs.add(mapResultSetToUtilisateur(rs));
-            }
+        try (Connection conn = getConn();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) utilisateurs.add(mapResultSetToUtilisateur(rs));
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération de tous les utilisateurs", e);
         }
@@ -157,13 +157,11 @@ public class UtilisateurService {
     public List<Utilisateur> getUtilisateursByRole(String role) {
         List<Utilisateur> utilisateurs = new ArrayList<>();
         String query = "SELECT * FROM Utilisateur WHERE role = ? AND actif = 1 ORDER BY nom";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, role);
             try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    utilisateurs.add(mapResultSetToUtilisateur(rs));
-                }
+                while (rs.next()) utilisateurs.add(mapResultSetToUtilisateur(rs));
             }
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération des utilisateurs par rôle", e);
@@ -173,12 +171,11 @@ public class UtilisateurService {
 
     public Utilisateur getUtilisateurById(int idUser) {
         String query = "SELECT * FROM Utilisateur WHERE idUser = ? AND actif = 1";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idUser);
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToUtilisateur(rs);
-                }
+                if (rs.next()) return mapResultSetToUtilisateur(rs);
             }
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération de l'utilisateur par id", e);
@@ -188,8 +185,8 @@ public class UtilisateurService {
 
     public boolean updateUtilisateur(Utilisateur utilisateur) {
         String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? WHERE idUser = ? AND actif = 1";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, utilisateur.getPrenom());
             pstmt.setString(2, utilisateur.getNom());
             pstmt.setString(3, utilisateur.getEmail());
@@ -207,10 +204,10 @@ public class UtilisateurService {
 
     public boolean updateUtilisateurAdmin(Utilisateur utilisateur) {
         String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
-        String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, motDePasse = ?, role = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? " +
-                "WHERE idUser = ? AND actif = 1";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, motDePasse = ?, role = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? "
+                + "WHERE idUser = ? AND actif = 1";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, utilisateur.getPrenom());
             pstmt.setString(2, utilisateur.getNom());
             pstmt.setString(3, utilisateur.getEmail());
@@ -223,25 +220,27 @@ public class UtilisateurService {
             pstmt.setInt(10, utilisateur.getIdUser());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
+            logger.error("Erreur updateUtilisateurAdmin: {}", e.getMessage());
             return false;
         }
     }
 
     public boolean deleteUtilisateur(int idUser) {
         String query = "UPDATE Utilisateur SET actif = 0 WHERE idUser = ?";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idUser);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
+            logger.error("Erreur deleteUtilisateur: {}", e.getMessage());
             return false;
         }
     }
 
     public int countAllActifs() {
         String query = "SELECT COUNT(*) FROM Utilisateur WHERE actif = 1";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query);
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query);
              ResultSet rs = pstmt.executeQuery()) {
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {

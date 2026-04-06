@@ -128,113 +128,90 @@ public class ReportService {
     }
 
     private double calculateAverageProcessingTime(LocalDate start, LocalDate end) {
-        String query = """
-            SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateAffectation)) as avgTime
-            FROM Signalement s
-            JOIN Affectation a ON s.idSignalement = a.idSignalement
-            WHERE DATE(s.dateSignalement) BETWEEN ? AND ?
-            AND s.statut = 'Terminé'
-        """;
-        
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        String query = "SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateAffectation)) as avgTime "
+            + "FROM Signalement s "
+            + "JOIN Affectation a ON s.idSignalement = a.idSignalement "
+            + "WHERE DATE(s.dateSignalement) BETWEEN ? AND ? "
+            + "AND s.statut = 'Termin\u00e9'";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
             pstmt.setDate(2, Date.valueOf(end));
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getDouble("avgTime");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getDouble("avgTime");
             }
         } catch (SQLException e) {
             logger.error("Erreur calcul temps moyen", e);
         }
-        
         return 0.0;
     }
 
     private Map<String, Integer> getPerformanceByZone(LocalDate start, LocalDate end) {
         Map<String, Integer> performance = new HashMap<>();
-        String query = """
-            SELECT z.nomZone, COUNT(*) as count
-            FROM Signalement s
-            JOIN Zone z ON s.idZone = z.idZone
-            WHERE DATE(s.dateSignalement) BETWEEN ? AND ?
-            GROUP BY z.nomZone
-            ORDER BY count DESC
-        """;
-        
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        String query = "SELECT z.nomZone, COUNT(*) as count "
+            + "FROM Signalement s JOIN Zone z ON s.idZone = z.idZone "
+            + "WHERE DATE(s.dateSignalement) BETWEEN ? AND ? "
+            + "GROUP BY z.nomZone ORDER BY count DESC";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
             pstmt.setDate(2, Date.valueOf(end));
-            ResultSet rs = pstmt.executeQuery();
-            
-            while (rs.next()) {
-                performance.put(rs.getString("nomZone"), rs.getInt("count"));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) performance.put(rs.getString("nomZone"), rs.getInt("count"));
             }
         } catch (SQLException e) {
             logger.error("Erreur performance par zone", e);
         }
-        
         return performance;
     }
 
     private Map<String, Integer> getTopCategories(LocalDate start, LocalDate end) {
         Map<String, Integer> categories = new HashMap<>();
-        String query = """
-            SELECT categorie, COUNT(*) as count
-            FROM Signalement
-            WHERE DATE(dateSignalement) BETWEEN ? AND ?
-            GROUP BY categorie
-            ORDER BY count DESC
-            LIMIT 5
-        """;
-        
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        String query = "SELECT categorie, COUNT(*) as count FROM Signalement "
+            + "WHERE DATE(dateSignalement) BETWEEN ? AND ? "
+            + "GROUP BY categorie ORDER BY count DESC LIMIT 5";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
             pstmt.setDate(2, Date.valueOf(end));
-            ResultSet rs = pstmt.executeQuery();
-            
-            while (rs.next()) {
-                categories.put(rs.getString("categorie"), rs.getInt("count"));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) categories.put(rs.getString("categorie"), rs.getInt("count"));
             }
         } catch (SQLException e) {
             logger.error("Erreur top catégories", e);
         }
-        
         return categories;
     }
 
     private List<AgentStats> getTopActiveAgents(LocalDate start, LocalDate end) {
         List<AgentStats> agents = new ArrayList<>();
-        String query = """
-            SELECT u.nom, u.email, COUNT(a.idAffectation) as missions,
-                   SUM(CASE WHEN s.statut = 'Terminé' THEN 1 ELSE 0 END) as terminees
-            FROM Utilisateur u
-            LEFT JOIN Affectation a ON u.idUser = a.idAgent
-            LEFT JOIN Signalement s ON a.idSignalement = s.idSignalement
-            WHERE u.role = 'Agent' AND DATE(a.dateAffectation) BETWEEN ? AND ?
-            GROUP BY u.idUser, u.nom, u.email
-            ORDER BY missions DESC, terminees DESC
-            LIMIT 10
-        """;
-        
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        String query = "SELECT u.nom, u.email, COUNT(a.idAffectation) as missions, "
+            + "SUM(CASE WHEN s.statut = 'Termin\u00e9' THEN 1 ELSE 0 END) as terminees "
+            + "FROM Utilisateur u "
+            + "LEFT JOIN Affectation a ON u.idUser = a.idAgent "
+            + "LEFT JOIN Signalement s ON a.idSignalement = s.idSignalement "
+            + "WHERE u.role = 'Agent' AND DATE(a.dateAffectation) BETWEEN ? AND ? "
+            + "GROUP BY u.idUser, u.nom, u.email "
+            + "ORDER BY missions DESC, terminees DESC LIMIT 10";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
             pstmt.setDate(2, Date.valueOf(end));
-            ResultSet rs = pstmt.executeQuery();
-            
-            while (rs.next()) {
-                AgentStats stats = new AgentStats();
-                stats.nom = rs.getString("nom");
-                stats.email = rs.getString("email");
-                stats.missionsTotal = rs.getInt("missions");
-                stats.missionsTerminees = rs.getInt("terminees");
-                stats.tauxReussite = stats.missionsTotal > 0 ? 
-                    (double) stats.missionsTerminees / stats.missionsTotal * 100 : 0.0;
-                agents.add(stats);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    AgentStats stats = new AgentStats();
+                    stats.nom = rs.getString("nom");
+                    stats.email = rs.getString("email");
+                    stats.missionsTotal = rs.getInt("missions");
+                    stats.missionsTerminees = rs.getInt("terminees");
+                    stats.tauxReussite = stats.missionsTotal > 0 ?
+                        (double) stats.missionsTerminees / stats.missionsTotal * 100 : 0.0;
+                    agents.add(stats);
+                }
             }
         } catch (SQLException e) {
             logger.error("Erreur agents actifs", e);
         }
-        
         return agents;
     }
 
@@ -248,31 +225,21 @@ public class ReportService {
     }
 
     private List<Signalement> getUrgentSignalements() {
-        // Signalements en attente depuis plus de 24h
-        String query = """
-            SELECT s.*, z.nomZone, u.nom as utilisateurNom
-            FROM Signalement s
-            LEFT JOIN Zone z ON s.idZone = z.idZone
-            LEFT JOIN Utilisateur u ON s.idUser = u.idUser
-            WHERE s.statut = 'En attente' 
-            AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            ORDER BY s.dateSignalement ASC
-            LIMIT 10
-        """;
-        
+        String query = "SELECT s.*, z.nomZone, u.nom as utilisateurNom "
+            + "FROM Signalement s "
+            + "LEFT JOIN Zone z ON s.idZone = z.idZone "
+            + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+            + "WHERE s.statut = 'En attente' "
+            + "AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 24 HOUR) "
+            + "ORDER BY s.dateSignalement ASC LIMIT 10";
         List<Signalement> urgents = new ArrayList<>();
-        
-        try (PreparedStatement pstmt = getConn().prepareStatement(query);
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query);
              ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Signalement s = mapResultSetToSignalement(rs);
-                urgents.add(s);
-            }
+            while (rs.next()) urgents.add(mapResultSetToSignalement(rs));
         } catch (SQLException e) {
             logger.error("Erreur signalements urgents", e);
         }
-        
         return urgents;
     }
 
@@ -337,12 +304,14 @@ public class ReportService {
     }
 
     private int executeCountQuery(String query, Object... params) {
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 pstmt.setObject(i + 1, params[i]);
             }
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() ? rs.getInt(1) : 0;
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
         } catch (SQLException e) {
             logger.error("Erreur requête de comptage", e);
             return 0;

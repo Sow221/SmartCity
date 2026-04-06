@@ -23,21 +23,15 @@ public class DatabaseConnection {
     private static final String PASSWORD;
     private static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
-    // Suppression du pool HikariCP, gestion simple JDBC
-
     static {
-        // Chargement sécurisé de la configuration
         URL = getConfigProperty("db.url",
                 "jdbc:mysql://localhost:3306/db_smartcity?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
         USER = getConfigProperty("db.user", "root");
-        PASSWORD = getConfigProperty("db.password", null);
+        PASSWORD = getConfigProperty("db.password", "");
 
-        if (PASSWORD == null) {
-            logger.error("❌ ERREUR CRITIQUE: Mot de passe DB non configuré! Définir DB_PASSWORD ou db.password");
-            throw new RuntimeException("Configuration DB manquante");
+        if (PASSWORD == null || PASSWORD.isEmpty()) {
+            logger.warn("⚠️ Mot de passe DB non configuré — vérifier config.properties ou la variable DB_PASSWORD");
         }
-
-        // Plus de pool HikariCP à initialiser
     }
 
     /**
@@ -78,20 +72,10 @@ public class DatabaseConnection {
         return defaultValue;
     }
 
-    // Suppression de l'initialisation du pool HikariCP
-
-    /**
-     * Obtient une connexion du pool (recommandé avec try-with-resources)
-     * 
-     * @return Connection du pool HikariCP
-     * @throws SQLException si erreur de connexion
-     */
     public static Connection getConnection() throws SQLException {
         try {
             Class.forName(DRIVER);
-            Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-            logger.debug("📊 Connexion JDBC obtenue");
-            return conn;
+            return DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (ClassNotFoundException e) {
             logger.error("❌ Driver JDBC non trouvé: {}", e.getMessage());
             throw new SQLException("Driver JDBC non trouvé", e);
@@ -101,52 +85,17 @@ public class DatabaseConnection {
         }
     }
 
-    /**
-     * Ferme le pool de connexions (à appeler au shutdown de l'application)
-     */
-    // Plus de pool à fermer avec JDBC simple
-    public static void closeDataSource() {
-        // Ne fait rien
-    }
+    public static void closeDataSource() {}
 
-    /**
-     * @deprecated Utiliser try-with-resources avec getConnection()
-     */
-    @Deprecated
-    public static void closeConnection() {
-        logger.warn("⚠️ Méthode dépréciée: Utiliser try-with-resources");
-    }
-
-    /**
-     * Teste la santé du pool de connexions
-     * 
-     * @return true si le pool est opérationnel
-     */
     public static boolean testConnection() {
         try (Connection conn = getConnection()) {
-            boolean isValid = conn != null && conn.isValid(5); // 5 secondes timeout
-            if (isValid) {
-                logger.debug("✅ Test connexion JDBC réussi");
-            } else {
-                logger.warn("⚠️ Test connexion JDBC échoué");
-            }
-            return isValid;
+            return conn != null && conn.isValid(5);
         } catch (SQLException e) {
-            logger.error("❌ Erreur test connexion JDBC: {}", e.getMessage());
+            logger.error("❌ Erreur test connexion: {}", e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Statistiques du pool de connexions pour monitoring
-     */
-    public static String getPoolStats() {
-        return "Mode JDBC simple : pas de pool";
-    }
-
-    /**
-     * Vérifie si le pool est en bonne santé
-     */
     public static boolean isHealthy() {
         return testConnection();
     }

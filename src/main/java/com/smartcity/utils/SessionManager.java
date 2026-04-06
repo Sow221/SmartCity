@@ -21,7 +21,6 @@ public class SessionManager {
     
     // Session actuelle (pour l'application desktop)
     private static SessionData currentSession;
-    private static boolean darkMode = false;
     
     // Configuration de sécurité
     private static final int SESSION_TIMEOUT_MINUTES = 30;
@@ -215,13 +214,19 @@ public class SessionManager {
         return email.substring(0, Math.min(2, atIndex)) + "***" + email.substring(atIndex);
     }
 
-    // Gestion du thème
+    // Gestion du thème avec persistance
+    private static final java.util.prefs.Preferences prefs =
+        java.util.prefs.Preferences.userNodeForPackage(SessionManager.class);
+    private static final String PREF_DARK_MODE = "darkMode";
+    private static boolean darkMode = prefs.getBoolean(PREF_DARK_MODE, false);
+
     public static boolean isDarkMode() {
         return darkMode;
     }
 
     public static void setDarkMode(boolean enabled) {
         darkMode = enabled;
+        prefs.putBoolean(PREF_DARK_MODE, enabled);
         logger.debug("🎨 Thème changé: {}", enabled ? "Sombre" : "Clair");
     }
 

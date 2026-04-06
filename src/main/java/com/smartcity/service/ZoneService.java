@@ -22,8 +22,8 @@ public class ZoneService {
     public List<Zone> getAllZones() {
         List<Zone> zones = new ArrayList<>();
         String query = "SELECT * FROM Zone";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query);
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query);
              ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
                 zones.add(new Zone(rs.getInt("idZone"), rs.getString("nomZone")));
@@ -34,14 +34,13 @@ public class ZoneService {
         return zones;
     }
 
-    private static java.util.Map<Integer, Zone> zoneCache = new java.util.HashMap<>();
+    private static final java.util.Map<Integer, Zone> zoneCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public Zone getZoneById(int idZone) {
-        if (zoneCache.containsKey(idZone)) {
-            return zoneCache.get(idZone);
-        }
+        if (zoneCache.containsKey(idZone)) return zoneCache.get(idZone);
         String query = "SELECT * FROM Zone WHERE idZone = ?";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idZone);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -58,8 +57,8 @@ public class ZoneService {
 
     public boolean ajouterZone(Zone zone) {
         String query = "INSERT INTO Zone (nomZone) VALUES (?)";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, zone.getNomZone());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {

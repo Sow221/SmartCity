@@ -1,164 +1,99 @@
 package com.smartcity.service;
 
 import com.smartcity.model.Signalement;
-import com.smartcity.model.Zone;
-
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
-/**
- * Service pour la géolocalisation et la cartographie
- */
 public class GeolocationService {
 
-    /**
-     * Obtenir la position courante de l'utilisateur (simulation)
-     */
-    public Coordinates getCurrentPosition() {
-        // À remplacer par une vraie géolocalisation si besoin
-        // Ici, retourne une position par défaut (Pikine)
-        return new Coordinates(14.7549, -17.3925);
-    }
-
-    // Coordonnées des zones principales de Dakar
+    // Source unique des coordonnées de zones
     private static final Map<String, Coordinates> ZONE_CENTERS = new HashMap<>();
-
     static {
-        // Coordonnées réelles de Pikine et Guédiawaye
-        ZONE_CENTERS.put("Pikine", new Coordinates(14.7549, -17.3925));
-        ZONE_CENTERS.put("Guédiawaye", new Coordinates(14.7692, -17.4281));
+        ZONE_CENTERS.put("Pikine",      new Coordinates(14.7646, -17.3920));
+        ZONE_CENTERS.put("Guediawaye",  new Coordinates(14.7765, -17.4047));
+        ZONE_CENTERS.put("Guédiawaye", new Coordinates(14.7765, -17.4047));
     }
 
-    /**
-     * Obtenir les coordonnées du centre d'une zone
-     */
+    public Coordinates getCurrentPosition() {
+        return ZONE_CENTERS.get("Pikine");
+    }
+
     public Coordinates getZoneCenter(String nomZone) {
-        return ZONE_CENTERS.getOrDefault(nomZone, new Coordinates(14.7549, -17.3925));
+        if (nomZone == null) return ZONE_CENTERS.get("Pikine");
+        return ZONE_CENTERS.getOrDefault(nomZone,
+               ZONE_CENTERS.getOrDefault(nomZone.trim(), ZONE_CENTERS.get("Pikine")));
     }
 
-    /**
-     * Calculer la distance entre deux points (en km)
-     */
+    // Source unique du calcul de distance (Haversine)
+    public static double distanceBetween(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // Instance method pour compatibilité avec le code existant
     public double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Rayon de la Terre en km
-
-        double latDistance = Math.toRadians(lat2 - lat1);
-        double lonDistance = Math.toRadians(lon2 - lon1);
-
-        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                        * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c;
+        return distanceBetween(lat1, lon1, lat2, lon2);
     }
 
-    /**
-     * Optimiser un itinéraire de collecte (algorithme du plus proche voisin
-     * simplifié)
-     */
     public List<Signalement> optimizeCollectionRoute(List<Signalement> signalements, Coordinates startPoint) {
-        if (signalements.isEmpty()) {
-            return signalements;
-        }
-
-        List<Signalement> optimizedRoute = new java.util.ArrayList<>();
+        if (signalements.isEmpty()) return signalements;
+        List<Signalement> optimized = new java.util.ArrayList<>();
         List<Signalement> remaining = new java.util.ArrayList<>(signalements);
-
-        Coordinates currentPos = startPoint;
-
+        Coordinates current = startPoint;
         while (!remaining.isEmpty()) {
             Signalement closest = null;
-            double minDistance = Double.MAX_VALUE;
-
+            double minDist = Double.MAX_VALUE;
             for (Signalement s : remaining) {
-                double distance = calculateDistance(currentPos.lat, currentPos.lon,
-                        s.getLatitude(), s.getLongitude());
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closest = s;
-                }
+                double d = distanceBetween(current.lat, current.lon, s.getLatitude(), s.getLongitude());
+                if (d < minDist) { minDist = d; closest = s; }
             }
-
             if (closest != null) {
-                optimizedRoute.add(closest);
+                optimized.add(closest);
                 remaining.remove(closest);
-                currentPos = new Coordinates(closest.getLatitude(), closest.getLongitude());
+                current = new Coordinates(closest.getLatitude(), closest.getLongitude());
             }
         }
-
-        return optimizedRoute;
+        return optimized;
     }
 
-    /**
-     * Générer des coordonnées aléatoires dans une zone donnée
-     */
     public Coordinates generateRandomCoordinatesInZone(String nomZone) {
         Coordinates center = getZoneCenter(nomZone);
-
-        // Rayon d'environ 2-3 km autour du centre
-        double radius = 0.02; // ~2.2 km
         double angle = Math.random() * 2 * Math.PI;
-        double distance = Math.random() * radius;
-
-        double lat = center.lat + (distance * Math.cos(angle));
-        double lon = center.lon + (distance * Math.sin(angle));
-
-        return new Coordinates(lat, lon);
+        double distance = Math.random() * 0.02;
+        return new Coordinates(center.lat + distance * Math.cos(angle),
+                               center.lon + distance * Math.sin(angle));
     }
 
-    /**
-     * Obtenir l'URL Google Maps pour un point
-     */
     public String getGoogleMapsUrl(double lat, double lon) {
         return String.format("https://maps.google.com/maps?q=%.6f,%.6f&z=16", lat, lon);
     }
 
-    /**
-     * Obtenir l'URL d'itinéraire Google Maps
-     */
     public String getRouteUrl(Coordinates start, Coordinates end) {
         return String.format("https://maps.google.com/maps/dir/%.6f,%.6f/%.6f,%.6f",
                 start.lat, start.lon, end.lat, end.lon);
     }
 
-    /**
-     * Obtenir l'URL d'itinéraire multi-points
-     */
     public String getMultiPointRouteUrl(List<Signalement> signalements) {
-        if (signalements.isEmpty()) {
-            return "";
-        }
-
+        if (signalements.isEmpty()) return "";
         StringBuilder url = new StringBuilder("https://maps.google.com/maps/dir/");
         for (int i = 0; i < signalements.size(); i++) {
             Signalement s = signalements.get(i);
             url.append(String.format("%.6f,%.6f", s.getLatitude(), s.getLongitude()));
-            if (i < signalements.size() - 1) {
-                url.append("/");
-            }
+            if (i < signalements.size() - 1) url.append("/");
         }
-
         return url.toString();
     }
 
-    /**
-     * Classe interne pour les coordonnées
-     */
     public static class Coordinates {
         public final double lat;
         public final double lon;
-
-        public Coordinates(double lat, double lon) {
-            this.lat = lat;
-            this.lon = lon;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("(%.6f, %.6f)", lat, lon);
-        }
+        public Coordinates(double lat, double lon) { this.lat = lat; this.lon = lon; }
+        @Override public String toString() { return String.format("(%.6f, %.6f)", lat, lon); }
     }
 }

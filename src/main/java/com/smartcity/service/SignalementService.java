@@ -15,10 +15,17 @@ import org.slf4j.LoggerFactory;
  * Service pour la gestion des signalements.
  */
 public class SignalementService {
-    // Modifier un signalement
+
+    private static final Logger logger = LoggerFactory.getLogger(SignalementService.class);
+
+    private Connection getConn() throws SQLException {
+        return DatabaseConnection.getConnection();
+    }
+
     public boolean modifierSignalement(Signalement signalement) {
         String query = "UPDATE Signalement SET description=?, categorie=?, idZone=?, latitude=?, longitude=?, statut=?, photo=? WHERE idSignalement=?";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
             pstmt.setInt(3, signalement.getIdZone());
@@ -39,20 +46,11 @@ public class SignalementService {
         }
     }
 
-    // ...existing code...
-
-    private static final Logger logger = LoggerFactory.getLogger(SignalementService.class);
-
-    // Connexion à la base
-    private Connection getConn() throws SQLException {
-        return DatabaseConnection.getConnection();
-    }
-
     // Ajouter un signalement
     public boolean ajouterSignalement(Signalement signalement) {
         String query = "INSERT INTO Signalement (description, categorie, idZone, latitude, longitude, dateSignalement, statut, photo, idUser) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (PreparedStatement pstmt = getConn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
             pstmt.setInt(3, signalement.getIdZone());
@@ -64,7 +62,13 @@ public class SignalementService {
             pstmt.setInt(9, signalement.getIdUser());
             boolean result = pstmt.executeUpdate() > 0;
             if (result) {
-                // Push WebSocket pour mise à jour carte
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        int idGenere = generatedKeys.getInt(1);
+                        signalement.setIdSignalement(idGenere);
+                        new AffectationService().affecterAgentParZone(idGenere, signalement.getIdZone());
+                    }
+                }
                 String missionJson = com.smartcity.utils.JsonUtils.toJson(signalement);
                 com.smartcity.websocket.AgentMissionEndpoint.pushMission(missionJson);
             }
@@ -137,7 +141,8 @@ public class SignalementService {
 
     public boolean updateStatut(int idSignalement, String nouveauStatut) {
         String query = "UPDATE Signalement SET statut = ? WHERE idSignalement = ?";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, nouveauStatut);
             pstmt.setInt(2, idSignalement);
             return pstmt.executeUpdate() > 0;
@@ -148,8 +153,14 @@ public class SignalementService {
     }
 
     public boolean supprimerSignalement(int idSignalement) {
+        try {
+            new AffectationService().supprimerAffectationParSignalement(idSignalement);
+        } catch (Exception e) {
+            logger.warn("Affectation non supprimee pour signalement #{}: {}", idSignalement, e.getMessage());
+        }
         String query = "DELETE FROM Signalement WHERE idSignalement = ?";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -171,6 +182,21 @@ public class SignalementService {
                 zoneNom);
     }
 
+    public int countByStatutAndZone(String statut, String zoneNom) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone WHERE s.statut = ? AND z.nomZone = ?",
+            statut, zoneNom);
+    }
+
+    public int countByCategorie(String categorie) {
+        return countSimple("SELECT COUNT(*) FROM Signalement WHERE categorie = ?", categorie);
+    }
+
+    public int countMoyenneParJour() {
+        String query = "SELECT ROUND(COUNT(*) / GREATEST(DATEDIFF(MAX(dateSignalement), MIN(dateSignalement)), 1)) FROM Signalement";
+        return countSimple(query);
+    }
+
     public int countByUtilisateur(int idUser) {
         return countSimple("SELECT COUNT(*) FROM Signalement WHERE idUser = ?", idUser);
     }
@@ -180,27 +206,17 @@ public class SignalementService {
     }
 
     public int countTraitesByAgent(int idAgent) {
-        String query = "SELECT COUNT(*) FROM Affectation a "
+        return countSimple(
+                "SELECT COUNT(*) FROM Affectation a "
                 + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-                + "WHERE a.idAgent = ? AND s.statut = 'Terminé'";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
-            pstmt.setInt(1, idAgent);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next())
-                    return rs.getInt(1);
-            }
-        } catch (SQLException e) {
-            logger.error("Erreur countTraitesByAgent", e);
-            return countSimple(
-                    "SELECT COUNT(*) FROM Signalement WHERE idZone = (SELECT idZone FROM Utilisateur WHERE idUser = ?) AND statut = 'Terminé'",
-                    idAgent);
-        }
-        return 0;
+                + "WHERE a.idAgent = ? AND s.statut = 'Terminé'",
+                idAgent);
     }
 
     // Méthode utilitaire pour compter
     private int countSimple(String query, Object... params) {
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 pstmt.setObject(i + 1, params[i]);
             }
@@ -213,10 +229,10 @@ public class SignalementService {
         }
     }
 
-    // Exécuter requêtes de sélection
     private List<Signalement> executeSignalementQuery(String query, Object... params) {
         List<Signalement> liste = new ArrayList<>();
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 pstmt.setObject(i + 1, params[i]);
             }

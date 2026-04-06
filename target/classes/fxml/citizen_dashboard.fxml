@@ -9,6 +9,8 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -26,6 +28,9 @@
 
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="header">
+            <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
+                <image><Image url="@../images/EcoTrack.png"/></image>
+            </ImageView>
             <Label text="Espace Citoyen" styleClass="header-title"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="citizenNameLabel" styleClass="header-user" text="Citoyen"/>
@@ -71,7 +76,7 @@
                         </VBox>
                         <VBox styleClass="card" prefWidth="180" prefHeight="100">
                             <Label fx:id="citizenCardCollectes" text="0" styleClass="card-number"/>
-                            <Label text="Collectes" styleClass="card-label"/>
+                            <Label text="Termines" styleClass="card-label"/>
                         </VBox>
                     </HBox>
                     <PieChart fx:id="citizenPieChart" prefWidth="450" prefHeight="300"/>
@@ -95,17 +100,14 @@
                             <Button text="Ajouter photo" prefWidth="150" prefHeight="35" onAction="#handleChoisirPhoto" styleClass="secondary-button"/>
                         </HBox>
 
-                        <Label text="Latitude" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                        <TextField fx:id="latitudeField" prefWidth="300" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
-
-                        <Label text="Longitude" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                        <TextField fx:id="longitudeField" prefWidth="300" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                        <Label text="Position" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <Label fx:id="positionLabel" text="⚠️ Cliquez sur la carte pour placer le déchet" GridPane.rowIndex="4" GridPane.columnIndex="1" style="-fx-text-fill: #E53935; -fx-font-weight: bold;"/>
                     </GridPane>
 
-                    <WebView fx:id="mapWebView" prefWidth="600" prefHeight="300" visible="false" managed="false"/>
+                    <Label text="📍 Placez le marqueur à l'endroit exact du déchet (obligatoire)" style="-fx-font-style: italic; -fx-text-fill: #555;"/>
+                    <WebView fx:id="mapWebView" prefWidth="600" prefHeight="320"/>
 
                     <HBox spacing="12" alignment="CENTER">
-                        <Button text="Afficher carte" prefWidth="140" prefHeight="40" onAction="#handleToggleMap" styleClass="secondary-button"/>
                         <Button text="Enregistrer" prefWidth="200" prefHeight="40" onAction="#handleEnregistrerSignalement" styleClass="action-button"/>
                         <Button text="Annuler" prefWidth="140" prefHeight="40" onAction="#handleAnnulerSignalement" styleClass="secondary-button"/>
                     </HBox>
@@ -113,7 +115,10 @@
 
                 <VBox fx:id="pageMesSignalements" spacing="15" styleClass="page-box" visible="false" managed="false">
                     <Label text="Mes Signalements" styleClass="page-title"/>
-                    <TableView fx:id="tableMesSignalements" prefHeight="420" VBox.vgrow="ALWAYS" styleClass="data-table">
+                    <HBox spacing="10">
+                        <Button fx:id="btnSupprimerSignalement" text="Supprimer" onAction="#handleSupprimerSignalement" styleClass="danger-button"/>
+                    </HBox>
+                    <TableView fx:id="tableMesSignalements" prefHeight="400" VBox.vgrow="ALWAYS" styleClass="data-table">
                         <columns>
                             <TableColumn fx:id="colMesId" text="ID" prefWidth="80"/>
                             <TableColumn fx:id="colMesDescription" text="Description" prefWidth="250"/>
@@ -143,6 +148,7 @@
 
                     <HBox spacing="12" alignment="CENTER">
                         <Button text="Modifier" prefWidth="150" prefHeight="40" onAction="#handleModifierProfil" styleClass="action-button"/>
+                        <Button text="Mot de passe" prefWidth="180" prefHeight="40" onAction="#handleModifierMotPasse" styleClass="secondary-button"/>
                         <Button text="Supprimer" prefWidth="150" prefHeight="40" onAction="#handleSupprimerCompte" styleClass="danger-button"/>
                     </HBox>
                 </VBox>

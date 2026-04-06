@@ -6,6 +6,8 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -21,8 +23,17 @@
         <StackPane BorderPane.alignment="CENTER">
             <VBox alignment="CENTER" spacing="20">
                 
-                <!-- Titre avec logo -->
-                <Label text="🏙️ SMARTCITY" styleClass="auth-title"/>
+                <!-- Logo + Nom -->
+                <VBox alignment="CENTER" spacing="8">
+                    <StackPane alignment="CENTER"
+                               style="-fx-background-color: white; -fx-background-radius: 55; -fx-pref-width: 110; -fx-pref-height: 110; -fx-effect: dropshadow(gaussian, rgba(27,94,32,0.35), 18, 0, 0, 5);">
+                        <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
+                            <image><Image url="@../images/EcoTrack.png"/></image>
+                        </ImageView>
+                    </StackPane>
+                    <Label text="SmartCity" style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1B5E20;"/>
+                    <Label text="Gestion des déchets — Pikine &amp; Guédiawaye" style="-fx-font-size: 13px; -fx-text-fill: #4B5563;"/>
+                </VBox>
                 
                 <!-- Carte flottante blanche -->
                 <VBox alignment="CENTER" spacing="16" styleClass="auth-card">

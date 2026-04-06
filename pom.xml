@@ -14,38 +14,45 @@
     <name>SmartCity Dechets</name>
     <description>Application de gestion et de suivi des déchets ménagers</description>
 
-    <!-- PROPRIÉTÉS -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <javafx.version>17.0.2</javafx.version>
         <mysql.version>8.2.0</mysql.version>
+        <spring.boot.version>3.2.0</spring.boot.version>
     </properties>
 
-    <!-- DÉPENDANCES -->
+    <!-- Spring Boot BOM sans hériter du parent (incompatible avec javafx-maven-plugin) -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-                <!-- Gson pour JSON -->
-                <dependency>
-                    <groupId>com.google.code.gson</groupId>
-                    <artifactId>gson</artifactId>
-                    <version>2.10.1</version>
-                </dependency>
-                <!-- WebSocket (Tyrus + javax.websocket pour Java 17) -->
-                <dependency>
-                    <groupId>org.glassfish.tyrus.bundles</groupId>
-                    <artifactId>tyrus-standalone-client</artifactId>
-                    <version>2.1.3</version>
-                </dependency>
-                <dependency>
-                    <groupId>javax.websocket</groupId>
-                    <artifactId>javax.websocket-api</artifactId>
-                    <version>1.1</version>
-                </dependency>
-        <!-- WebSocket (Jakarta Tyrus) -->
+        <!-- Gson -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
+        <!-- WebSocket client -->
         <dependency>
             <groupId>org.glassfish.tyrus.bundles</groupId>
             <artifactId>tyrus-standalone-client</artifactId>
             <version>2.1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+            <version>1.1</version>
         </dependency>
 
         <!-- JavaFX -->
@@ -54,16 +61,19 @@
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-swing</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 
@@ -72,6 +82,29 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>${mysql.version}</version>
+        </dependency>
+
+        <!-- Spring Boot Web + JPA (serveur GPS embarqué) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <!-- Exclure logback de Spring Boot, on utilise le nôtre -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Sécurité -->
@@ -88,19 +121,19 @@
             <version>2.0.27</version>
         </dependency>
 
-        <!-- Logs -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.36</version>
-        </dependency>
+        <!-- Logs gérés par Spring Boot BOM -->
 
+        <!-- ZXing QR Code -->
         <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.12</version>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.2</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.2</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -109,21 +142,21 @@
             <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
-        
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.5.0</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
-    <!-- BUILD -->
     <build>
         <plugins>
-
-            <!-- Compiler -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.2</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -132,8 +165,6 @@
                     <release>17</release>
                 </configuration>
             </plugin>
-
-            <!-- JavaFX RUN -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -142,7 +173,6 @@
                     <mainClass>com.smartcity.app.MainApp</mainClass>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
 

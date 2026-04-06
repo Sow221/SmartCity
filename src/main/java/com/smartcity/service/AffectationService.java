@@ -28,8 +28,8 @@ public class AffectationService {
      */
     public boolean creerAffectation(int idSignalement, int idAgent) {
         String query = "INSERT INTO Affectation (idSignalement, idAgent) VALUES (?, ?)";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             pstmt.setInt(2, idAgent);
             return pstmt.executeUpdate() > 0;
@@ -39,14 +39,10 @@ public class AffectationService {
         }
     }
 
-    /**
-     * Enregistre la date de collecte et un commentaire optionnel
-     * lorsque l'agent marque la collecte comme effectuée.
-     */
     public boolean marquerCollecte(int idAffectation, String commentaire) {
         String query = "UPDATE Affectation SET dateCollecte = ?, commentaire = ? WHERE idAffectation = ?";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
             pstmt.setString(2, commentaire);
             pstmt.setInt(3, idAffectation);
@@ -57,36 +53,27 @@ public class AffectationService {
         }
     }
 
-    /**
-     * Récupère toutes les affectations
-     */
     public List<Affectation> getAllAffectations() {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation ORDER BY dateAffectation DESC";
-        try (Statement stmt = getConn().createStatement()) {
-            try (ResultSet rs = stmt.executeQuery(query)) {
-                while (rs.next()) {
-                    liste.add(mapResultSetToAffectation(rs));
-                }
-            }
+        try (Connection conn = getConn();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) liste.add(mapResultSetToAffectation(rs));
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération des affectations", e);
         }
         return liste;
     }
 
-    /**
-     * Récupère les affectations d'un agent
-     */
     public List<Affectation> getAffectationsByAgent(int idAgent) {
         List<Affectation> liste = new ArrayList<>();
         String query = "SELECT * FROM Affectation WHERE idAgent = ? ORDER BY dateAffectation DESC";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idAgent);
             try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    liste.add(mapResultSetToAffectation(rs));
-                }
+                while (rs.next()) liste.add(mapResultSetToAffectation(rs));
             }
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération des affectations par agent", e);
@@ -94,17 +81,13 @@ public class AffectationService {
         return liste;
     }
 
-    /**
-     * Récupère l'affectation d'un signalement (unique par contrainte DB)
-     */
     public Affectation getAffectationBySignalement(int idSignalement) {
         String query = "SELECT * FROM Affectation WHERE idSignalement = ?";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToAffectation(rs);
-                }
+                if (rs.next()) return mapResultSetToAffectation(rs);
             }
         } catch (SQLException e) {
             logger.error("Erreur lors de la récupération de l'affectation par signalement", e);
@@ -112,24 +95,92 @@ public class AffectationService {
         return null;
     }
 
-    /**
-     * Vérifie si un signalement est déjà affecté
-     */
     public boolean estDejaAffecte(int idSignalement) {
         return getAffectationBySignalement(idSignalement) != null;
     }
 
+    public boolean affecterAgentParZone(int idSignalement, int idZone) {
+        if (estDejaAffecte(idSignalement)) return false;
+        String query = "SELECT u.idUser FROM Utilisateur u "
+                + "LEFT JOIN Affectation a ON a.idAgent = u.idUser "
+                + "AND a.idSignalement IN (SELECT idSignalement FROM Signalement WHERE statut NOT IN ('Terminé')) "
+                + "WHERE u.idZone = ? AND u.role = 'Agent' AND u.actif = 1 "
+                + "GROUP BY u.idUser ORDER BY COUNT(a.idAffectation) ASC LIMIT 1";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, idZone);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return creerAffectation(idSignalement, rs.getInt("idUser"));
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur affecterAgentParZone", e);
+        }
+        return false;
+    }
+
+    public List<com.smartcity.model.Signalement> getSignalementsByAgent(int idAgent) {
+        List<com.smartcity.model.Signalement> liste = new ArrayList<>();
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom "
+                + "FROM Affectation a "
+                + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
+                + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
+                + "WHERE a.idAgent = ? ORDER BY s.dateSignalement DESC";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, idAgent);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) liste.add(mapSignalement(rs));
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getSignalementsByAgent", e);
+        }
+        return liste;
+    }
+
+    private com.smartcity.model.Signalement mapSignalement(ResultSet rs) throws SQLException {
+        com.smartcity.model.Signalement s = new com.smartcity.model.Signalement();
+        s.setIdSignalement(rs.getInt("idSignalement"));
+        s.setDescription(rs.getString("description"));
+        s.setCategorie(rs.getString("categorie"));
+        s.setIdZone(rs.getInt("idZone"));
+        s.setLatitude(rs.getDouble("latitude"));
+        s.setLongitude(rs.getDouble("longitude"));
+        s.setStatut(rs.getString("statut"));
+        s.setPhoto(rs.getString("photo"));
+        s.setIdUser(rs.getInt("idUser"));
+        Timestamp ts = rs.getTimestamp("dateSignalement");
+        if (ts != null) s.setDateSignalement(ts.toLocalDateTime());
+        String zoneNom = rs.getString("zoneNom");
+        s.setZoneNom(zoneNom != null ? zoneNom : "Zone #" + s.getIdZone());
+        String utilisateurNom = rs.getString("utilisateurNom");
+        s.setUtilisateurNom(utilisateurNom != null ? utilisateurNom : "Utilisateur #" + s.getIdUser());
+        return s;
+    }
+
     /**
-     * Supprime une affectation
+     * Supprime une affectation par son id
      */
     public boolean supprimerAffectation(int idAffectation) {
         String query = "DELETE FROM Affectation WHERE idAffectation = ?";
-
-        try (PreparedStatement pstmt = getConn().prepareStatement(query)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idAffectation);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             logger.error("Erreur lors de la suppression d'une affectation", e);
+            return false;
+        }
+    }
+
+    public boolean supprimerAffectationParSignalement(int idSignalement) {
+        String query = "DELETE FROM Affectation WHERE idSignalement = ?";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, idSignalement);
+            return pstmt.executeUpdate() >= 0;
+        } catch (SQLException e) {
+            logger.error("Erreur supprimerAffectationParSignalement", e);
             return false;
         }
     }
@@ -155,5 +206,32 @@ public class AffectationService {
 
         a.setCommentaire(rs.getString("commentaire"));
         return a;
+    }
+
+    public boolean sauvegarderCommentaire(int idSignalement, String commentaire) {
+        String query = "UPDATE Affectation SET commentaire = ? WHERE idSignalement = ?";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, commentaire);
+            pstmt.setInt(2, idSignalement);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.error("Erreur sauvegarderCommentaire: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public String getCommentaireBySignalement(int idSignalement) {
+        String query = "SELECT commentaire FROM Affectation WHERE idSignalement = ? LIMIT 1";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, idSignalement);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getString("commentaire") : null;
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getCommentaireBySignalement: {}", e.getMessage());
+            return null;
+        }
     }
 }

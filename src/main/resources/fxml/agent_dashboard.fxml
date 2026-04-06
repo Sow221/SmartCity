@@ -7,6 +7,8 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -24,6 +26,9 @@
 
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="header-agent">
+            <ImageView fitWidth="32" fitHeight="32" preserveRatio="true" smooth="true">
+                <image><Image url="@../images/EcoTrack.png"/></image>
+            </ImageView>
             <Label text="Espace Agent" styleClass="header-title"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="agentNameLabel" styleClass="header-user" text="Agent"/>
@@ -138,6 +143,9 @@
                                 <Label fx:id="mapTempsLabel" text="-"/>
                                 <Label text="📍 Position actuelle:" styleClass="form-label"/>
                                 <Label fx:id="lblPositionActuelle" text="🔄 GPS en cours..." wrapText="true" styleClass="text-sm"/>
+                                <Label text="📱 Scanner pour activer GPS:" styleClass="form-label"/>
+                                <ImageView fx:id="qrCodeImageView" fitWidth="160" fitHeight="160" preserveRatio="true"/>
+                                <Label fx:id="qrUrlLabel" text="" wrapText="true" styleClass="text-sm" style="-fx-font-size:10px;"/>
                                 <Region VBox.vgrow="ALWAYS"/>
                                 <Button text="Itineraire optimal" prefWidth="200" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent"/>
                             </VBox>

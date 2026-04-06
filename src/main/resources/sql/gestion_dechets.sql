@@ -42,8 +42,6 @@ CREATE TABLE IF NOT EXISTS Signalement (
     statut ENUM('En attente', 'Affecté', 'En cours', 'Terminé') DEFAULT 'En attente',
     photo VARCHAR(255),
     idUser INT,
-    zoneNom VARCHAR(100),
-    utilisateurNom VARCHAR(100),
     FOREIGN KEY (idZone) REFERENCES Zone(idZone),
     FOREIGN KEY (idUser) REFERENCES Utilisateur(idUser)
 );
@@ -51,10 +49,12 @@ CREATE TABLE IF NOT EXISTS Signalement (
 -- Table Affectation (Agent -> Signalement)
 CREATE TABLE IF NOT EXISTS Affectation (
     idAffectation INT AUTO_INCREMENT PRIMARY KEY,
-    idSignalement INT,
+    idSignalement INT UNIQUE,
     idAgent INT,
     dateAffectation DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (idSignalement) REFERENCES Signalement(idSignalement),
+    dateCollecte DATETIME NULL,
+    commentaire TEXT NULL,
+    FOREIGN KEY (idSignalement) REFERENCES Signalement(idSignalement) ON DELETE CASCADE,
     FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser)
 );
 
@@ -75,3 +75,12 @@ VALUES ('Agent Guédiawaye', 'agentguediawaye@smartcity.sn', 'agent123', 'Agent'
 -- Insertion d'un citoyen test (mot de passe: citizen123)
 INSERT INTO Utilisateur (nom, email, motDePasse, role, idZone) 
 VALUES ('Citoyen Test', 'citoyen@smartcity.sn', 'citizen123', 'Citoyen', 1);
+
+-- Table position GPS temps réel des agents
+CREATE TABLE IF NOT EXISTS position_agent (
+    idAgent INT PRIMARY KEY,
+    latitude DECIMAL(10,8) NOT NULL,
+    longitude DECIMAL(11,8) NOT NULL,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser)
+);

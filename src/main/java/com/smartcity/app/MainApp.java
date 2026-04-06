@@ -11,8 +11,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -82,22 +80,14 @@ public class MainApp extends Application {
             Parent root = loader.load();
             Object controller = loader.getController();
 
-            if (controller instanceof DashboardController) {
-                DashboardController dashboardController = (DashboardController) controller;
-                dashboardController.setMainApp(this);
-                dashboardController.chargerDonnees();
-            } else if (controller instanceof AgentDashboardController) {
-                AgentDashboardController agentDashboardController = (AgentDashboardController) controller;
-                agentDashboardController.setMainApp(this);
-                agentDashboardController.chargerDonnees();
+            if (controller instanceof AgentDashboardController) {
+                ((AgentDashboardController) controller).setMainApp(this);
             } else if (controller instanceof AdminDashboardController) {
-                AdminDashboardController adminDashboardController = (AdminDashboardController) controller;
-                adminDashboardController.setMainApp(this);
-                adminDashboardController.chargerDonnees();
+                ((AdminDashboardController) controller).setMainApp(this);
             } else if (controller instanceof CitizenDashboardController) {
-                CitizenDashboardController citizenDashboardController = (CitizenDashboardController) controller;
-                citizenDashboardController.setMainApp(this);
-                citizenDashboardController.chargerDonnees();
+                ((CitizenDashboardController) controller).setMainApp(this);
+            } else if (controller instanceof DashboardController) {
+                ((DashboardController) controller).setMainApp(this);
             }
 
             primaryStage.setScene(new Scene(root));

@@ -1,7 +1,0 @@
-# Configuration base de données SmartCity
-# Copier ce fichier en config.properties et renseigner vos valeurs
-# IMPORTANT : ne jamais committer config.properties dans Git
-
-db.url=jdbc:mysql://localhost:3306/db_smartcity?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
-db.user=root
-db.password=VOTRE_MOT_DE_PASSE_ICI

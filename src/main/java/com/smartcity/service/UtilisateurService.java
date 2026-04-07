@@ -43,6 +43,11 @@ public class UtilisateurService {
             logger.error("Mot de passe trop faible pour: {}", utilisateur.getEmail());
             return false;
         }
+
+        if (emailExiste(utilisateur.getEmail())) {
+            logger.warn("Email déjà utilisé lors de l'inscription: {}", utilisateur.getEmail());
+            return false;
+        }
         
         String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
         String query = "INSERT INTO Utilisateur (prenom, nom, email, motDePasse, role, age, localite, photoProfil, idZone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -129,10 +134,11 @@ public class UtilisateurService {
     }
 
     public boolean emailExiste(String email) {
+        if (email == null) return false;
         String query = "SELECT COUNT(*) FROM Utilisateur WHERE email = ? AND actif = 1";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setString(1, email);
+            pstmt.setString(1, email.toLowerCase().trim());
             try (ResultSet rs = pstmt.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
@@ -202,8 +208,28 @@ public class UtilisateurService {
         }
     }
 
+    public boolean updateMotDePasse(int idUser, String nouveauMotDePasse) {
+        String hashed = BCrypt.hashpw(nouveauMotDePasse, BCrypt.gensalt());
+        String query = "UPDATE Utilisateur SET motDePasse = ? WHERE idUser = ? AND actif = 1";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, hashed);
+            pstmt.setInt(2, idUser);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.error("Erreur updateMotDePasse: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public boolean updateUtilisateurAdmin(Utilisateur utilisateur) {
-        String hashedPassword = BCrypt.hashpw(utilisateur.getMotDePasse(), BCrypt.gensalt());
+        // Ne re-hasher que si le mot de passe n'est pas déjà un hash BCrypt
+        String motDePasse = utilisateur.getMotDePasse();
+        if (motDePasse == null || motDePasse.isEmpty()) {
+            logger.error("Mot de passe vide pour updateUtilisateurAdmin");
+            return false;
+        }
+        String hashedPassword = motDePasse.startsWith("$2") ? motDePasse : BCrypt.hashpw(motDePasse, BCrypt.gensalt());
         String query = "UPDATE Utilisateur SET prenom = ?, nom = ?, email = ?, motDePasse = ?, role = ?, age = ?, localite = ?, photoProfil = ?, idZone = ? "
                 + "WHERE idUser = ? AND actif = 1";
         try (Connection conn = getConn();
@@ -226,6 +252,21 @@ public class UtilisateurService {
     }
 
     public boolean deleteUtilisateur(int idUser) {
+        // Libérer les affectations actives du citoyen avant désactivation
+        String queryAffectations = "SELECT s.idSignalement FROM Signalement s "
+            + "WHERE s.idUser = ? AND s.statut NOT IN ('Terminé', 'Termine')";
+        try (Connection conn = getConn();
+             PreparedStatement ps = conn.prepareStatement(queryAffectations)) {
+            ps.setInt(1, idUser);
+            try (ResultSet rs = ps.executeQuery()) {
+                AffectationService affService = new AffectationService();
+                while (rs.next()) {
+                    affService.supprimerAffectationParSignalement(rs.getInt("idSignalement"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.warn("Erreur libération affectations pour user #{}: {}", idUser, e.getMessage());
+        }
         String query = "UPDATE Utilisateur SET actif = 0 WHERE idUser = ?";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {

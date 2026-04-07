@@ -1,4 +1,4 @@
-package com.smartcity.controller;
+// package com.smartcity.controller;
 
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Utilisateur;
@@ -70,9 +70,7 @@ public class RegisterController {
         clearStatusMessage();
         backToLoginLink.setOnAction(evt -> mainApp.showLoginScreen());
         
-        // Effets de survol du bouton
-        inscriptionButton.setOnMouseEntered(e -> inscriptionButton.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;"));
-        inscriptionButton.setOnMouseExited(e -> inscriptionButton.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;"));
+
     }
 
     @FXML
@@ -84,20 +82,22 @@ public class RegisterController {
         String confirm = confirmField.getText();
         String role = DEFAULT_ROLE;
 
-        if (nom.isEmpty()) {
-            showErrorMessage("Le nom est obligatoire");
+        if (nom.isEmpty() || !com.smartcity.utils.ValidationUtils.isValidName(nom)) {
+            showErrorMessage("Nom invalide (2-50 caractères, lettres uniquement)");
             nomField.requestFocus();
             return;
         }
 
-        if (email.isEmpty() || !EMAIL_PATTERN.matcher(email).matches()) {
+        if (!com.smartcity.utils.ValidationUtils.isValidEmail(email)) {
             showErrorMessage("Email invalide");
             emailField.requestFocus();
             return;
         }
 
-        if (motPasse.isEmpty() || motPasse.length() < 6) {
-            showErrorMessage("Mot de passe trop court (min 6 caractères)");
+        com.smartcity.utils.ValidationUtils.ValidationResult pwCheck =
+            com.smartcity.utils.ValidationUtils.validatePassword(motPasse);
+        if (!pwCheck.isValid()) {
+            showErrorMessage(pwCheck.getMessage());
             motPasseField.requestFocus();
             return;
         }

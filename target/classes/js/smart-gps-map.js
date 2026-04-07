@@ -196,21 +196,20 @@ class SmartCityGPSMap {
     }
     
     getMissionStatusClass(status) {
-        switch (status.toLowerCase()) {
-            case 'en attente': return 'new';
-            case 'en cours': return 'progress';
-            case 'collecte': case 'terminé': return 'done';
-            default: return 'new';
-        }
+        const s = status.toLowerCase();
+        if (s === 'en attente' || s === 'affect\u00e9') return 'new';
+        if (s === 'en cours') return 'progress';
+        if (s === 'termin\u00e9' || s === 'termine') return 'done';
+        return 'new';
     }
-    
+
     getStatusEmoji(status) {
-        switch (status.toLowerCase()) {
-            case 'en attente': return '🔴';
-            case 'en cours': return '🟠';
-            case 'collecte': case 'terminé': return '✅';
-            default: return '⚪';
-        }
+        const s = status.toLowerCase();
+        if (s === 'en attente') return '\uD83D\uDD34';
+        if (s === 'affect\u00e9') return '\uD83D\uDFE3';
+        if (s === 'en cours') return '\uD83D\uDFE0';
+        if (s === 'termin\u00e9' || s === 'termine') return '\u2705';
+        return '\u26AA';
     }
     
     /**

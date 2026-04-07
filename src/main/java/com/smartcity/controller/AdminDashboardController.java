@@ -35,6 +35,7 @@ public class AdminDashboardController {
 
     @FXML private BorderPane rootPane;
     @FXML private Label adminNameLabel;
+    @FXML private Label adminAvatarLabel;
     @FXML private Label adminMessageLabel;
     @FXML private Button themeToggleButton;
 
@@ -43,14 +44,16 @@ public class AdminDashboardController {
     @FXML private Button btnGestionAgents;
     @FXML private Button btnGestionSignalements;
     @FXML private Button btnStatistiques;
+    @FXML private Button btnAdminProfil;
+    @FXML private Button btnParametres;
 
-    @FXML private VBox pageAdminDashboard;
-    @FXML private VBox pageAdminUsers;
-    @FXML private VBox pageAdminAgents;
-    @FXML private VBox pageAdminSignalements;
-    @FXML private VBox pageStatistiques;
+    @FXML private javafx.scene.control.ScrollPane pageAdminDashboard;
+    @FXML private javafx.scene.control.ScrollPane pageAdminUsers;
+    @FXML private javafx.scene.control.ScrollPane pageAdminAgents;
+    @FXML private javafx.scene.control.ScrollPane pageAdminSignalements;
+    @FXML private javafx.scene.control.ScrollPane pageStatistiques;
     @FXML private VBox pageAdminProfil;
-    @FXML private VBox pageParametres;
+    @FXML private javafx.scene.control.ScrollPane pageParametres;
 
     @FXML private Label adminCardTotalSignalements;
     @FXML private Label adminCardEnAttente;
@@ -88,6 +91,7 @@ public class AdminDashboardController {
     @FXML private Button btnSupprimerAgent;
 
     @FXML private Button btnModifierStatutSignalement;
+    @FXML private Button btnReaffecterSignalement;
     @FXML private Button btnSupprimerSignalement;
 
     @FXML private ComboBox<String> filterZoneCombo;
@@ -103,9 +107,13 @@ public class AdminDashboardController {
     @FXML private TableColumn<Signalement, String> colSignalementUtilisateur;
     @FXML private TableColumn<Signalement, String> colSignalementCommentaire;
 
+    @FXML private Label adminProfilAvatarLabel;
+    @FXML private Label adminProfilNomDisplay;
     @FXML private TextField adminProfilNomField;
     @FXML private TextField adminProfilEmailField;
     @FXML private TextField adminProfilRoleField;
+    @FXML private TextField nouvelleZoneField;
+    @FXML private Label zonesListLabel;
 
     private final UtilisateurService utilisateurService = new UtilisateurService();
     private final SignalementService signalementService = new SignalementService();
@@ -242,14 +250,24 @@ public class AdminDashboardController {
     private void handleModifierAdminMotPasse() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
-        TextInputDialog dialog = new TextInputDialog();
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Mot de passe");
         dialog.setHeaderText(null);
-        dialog.setContentText("Nouveau mot de passe :");
+        ButtonType saveType = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+        PasswordField pwField = new PasswordField();
+        pwField.setPromptText("Nouveau mot de passe (min. 6 caractères)");
+        dialog.getDialogPane().setContent(pwField);
+        dialog.setResultConverter(bt -> bt == saveType ? pwField.getText() : null);
         Optional<String> result = dialog.showAndWait();
         if (result.isEmpty() || result.get().isBlank()) return;
-        current.setMotDePasse(result.get());
-        if (utilisateurService.updateUtilisateurAdmin(current)) {
+        com.smartcity.utils.ValidationUtils.ValidationResult check =
+            com.smartcity.utils.ValidationUtils.validatePassword(result.get());
+        if (!check.isValid()) {
+            showAdminMessage(check.getMessage(), false);
+            return;
+        }
+        if (utilisateurService.updateMotDePasse(current.getIdUser(), result.get())) {
             showAdminMessage("Mot de passe mis a jour.", true);
         } else {
             showAdminMessage("Echec de la mise a jour du mot de passe.", false);
@@ -488,6 +506,20 @@ public class AdminDashboardController {
     }
 
     @FXML
+    private void handleReaffecterSignalement() {
+        Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        new com.smartcity.service.AffectationService().supprimerAffectationParSignalement(selected.getIdSignalement());
+        if (signalementService.updateStatut(selected.getIdSignalement(), "En attente")) {
+            new com.smartcity.service.AffectationService().affecterAgentParZone(selected.getIdSignalement(), selected.getIdZone());
+            showAdminMessage("Signalement réaffecté.", true);
+            chargerDonnees();
+        } else {
+            showAdminMessage("Echec de la réaffectation.", false);
+        }
+    }
+
+    @FXML
     private void handleSupprimerSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
         if (selected == null) return;
@@ -533,7 +565,8 @@ public class AdminDashboardController {
         agents.clear();
         for (Utilisateur u : utilisateursAgents) {
             int traites = signalementService.countTraitesByAgent(u.getIdUser());
-            String zoneNom = (zoneService.getZoneById(u.getIdZone()) != null ? zoneService.getZoneById(u.getIdZone()).getNomZone() : "Zone inconnue");
+            String zoneNom = zoneService.getZoneById(u.getIdZone()) != null
+                    ? zoneService.getZoneById(u.getIdZone()).getNomZone() : "Zone inconnue";
             agents.add(new AgentStatsRow(u.getIdUser(), u.getNom(), zoneNom, traites));
         }
     }
@@ -640,7 +673,8 @@ public class AdminDashboardController {
         roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : (roleLockedAgent ? "Agent" : "Citoyen"));
         ComboBox<String> zoneCombo = new ComboBox<>();
         zoneService.getAllZones().forEach(z -> zoneCombo.getItems().add(z.getNomZone()));
-        zoneCombo.setValue(initial != null ? zoneService.getZoneById(initial.getIdZone()).getNomZone() : zoneCombo.getItems().isEmpty() ? "Pikine" : zoneCombo.getItems().get(0));
+        com.smartcity.model.Zone zoneInitial = initial != null ? zoneService.getZoneById(initial.getIdZone()) : null;
+        zoneCombo.setValue(zoneInitial != null ? zoneInitial.getNomZone() : (zoneCombo.getItems().isEmpty() ? "Pikine" : zoneCombo.getItems().get(0)));
 
         if (roleLockedAgent) {
             roleCombo.setValue("Agent");
@@ -698,7 +732,10 @@ public class AdminDashboardController {
         colUserNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
         colUserEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
         colUserRole.setCellValueFactory(new PropertyValueFactory<>("role"));
-        colUserZone.setCellValueFactory(cell -> new SimpleStringProperty(zoneService.getZoneById(cell.getValue().getIdZone()).getNomZone()));
+        colUserZone.setCellValueFactory(cell -> {
+            com.smartcity.model.Zone z = zoneService.getZoneById(cell.getValue().getIdZone());
+            return new SimpleStringProperty(z != null ? z.getNomZone() : "Zone inconnue");
+        });
 
         centerColumn(colUserId);
         centerColumn(colUserNom);
@@ -782,7 +819,7 @@ public class AdminDashboardController {
         filterStatutCombo.setValue(ALL_STATUTS);
 
         filterCategorieCombo.setItems(FXCollections.observableArrayList(
-                ALL_CATEGORIES, "Plastique", "Papier", "Organique", "Verre"));
+                ALL_CATEGORIES, "Plastique", "Papier", "Verre", "Métal", "Organique", "Autre"));
         filterCategorieCombo.setValue(ALL_CATEGORIES);
     }
 
@@ -790,9 +827,9 @@ public class AdminDashboardController {
         showPage(pageAdminDashboard, btnAdminDashboard);
     }
 
-    private void showPage(VBox pageToShow, Button activeButton) {
-        VBox[] pages = {pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements, pageStatistiques, pageAdminProfil, pageParametres};
-        for (VBox page : pages) {
+    private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
+        javafx.scene.Node[] pages = {pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements, pageStatistiques, pageAdminProfil, pageParametres};
+        for (javafx.scene.Node page : pages) {
             if (page == null) continue;
             boolean visible = page == pageToShow;
             page.setVisible(visible);

@@ -2,30 +2,10 @@ package com.smartcity.service;
 
 import com.smartcity.model.Signalement;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 public class GeolocationService {
 
-    // Source unique des coordonnées de zones
-    private static final Map<String, Coordinates> ZONE_CENTERS = new HashMap<>();
-    static {
-        ZONE_CENTERS.put("Pikine",      new Coordinates(14.7646, -17.3920));
-        ZONE_CENTERS.put("Guediawaye",  new Coordinates(14.7765, -17.4047));
-        ZONE_CENTERS.put("Guédiawaye", new Coordinates(14.7765, -17.4047));
-    }
-
-    public Coordinates getCurrentPosition() {
-        return ZONE_CENTERS.get("Pikine");
-    }
-
-    public Coordinates getZoneCenter(String nomZone) {
-        if (nomZone == null) return ZONE_CENTERS.get("Pikine");
-        return ZONE_CENTERS.getOrDefault(nomZone,
-               ZONE_CENTERS.getOrDefault(nomZone.trim(), ZONE_CENTERS.get("Pikine")));
-    }
-
-    // Source unique du calcul de distance (Haversine)
+    // Calcul de distance Haversine (vol d'oiseau, metres -> km)
     public static double distanceBetween(double lat1, double lon1, double lat2, double lon2) {
         final int R = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
@@ -36,9 +16,21 @@ public class GeolocationService {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // Instance method pour compatibilité avec le code existant
     public double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         return distanceBetween(lat1, lon1, lat2, lon2);
+    }
+
+    /**
+     * Retourne le centre GPS d'une zone depuis la DB via ZoneService.
+     * Plus de coordonnees hardcodees dans le code.
+     */
+    public Coordinates getZoneCenter(String nomZone) {
+        return new ZoneService().getCenter(nomZone);
+    }
+
+    public Coordinates getCurrentPosition() {
+        // Position par defaut : centre de Pikine (utilise si GPS agent inactif)
+        return new ZoneService().getCenter("Pikine");
     }
 
     public List<Signalement> optimizeCollectionRoute(List<Signalement> signalements, Coordinates startPoint) {
@@ -60,14 +52,6 @@ public class GeolocationService {
             }
         }
         return optimized;
-    }
-
-    public Coordinates generateRandomCoordinatesInZone(String nomZone) {
-        Coordinates center = getZoneCenter(nomZone);
-        double angle = Math.random() * 2 * Math.PI;
-        double distance = Math.random() * 0.02;
-        return new Coordinates(center.lat + distance * Math.cos(angle),
-                               center.lon + distance * Math.sin(angle));
     }
 
     public String getGoogleMapsUrl(double lat, double lon) {

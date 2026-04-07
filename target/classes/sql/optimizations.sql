@@ -140,12 +140,11 @@ BEGIN
     
     START TRANSACTION;
     
-    -- Archiver les signalements terminés de plus de 6 mois
-    -- (Dans un vrai système, on créerait une table d'archive)
-    UPDATE Signalement 
-    SET statut = 'Archivé' 
-    WHERE statut = 'Terminé' 
-    AND dateSignalement < DATE_SUB(NOW(), INTERVAL 6 MONTH);
+    -- Passer les signalements termines anciens en statut archive (hors ENUM actuel)
+    -- NOTE: necessite d'ajouter 'Archive' a l'ENUM Signalement.statut avant d'executer
+    -- UPDATE Signalement SET statut = 'Archive'
+    -- WHERE statut = 'Termin\u00e9'
+    -- AND dateSignalement < DATE_SUB(NOW(), INTERVAL 6 MONTH);
     
     COMMIT;
 END//
@@ -239,20 +238,14 @@ CREATE TRIGGER tr_signalement_coordinates
     BEFORE INSERT ON Signalement
     FOR EACH ROW
 BEGIN
-    -- Si pas de coordonnées fournies, utiliser celles du centre de la zone
+    -- Si pas de coordonnees fournies, utiliser celles du centre de la zone (sans offset aleatoire)
     IF NEW.latitude = 0 AND NEW.longitude = 0 THEN
-        CASE NEW.idZone
-            WHEN 1 THEN -- Pikine
-                SET NEW.latitude = 14.7549, NEW.longitude = -17.3925;
-            WHEN 2 THEN -- Guédiawaye  
-                SET NEW.latitude = 14.7692, NEW.longitude = -17.4281;
-            ELSE
-                SET NEW.latitude = 14.7549, NEW.longitude = -17.3925;
-        END CASE;
-        
-        -- Ajouter un petit offset aléatoire
-        SET NEW.latitude = NEW.latitude + (RAND() - 0.5) * 0.01;
-        SET NEW.longitude = NEW.longitude + (RAND() - 0.5) * 0.01;
+        SELECT latitude, longitude INTO NEW.latitude, NEW.longitude
+        FROM Zone WHERE idZone = NEW.idZone LIMIT 1;
+        -- Fallback si la zone n'a pas de coordonnees
+        IF NEW.latitude = 0 AND NEW.longitude = 0 THEN
+            SET NEW.latitude = 14.7646, NEW.longitude = -17.3920;
+        END IF;
     END IF;
 END//
 DELIMITER ;
@@ -261,12 +254,12 @@ DELIMITER ;
 -- CONFIGURATION DES PARAMÈTRES MYSQL
 -- =============================================
 
--- Optimisation pour les requêtes de rapports
-SET GLOBAL query_cache_type = ON;
-SET GLOBAL query_cache_size = 67108864; -- 64MB
+-- NOTE: query_cache supprime dans MySQL 8.0 - ne pas executer
+-- SET GLOBAL query_cache_type = ON;
+-- SET GLOBAL query_cache_size = 67108864;
 
--- Configuration pour les performances
-SET GLOBAL innodb_buffer_pool_size = 134217728; -- 128MB (ajuster selon la RAM)
+-- Configuration pour les performances (ajuster selon la RAM disponible)
+-- SET GLOBAL innodb_buffer_pool_size = 134217728;
 
 -- =============================================
 -- REQUÊTES DE VÉRIFICATION

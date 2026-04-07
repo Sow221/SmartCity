@@ -4,7 +4,13 @@ import com.smartcity.model.Utilisateur;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests d'integration reels sur la DB.
+ * Necessite MySQL demarre avec les credentials de config.properties.
+ * Lancer avec: mvnw test -Ddb.integration=true
+ */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "db.integration", matches = "true")
 public class InscriptionConnexionTest {
 
     private static final UtilisateurService service = new UtilisateurService();

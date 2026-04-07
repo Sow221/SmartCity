@@ -31,6 +31,7 @@ public class ReportService {
      * Rapport hebdomadaire
      */
     public WeeklyReport generateWeeklyReport(LocalDate startDate) {
+        if (startDate == null) throw new IllegalArgumentException("startDate ne peut pas être null");
         LocalDate endDate = startDate.plusDays(6);
         
         WeeklyReport report = new WeeklyReport();
@@ -59,6 +60,8 @@ public class ReportService {
      * Rapport mensuel détaillé
      */
     public MonthlyReport generateMonthlyReport(int month, int year) {
+        if (month < 1 || month > 12) throw new IllegalArgumentException("Mois invalide: " + month);
+        if (year < 2000 || year > 2100) throw new IllegalArgumentException("Année invalide: " + year);
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
         
@@ -80,7 +83,12 @@ public class ReportService {
         report.performanceAgents = getAgentPerformanceDetailed(startDate, endDate);
         
         // Analyse géographique
-        report.analyseeGeographique = getGeographicAnalysis(startDate, endDate);
+        Map<String, Integer> perfParZone = getPerformanceByZone(startDate, endDate);
+        report.performanceParZone = perfParZone;
+        report.zoneLaPlusActive = perfParZone.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .orElse("Aucune");
         
         return report;
     }
@@ -283,24 +291,12 @@ public class ReportService {
     }
 
     private List<AgentStats> getAgentPerformanceDetailed(LocalDate start, LocalDate end) {
+        if (start == null || end == null || start.isAfter(end)) return new ArrayList<>();
         return getTopActiveAgents(start, end);
     }
 
     private Map<String, Object> getGeographicAnalysis(LocalDate start, LocalDate end) {
-        Map<String, Object> analysis = new HashMap<>();
-        
-        // Performance par zone
-        analysis.put("performanceParZone", getPerformanceByZone(start, end));
-        
-        // Zone la plus active
-        Map<String, Integer> zonePerf = getPerformanceByZone(start, end);
-        String mostActiveZone = zonePerf.entrySet().stream()
-            .max(Map.Entry.comparingByValue())
-            .map(Map.Entry::getKey)
-            .orElse("Aucune");
-        analysis.put("zoneLaPlusActive", mostActiveZone);
-        
-        return analysis;
+        return new HashMap<>(); // remplacé par zoneLaPlusActive + performanceParZone dans MonthlyReport
     }
 
     private int executeCountQuery(String query, Object... params) {
@@ -366,7 +362,8 @@ public class ReportService {
         public double tempsTraitementMoyen;
         public Map<String, Integer> evolutionQuotidienne;
         public List<AgentStats> performanceAgents;
-        public Map<String, Object> analyseeGeographique;
+        public String zoneLaPlusActive;
+        public Map<String, Integer> performanceParZone;
     }
     
     public static class RealTimeDashboard {

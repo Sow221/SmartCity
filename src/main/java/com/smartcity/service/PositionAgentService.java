@@ -20,7 +20,7 @@ public class PositionAgentService {
     private static final Logger logger = LoggerFactory.getLogger(PositionAgentService.class);
     private static final String SERVER_URL = "http://localhost:" + GpsApiServer.PORT;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(3))
         .build();
 
@@ -37,12 +37,15 @@ public class PositionAgentService {
                 .timeout(Duration.ofSeconds(3))
                 .GET()
                 .build();
-            HttpResponse<String> response = httpClient.send(request,
+            HttpResponse<String> response = HTTP_CLIENT.send(request,
                 HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
                 return new Position(json.get("lat").getAsDouble(), json.get("lon").getAsDouble());
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("Interruption lors de la requête GPS pour agent {}", agentId);
         } catch (Exception e) {
             logger.debug("Serveur GPS injoignable pour agent {}: {}", agentId, e.getMessage());
         }
@@ -54,6 +57,6 @@ public class PositionAgentService {
     }
 
     public static String getGpsPageUrl(int agentId, String serverIp) {
-        return GpsApiServer.getGpsPageUrl(agentId);
+        return "http://" + serverIp + ":" + GpsApiServer.PORT + "/gps?agentId=" + agentId;
     }
 }

@@ -8,6 +8,8 @@ import jakarta.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Endpoint WebSocket pour le push temps réel des missions aux agents
@@ -23,38 +25,37 @@ public class AgentMissionEndpoint {
                 try {
                     session.getBasicRemote().sendText(msg);
                 } catch (IOException e) {
-                    // Ignorer
+                    logger.warn("Erreur WebSocket pushHistoriqueProfil: {}", e.getMessage());
                 }
             }
         }
     }
 
+private static final Logger logger = LoggerFactory.getLogger(AgentMissionEndpoint.class);
     private static final Set<Session> sessions = ConcurrentHashMap.newKeySet();
 
     @OnOpen
     public void onOpen(Session session) {
         sessions.add(session);
-        System.out.println("[WebSocket] Agent connecté: " + session.getId());
+        logger.info("[WebSocket] Agent connecté: {}", session.getId());
     }
 
     @OnClose
     public void onClose(Session session) {
         sessions.remove(session);
-        System.out.println("[WebSocket] Agent déconnecté: " + session.getId());
+        logger.info("[WebSocket] Agent déconnecté: {}", session.getId());
     }
 
     @OnMessage
     public void onMessage(String message, Session session) {
-        // Traiter les messages reçus des agents (missions ou GPS)
-        System.out.println("[WebSocket] Message reçu de " + session.getId() + ": " + message);
+        logger.debug("[WebSocket] Message reçu de {}", session.getId());
         if (message != null && message.contains("gps")) {
-            // Diffuser la position GPS à tous les clients connectés
             for (Session s : sessions) {
                 if (s.isOpen()) {
                     try {
                         s.getBasicRemote().sendText(message);
                     } catch (IOException e) {
-                        // Ignorer
+                        logger.warn("Erreur WebSocket broadcast GPS: {}", e.getMessage());
                     }
                 }
             }
@@ -68,7 +69,7 @@ public class AgentMissionEndpoint {
                 try {
                     session.getBasicRemote().sendText(missionJson);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.warn("Erreur WebSocket push: {}", e.getMessage());
                 }
             }
         }

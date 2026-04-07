@@ -15,6 +15,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.scene.web.WebView;
@@ -31,12 +32,10 @@ public class CitizenDashboardController {
 
     @FXML
     private BorderPane rootPane;
-    @FXML
-    private Label citizenNameLabel;
-    @FXML
-    private Label citizenMessageLabel;
-    @FXML
-    private Button themeToggleButton;
+    @FXML private Label citizenNameLabel;
+    @FXML private Label citizenAvatarLabel;
+    @FXML private Label citizenMessageLabel;
+    @FXML private Button themeToggleButton;
 
     @FXML
     private Button btnCitizenDashboard;
@@ -48,9 +47,9 @@ public class CitizenDashboardController {
     private Button btnMonProfil;
 
     @FXML
-    private VBox pageCitizenDashboard;
+    private ScrollPane pageCitizenDashboard;
     @FXML
-    private VBox pageAjouterSignalement;
+    private javafx.scene.control.ScrollPane pageAjouterSignalement;
     @FXML
     private VBox pageMesSignalements;
     @FXML
@@ -98,16 +97,18 @@ public class CitizenDashboardController {
     @FXML
     private TableColumn<Signalement, String> colMesStatut;
 
-    @FXML
-    private TextField profilNomField;
-    @FXML
-    private TextField profilEmailField;
-    @FXML
-    private ComboBox<String> profilZoneCombo;
-    @FXML
-    private TextField profilTelephoneField;
-
+    @FXML private TextField profilNomField;
+    @FXML private TextField profilEmailField;
+    @FXML private ComboBox<String> profilZoneCombo;
+    @FXML private TextField profilTelephoneField;
+    @FXML private Label citizenProfilAvatarLabel;
+    @FXML private Label citizenProfilNomDisplay;
     @FXML private Button btnSupprimerSignalement;
+    @FXML private Label badgeSignalements;
+
+    // Snapshot des statuts pour détecter les changements
+    private final java.util.Map<Integer, String> statutsSnapshot = new java.util.HashMap<>();
+    private javafx.animation.Timeline pollingTimeline;
 
     private final SignalementService signalementService = new SignalementService();
     private final UtilisateurService utilisateurService = new UtilisateurService();
@@ -131,11 +132,16 @@ public class CitizenDashboardController {
         }
 
         citizenNameLabel.setText(current.getNom());
+        if (citizenAvatarLabel != null)
+            citizenAvatarLabel.setText(current.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
 
         categorieSignalementCombo
-                .setItems(FXCollections.observableArrayList("Plastique", "Papier", "Organique", "Verre"));
-        zoneSignalementCombo.setItems(FXCollections.observableArrayList("Pikine", "Guédiawaye"));
-        profilZoneCombo.setItems(FXCollections.observableArrayList("Pikine", "Guédiawaye"));
+                .setItems(FXCollections.observableArrayList("Plastique", "Papier", "Verre", "Métal", "Organique", "Autre"));
+        // Zones depuis la DB
+        ObservableList<String> zonesItems = FXCollections.observableArrayList(
+            zoneService.getAllZones().stream().map(z -> z.getNomZone()).collect(java.util.stream.Collectors.toList()));
+        zoneSignalementCombo.setItems(zonesItems);
+        profilZoneCombo.setItems(FXCollections.observableArrayList(zonesItems));
 
         configureMesSignalementsTable();
         tableMesSignalements.setItems(mesSignalements);
@@ -154,6 +160,7 @@ public class CitizenDashboardController {
         applyTheme();
         showCitizenDashboardPage();
         chargerDonnees();
+        startPolling();
     }
 
     @FXML
@@ -171,10 +178,9 @@ public class CitizenDashboardController {
 
     @FXML
     private void handleDeconnexion() {
+        stopPolling();
         SessionManager.logout();
-        if (mainApp != null) {
-            mainApp.showLoginScreen();
-        }
+        if (mainApp != null) mainApp.showLoginScreen();
     }
 
     @FXML
@@ -190,6 +196,7 @@ public class CitizenDashboardController {
     @FXML
     private void handleShowMesSignalements() {
         showPage(pageMesSignalements, btnMesSignalements);
+        clearBadge();
     }
 
     @FXML
@@ -213,8 +220,13 @@ public class CitizenDashboardController {
 
         File selected = chooser.showOpenDialog(MainApp.getPrimaryStage());
         if (selected != null) {
-            photoSignalementField.setText(selected.getName()); // Juste le nom, pas le chemin complet
-            showCitizenMessage("✅ Photo sélectionnée: " + selected.getName(), true);
+            String fileName = selected.getName();
+            if (!fileName.matches("[a-zA-Z0-9_\\-. ]+\\.(png|jpg|jpeg|gif|bmp)")) {
+                showCitizenMessage("❌ Nom de fichier invalide.", false);
+                return;
+            }
+            photoSignalementField.setText(fileName);
+            showCitizenMessage("✅ Photo sélectionnée: " + fileName, true);
         }
     }
 
@@ -248,6 +260,17 @@ public class CitizenDashboardController {
             return;
         }
 
+        // Validation sécurisée
+        com.smartcity.utils.ValidationUtils.ValidationResult validation =
+            com.smartcity.utils.ValidationUtils.validateSignalement(
+                descriptionSignalementArea.getText().trim(),
+                categorieSignalementCombo.getValue(),
+                selectedLatitude, selectedLongitude);
+        if (!validation.isValid()) {
+            showCitizenMessage("❌ " + validation.getMessage(), false);
+            return;
+        }
+
         Signalement signalement = new Signalement();
         signalement.setDescription(descriptionSignalementArea.getText().trim());
         signalement.setCategorie(categorieSignalementCombo.getValue());
@@ -262,12 +285,16 @@ public class CitizenDashboardController {
         signalement.setIdUser(current.getIdUser());
 
         if (signalementService.ajouterSignalement(signalement)) {
-            showCitizenMessage("🎉 Signalement enregistré avec succès !", true);
+            // Vérifier si le signalement a été affecté ou reste en attente
+            String msg = signalement.getStatut() != null && "Affect\u00e9".equals(signalement.getStatut())
+                ? "Signalement enregistr\u00e9 et affect\u00e9 \u00e0 un agent !"
+                : "Signalement enregistr\u00e9. Un agent sera assign\u00e9 d\u00e8s que possible.";
+            showCitizenMessage(msg, true);
             clearForm();
             chargerDonnees();
             showPage(pageMesSignalements, btnMesSignalements);
         } else {
-            showCitizenMessage("❌ Erreur lors de l'enregistrement. Réessayez.", false);
+            showCitizenMessage("Erreur lors de l'enregistrement. R\u00e9essayez.", false);
         }
     }
 
@@ -325,13 +352,20 @@ public class CitizenDashboardController {
             return;
         }
 
+        String newEmail = profilEmailField.getText().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!newEmail.equals(current.getEmail()) && utilisateurService.emailExiste(newEmail)) {
+            showCitizenMessage("Cet email est déjà utilisé par un autre compte.", false);
+            return;
+        }
+
         Utilisateur updated = new Utilisateur();
         updated.setIdUser(current.getIdUser());
         updated.setPrenom(current.getPrenom());
         updated.setNom(profilNomField.getText().trim());
-        updated.setEmail(profilEmailField.getText().trim());
+        updated.setEmail(newEmail);
         updated.setAge(current.getAge());
-        updated.setLocalite(current.getLocalite());
+        // Téléphone stocké dans localite
+        updated.setLocalite(profilTelephoneField != null ? profilTelephoneField.getText().trim() : current.getLocalite());
         updated.setPhotoProfil(current.getPhotoProfil());
         int idZone = zoneService.getAllZones().stream()
             .filter(z -> z.getNomZone().equals(profilZoneCombo.getValue()))
@@ -354,16 +388,18 @@ public class CitizenDashboardController {
     private void handleModifierMotPasse() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
-
-        TextInputDialog dialog = new TextInputDialog();
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Mot de passe");
         dialog.setHeaderText(null);
-        dialog.setContentText("Nouveau mot de passe :");
+        ButtonType saveType = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+        PasswordField pwField = new PasswordField();
+        pwField.setPromptText("Nouveau mot de passe");
+        dialog.getDialogPane().setContent(pwField);
+        dialog.setResultConverter(bt -> bt == saveType ? pwField.getText() : null);
         Optional<String> result = dialog.showAndWait();
         if (result.isEmpty() || result.get().isBlank()) return;
-
-        current.setMotDePasse(result.get());
-        if (utilisateurService.updateUtilisateurAdmin(current)) {
+        if (utilisateurService.updateMotDePasse(current.getIdUser(), result.get())) {
             showCitizenMessage("Mot de passe mis à jour.", true);
         } else {
             showCitizenMessage("Echec de la mise à jour du mot de passe.", false);
@@ -400,13 +436,14 @@ public class CitizenDashboardController {
 
     private void loadInteractiveMap() {
         String selectedZone = zoneSignalementCombo.getValue();
-        double centerLat = (selectedZone != null && selectedZone.equals("Guédiawaye")) ? 14.7765 : 14.7646;
-        double centerLon = (selectedZone != null && selectedZone.equals("Guédiawaye")) ? -17.4047 : -17.3920;
+        com.smartcity.service.GeolocationService.Coordinates zoneCenter = zoneService.getCenter(selectedZone != null ? selectedZone : "Pikine");
+        double centerLat = zoneCenter.lat;
+        double centerLon = zoneCenter.lon;
 
         // Construire le HTML sans marqueur par défaut - le citoyen DOIT cliquer
         String html = "<!DOCTYPE html><html><head>"
             + "<meta charset='UTF-8'>"
-            + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
+            + com.smartcity.utils.MapResourceUtils.leafletHead()
             + "<style>"
             + "html,body,#map{height:100%;margin:0;}"
             + "#map{cursor:crosshair;}"
@@ -417,7 +454,6 @@ public class CitizenDashboardController {
             + "</style></head><body>"
             + "<div id='hint'>&#128205; Cliquez sur la carte pour placer le d&eacute;chet</div>"
             + "<div id='map'></div>"
-            + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
             + "<script>"
             + "var map = L.map('map').setView([" + centerLat + "," + centerLon + "],15);"
             + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',"
@@ -435,35 +471,48 @@ public class CitizenDashboardController {
             + "</script></body></html>";
 
         mapWebView.getEngine().loadContent(html);
-        // Enregistrer le pont JS après chargement complet
-        mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                JSObject win = (JSObject) mapWebView.getEngine().executeScript("window");
-                win.setMember("javafx", new JSBridge());
-            }
-        });
+        // Enregistrer le pont JS une seule fois (eviter l'empilement de listeners)
+        mapWebView.getEngine().getLoadWorker().stateProperty().addListener(
+            new javafx.beans.value.ChangeListener<javafx.concurrent.Worker.State>() {
+                boolean registered = false;
+                @Override
+                public void changed(javafx.beans.value.ObservableValue<? extends javafx.concurrent.Worker.State> obs,
+                                    javafx.concurrent.Worker.State o, javafx.concurrent.Worker.State n) {
+                    if (n == javafx.concurrent.Worker.State.SUCCEEDED && !registered) {
+                        registered = true;
+                        JSObject win = (JSObject) mapWebView.getEngine().executeScript("window");
+                        jsBridgeRef = new JSBridge(); win.setMember("javafx", jsBridgeRef);
+                    }
+                }
+            });
     }
 
     public class JSBridge {
+        // Maintenu comme inner class non-statique pour accéder aux champs du controller
+        // Référence forte conservée dans le champ ci-dessous pour éviter le GC
         public void setLocation(double lat, double lng) {
-            selectedLatitude = lat;
-            selectedLongitude = lng;
-            positionLabel.setText(String.format("✅ Position: %.5f, %.5f", lat, lng));
-            positionLabel.setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
-            showCitizenMessage(String.format("📍 Position enregistrée: %.5f, %.5f", lat, lng), true);
+            javafx.application.Platform.runLater(() -> {
+                selectedLatitude = lat;
+                selectedLongitude = lng;
+                positionLabel.setText(String.format("\u2705 Position: %.5f, %.5f", lat, lng));
+                positionLabel.setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                showCitizenMessage(String.format("\uD83D\uDCCD Position enregistr\u00e9e: %.5f, %.5f", lat, lng), true);
+            });
         }
     }
 
+    // Référence forte pour éviter que le GC ne collecte le JSBridge
+    private JSBridge jsBridgeRef;
+
     private void refreshCards() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        if (current == null) {
-            return;
-        }
+        if (current == null) return;
 
-        int total = signalementService.countByUtilisateur(current.getIdUser());
+        int total   = signalementService.countByUtilisateur(current.getIdUser());
         int attente = signalementService.countByStatutAndUtilisateur("En attente", current.getIdUser());
-        int enCours = signalementService.countByStatutAndUtilisateur("En cours", current.getIdUser());
-        int collectes = signalementService.countByStatutAndUtilisateur("Terminé", current.getIdUser());
+        int affecte = signalementService.countByStatutAndUtilisateur("Affect\u00e9", current.getIdUser());
+        int enCours = signalementService.countByStatutAndUtilisateur("En cours", current.getIdUser()) + affecte;
+        int collectes = signalementService.countByStatutAndUtilisateur("Termin\u00e9", current.getIdUser());
 
         com.smartcity.utils.AnimationUtils.animateCounter(citizenCardTotal, 0, total).play();
         com.smartcity.utils.AnimationUtils.animateCounter(citizenCardAttente, 0, attente).play();
@@ -473,9 +522,9 @@ public class CitizenDashboardController {
         if (total > 0) {
             citizenPieChart.setAnimated(true);
             citizenPieChart.setData(FXCollections.observableArrayList(
-                new PieChart.Data("En attente (" + attente + ")", attente),
-                new PieChart.Data("En cours (" + enCours + ")", enCours),
-                new PieChart.Data("Terminé (" + collectes + ")", collectes)));
+                new PieChart.Data("En attente (" + attente + ")", Math.max(attente, 0.01)),
+                new PieChart.Data("En cours (" + enCours + ")", Math.max(enCours, 0.01)),
+                new PieChart.Data("Termin\u00e9 (" + collectes + ")", Math.max(collectes, 0.01))));
         }
     }
 
@@ -489,12 +538,15 @@ public class CitizenDashboardController {
 
     private void refreshProfil() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        if (current == null) {
-            return;
-        }
-
+        if (current == null) return;
         profilNomField.setText(current.getNom());
         profilEmailField.setText(current.getEmail());
+        if (citizenProfilAvatarLabel != null)
+            citizenProfilAvatarLabel.setText(current.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+        if (citizenProfilNomDisplay != null)
+            citizenProfilNomDisplay.setText(current.getNom());
+        if (profilTelephoneField != null)
+            profilTelephoneField.setText(current.getLocalite() != null ? current.getLocalite() : "");
         com.smartcity.model.Zone zone = zoneService.getZoneById(current.getIdZone());
         if (zone != null) profilZoneCombo.setValue(zone.getNomZone());
     }
@@ -539,13 +591,85 @@ public class CitizenDashboardController {
         });
     }
 
+    public void cleanup() {
+        stopPolling();
+    }
+
+    private void startPolling() {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+        // Snapshot initial
+        signalementService.getSignalementsByUtilisateur(current.getIdUser())
+            .forEach(s -> statutsSnapshot.put(s.getIdSignalement(), s.getStatut()));
+        // Polling toutes les 30 secondes
+        pollingTimeline = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(30), e -> checkStatutChanges()));
+        pollingTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        pollingTimeline.play();
+    }
+
+    private void stopPolling() {
+        if (pollingTimeline != null) {
+            pollingTimeline.stop();
+            pollingTimeline = null;
+        }
+    }
+
+    private void checkStatutChanges() {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+        java.util.List<com.smartcity.model.Signalement> liste =
+            signalementService.getSignalementsByUtilisateur(current.getIdUser());
+        int nbChangements = 0;
+        for (com.smartcity.model.Signalement s : liste) {
+            String ancienStatut = statutsSnapshot.get(s.getIdSignalement());
+            if (ancienStatut != null && !ancienStatut.equals(s.getStatut())) {
+                nbChangements++;
+            }
+            statutsSnapshot.put(s.getIdSignalement(), s.getStatut());
+        }
+        if (nbChangements > 0) {
+            final int n = nbChangements;
+            javafx.application.Platform.runLater(() -> {
+                updateBadge(n);
+                showCitizenMessage(n + " signalement(s) mis \u00e0 jour !", true);
+            });
+        }
+    }
+
+    private void updateBadge(int count) {
+        if (badgeSignalements == null) return;
+        if (count <= 0) {
+            badgeSignalements.setVisible(false);
+            badgeSignalements.setManaged(false);
+        } else {
+            badgeSignalements.setText(count > 9 ? "9+" : String.valueOf(count));
+            badgeSignalements.setVisible(true);
+            badgeSignalements.setManaged(true);
+            // Animation pulse
+            javafx.animation.ScaleTransition pulse =
+                new javafx.animation.ScaleTransition(javafx.util.Duration.millis(300), badgeSignalements);
+            pulse.setFromX(1.0); pulse.setFromY(1.0);
+            pulse.setToX(1.3);   pulse.setToY(1.3);
+            pulse.setAutoReverse(true); pulse.setCycleCount(4);
+            pulse.play();
+        }
+    }
+
+    private void clearBadge() {
+        // Mettre à jour le snapshot avec les statuts actuels
+        mesSignalements.forEach(s -> statutsSnapshot.put(s.getIdSignalement(), s.getStatut()));
+        updateBadge(0);
+    }
+
     private void showCitizenDashboardPage() {
         showPage(pageCitizenDashboard, btnCitizenDashboard);
     }
 
-    private void showPage(VBox pageToShow, Button activeButton) {
-        VBox[] pages = { pageCitizenDashboard, pageAjouterSignalement, pageMesSignalements, pageMonProfil };
-        for (VBox page : pages) {
+    private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
+        javafx.scene.Node[] pages = { pageCitizenDashboard, pageAjouterSignalement, pageMesSignalements, pageMonProfil };
+        for (javafx.scene.Node page : pages) {
+            if (page == null) continue;
             boolean visible = page == pageToShow;
             page.setVisible(visible);
             page.setManaged(visible);
@@ -558,13 +682,11 @@ public class CitizenDashboardController {
         Button[] buttons = { btnCitizenDashboard, btnAjouterSignalement, btnMesSignalements, btnMonProfil };
         for (Button btn : buttons) {
             btn.getStyleClass().remove("sidebar-button-active");
-            if (btn == activeButton) {
-                btn.getStyleClass().add("sidebar-button-active");
-            }
+            if (btn == activeButton) btn.getStyleClass().add("sidebar-button-active");
         }
     }
 
-    private javafx.animation.PauseTransition citizenMsgDelay =
+    private final javafx.animation.PauseTransition citizenMsgDelay =
         new javafx.animation.PauseTransition(javafx.util.Duration.seconds(3));
 
     private void showCitizenMessage(String message, boolean success) {

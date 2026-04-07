@@ -1,132 +1,149 @@
-
 package com.smartcity.controller;
 
 import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
+import com.smartcity.service.ZoneService;
 import com.smartcity.utils.SessionManager;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
 
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
- * Contrôleur pour la gestion des déchets/signalements
+ * Contrôleur de gestion des déchets (vue simplifiée signalements).
+ * Utilisé comme fallback ou vue dédiée.
  */
 public class GestionDechetsController {
 
-    @FXML
-    private TextField descriptionField;
+    @FXML private TableView<Signalement> tableSignalements;
+    @FXML private TableColumn<Signalement, Integer> colId;
+    @FXML private TableColumn<Signalement, String> colDescription;
+    @FXML private TableColumn<Signalement, String> colCategorie;
+    @FXML private TableColumn<Signalement, String> colZone;
+    @FXML private TableColumn<Signalement, String> colStatut;
+    @FXML private TableColumn<Signalement, String> colDate;
+    @FXML private ComboBox<String> filterStatutCombo;
+    @FXML private Label statusLabel;
 
-    @FXML
-    private ComboBox<String> categorieCombo;
-
-    @FXML
-    private ComboBox<String> zoneCombo;
-
-    @FXML
-    private TextField quartierField;
-
-    @FXML
-    private TextField photoField;
-
-    private SignalementService signalementService;
-    private ObservableList<String> categories;
-    private ObservableList<String> zones;
-
-    public GestionDechetsController() {
-        signalementService = new SignalementService();
-        categories = FXCollections.observableArrayList("Plastique", "Papier", "Organique", "Verre");
-        zones = FXCollections.observableArrayList("Pikine", "Guédiawaye");
-    }
-
-    /**
-     * Initialise le contrôleur
-     */
-    /**
-     * Méthode utilitaire pour retrouver l'idZone à partir du nom de la zone.
-     * À adapter selon la logique de votre application (ex: requête en base ou
-     * mapping statique).
-     */
-    private int getIdZoneByNom(String zoneNom) {
-        // Exemple de mapping statique, à remplacer par une vraie requête si besoin
-        if (zoneNom.equalsIgnoreCase("Pikine"))
-            return 1;
-        if (zoneNom.equalsIgnoreCase("Guédiawaye"))
-            return 2;
-        return 0; // ou lever une exception si zone inconnue
-    }
+    private final SignalementService signalementService = new SignalementService();
+    private final ZoneService zoneService = new ZoneService();
+    private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @FXML
     private void initialize() {
-        categorieCombo.setItems(categories);
-        zoneCombo.setItems(zones);
+        configureTable();
+        configureFilters();
+        tableSignalements.setItems(signalements);
+        chargerDonnees();
     }
 
-    /**
-     * Gère le clic sur le bouton Ajouter un signalement
-     */
-    @FXML
-    private void handleAjouterSignalement() {
-        String description = descriptionField.getText();
-        String categorie = categorieCombo.getValue();
-        String zoneNom = zoneCombo.getValue();
-        String quartier = quartierField.getText();
-        String photo = photoField.getText();
+    private void configureTable() {
+        if (colId != null) colId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
+        if (colDescription != null) colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
+        if (colCategorie != null) colCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
+        if (colZone != null) colZone.setCellValueFactory(new PropertyValueFactory<>("zoneNom"));
+        if (colStatut != null) colStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
+        if (colDate != null) {
+            colDate.setCellValueFactory(cell -> {
+                if (cell.getValue().getDateSignalement() != null) {
+                    return new SimpleStringProperty(cell.getValue().getDateSignalement().format(DATE_FORMATTER));
+                }
+                return new SimpleStringProperty("");
+            });
+        }
+    }
 
-        if (description.isEmpty() || categorie == null || zoneNom == null || quartier.isEmpty()) {
-            showAlert("Erreur", "Veuillez remplir tous les champs obligatoires");
+    private void configureFilters() {
+        if (filterStatutCombo != null) {
+            filterStatutCombo.setItems(FXCollections.observableArrayList(
+                "Tous", "En attente", "Affecté", "En cours", "Terminé"));
+            filterStatutCombo.setValue("Tous");
+        }
+    }
+
+    @FXML
+    public void chargerDonnees() {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+
+        List<Signalement> liste;
+        if (SessionManager.isAdmin()) {
+            liste = signalementService.getAllSignalements();
+        } else if (SessionManager.isAgent()) {
+            liste = signalementService.getSignalementsByZone(current.getIdZone());
+        } else {
+            liste = signalementService.getSignalementsByUtilisateur(current.getIdUser());
+        }
+        signalements.setAll(liste);
+    }
+
+    @FXML
+    private void handleFiltrer() {
+        if (filterStatutCombo == null) return;
+        String statut = filterStatutCombo.getValue();
+        if (statut == null || "Tous".equals(statut)) {
+            chargerDonnees();
+        } else {
+            signalements.setAll(signalementService.getSignalementsFiltres(null, statut, null));
+        }
+    }
+
+    @FXML
+    private void handleModifierStatut() {
+        Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showStatus("Sélectionnez un signalement.", false);
             return;
         }
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(selected.getStatut(),
+            "En attente", "Affecté", "En cours", "Terminé");
+        dialog.setTitle("Modifier statut");
+        dialog.setHeaderText("Signalement #" + selected.getIdSignalement());
+        dialog.setContentText("Nouveau statut :");
+        dialog.showAndWait().ifPresent(statut -> {
+            if (signalementService.updateStatut(selected.getIdSignalement(), statut)) {
+                showStatus("Statut mis à jour : " + statut, true);
+                chargerDonnees();
+            } else {
+                showStatus("Échec de la mise à jour.", false);
+            }
+        });
+    }
 
-        Utilisateur utilisateur = SessionManager.getUtilisateurConnecte();
-
-        // Ici, il faut retrouver l'idZone à partir du nom de la zone (zoneNom)
-        int idZone = getIdZoneByNom(zoneNom); // À implémenter selon votre logique
-
-        Signalement signalement = new Signalement();
-        signalement.setDescription(description);
-        signalement.setCategorie(categorie);
-        signalement.setIdZone(idZone);
-        signalement.setLatitude(0.0); // À adapter si GPS disponible
-        signalement.setLongitude(0.0); // À adapter si GPS disponible
-        signalement.setPhoto(photo);
-        signalement.setStatut("En attente");
-        signalement.setDateSignalement(LocalDateTime.now());
-        signalement.setIdUser(utilisateur.getIdUser());
-
-        if (signalementService.ajouterSignalement(signalement)) {
-            showAlert("Succès", "Signalement ajouté avec succès!");
-            effacerChamps();
-        } else {
-            showAlert("Erreur", "Échec de l'ajout du signalement");
+    @FXML
+    private void handleSupprimer() {
+        Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showStatus("Sélectionnez un signalement.", false);
+            return;
         }
-    }
-
-    /**
-     * Efface les champs du formulaire
-     */
-    private void effacerChamps() {
-        descriptionField.clear();
-        categorieCombo.setValue(null);
-        zoneCombo.setValue(null);
-        quartierField.clear();
-        photoField.clear();
-    }
-
-    /**
-     * Affiche une alerte
-     */
-    private void showAlert(String titre, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(titre);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmer");
         alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        alert.setContentText("Supprimer le signalement #" + selected.getIdSignalement() + " ?");
+        alert.showAndWait().filter(btn -> btn == ButtonType.OK).ifPresent(btn -> {
+            if (signalementService.supprimerSignalement(selected.getIdSignalement())) {
+                showStatus("Signalement supprimé.", true);
+                chargerDonnees();
+            } else {
+                showStatus("Échec de la suppression.", false);
+            }
+        });
+    }
+
+    private void showStatus(String message, boolean success) {
+        if (statusLabel == null) return;
+        statusLabel.setText(message);
+        statusLabel.setStyle(success
+            ? "-fx-text-fill: #2E7D32; -fx-font-weight: bold;"
+            : "-fx-text-fill: #C62828; -fx-font-weight: bold;");
     }
 }

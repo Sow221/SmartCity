@@ -13,6 +13,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,8 @@ import org.slf4j.LoggerFactory;
  *
  * Endpoints :
  *   POST /api/position  → body: agentId=X&lat=Y&lon=Z
- *   GET  /gps           → page HTML servie au téléphone de l'agent
+ *   GET  /api/position?agentId=X → lecture position
+ *   GET  /gps?agentId=X → page HTML servie au téléphone de l'agent
  */
 public class GpsApiServer {
 
@@ -31,10 +33,13 @@ public class GpsApiServer {
 
     private HttpServer server;
 
-    public void start(int agentId) throws IOException {
+    public void start(int defaultAgentId) throws IOException {
         server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/api/position", exchange -> handlePosition(exchange));
-        server.createContext("/gps", exchange -> handleGpsPage(exchange, agentId));
+        server.createContext("/gps", exchange -> {
+            int id = parseParam(exchange.getRequestURI().getQuery(), "agentId");
+            handleGpsPage(exchange, id < 0 ? defaultAgentId : id);
+        });
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         logger.info("GPS API Server démarré sur le port {}", PORT);
@@ -50,12 +55,21 @@ public class GpsApiServer {
     /** Retourne l'IP locale du PC pour construire l'URL à afficher/QR coder */
     public static String getLocalIp() {
         try {
-            return Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
+            // Priorité : IP LAN (192.168.x.x ou 10.x.x.x) avant les autres
+            java.util.List<String> candidates = Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
+                .filter(ni -> {
+                    try { return ni.isUp() && !ni.isLoopback() && !ni.isVirtual(); }
+                    catch (Exception e) { return false; }
+                })
                 .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
                 .filter(addr -> !addr.isLoopbackAddress() && addr.getHostAddress().contains("."))
                 .map(addr -> addr.getHostAddress())
+                .collect(java.util.stream.Collectors.toList());
+            // Préférer 192.168.x.x ou 10.x.x.x
+            return candidates.stream()
+                .filter(ip -> ip.startsWith("192.168.") || ip.startsWith("10."))
                 .findFirst()
-                .orElse("localhost");
+                .orElse(candidates.isEmpty() ? "localhost" : candidates.get(0));
         } catch (Exception e) {
             return "localhost";
         }
@@ -78,19 +92,14 @@ public class GpsApiServer {
 
         // GET /api/position?agentId=X — lecture position
         if ("GET".equals(exchange.getRequestMethod())) {
-            String query = exchange.getRequestURI().getQuery();
-            if (query != null && query.contains("agentId=")) {
-                try {
-                    int agentId = Integer.parseInt(query.replace("agentId=", "").split("&")[0]);
+            int agentId = parseParam(exchange.getRequestURI().getQuery(), "agentId");
+            if (agentId > 0) {
                     double[] pos = readPosition(agentId);
                     if (pos != null) {
                         sendResponse(exchange, 200,
                             String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1]));
-                    } else {
-                        sendResponse(exchange, 404, "{\"status\":\"not_found\"}");
-                    }
-                } catch (Exception e) {
-                    sendResponse(exchange, 400, "{\"status\":\"invalid\"}");
+                } else {
+                    sendResponse(exchange, 404, "{\"status\":\"not_found\"}");
                 }
             } else {
                 sendResponse(exchange, 400, "{\"status\":\"missing_agentId\"}");
@@ -112,15 +121,18 @@ public class GpsApiServer {
             for (String param : params) {
                 String[] kv = param.split("=");
                 if (kv.length == 2) {
-                    switch (kv[0]) {
-                        case "agentId" -> agentId = Integer.parseInt(kv[1]);
-                        case "lat"     -> lat = Double.parseDouble(kv[1]);
-                        case "lon"     -> lon = Double.parseDouble(kv[1]);
+                    if ("agentId".equals(kv[0])) {
+                        agentId = Integer.parseInt(kv[1]);
+                    } else if ("lat".equals(kv[0])) {
+                        lat = Double.parseDouble(kv[1]);
+                    } else if ("lon".equals(kv[0])) {
+                        lon = Double.parseDouble(kv[1]);
                     }
                 }
             }
 
-            if (agentId > 0 && lat != 0 && lon != 0) {
+            if (agentId > 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+                    && (lat != 0 || lon != 0)) {
                 savePosition(agentId, lat, lon);
                 sendResponse(exchange, 200, "{\"status\":\"ok\"}");
             } else {
@@ -144,8 +156,8 @@ public class GpsApiServer {
 
     private double[] readPosition(int agentId) {
         String sql = "SELECT latitude, longitude FROM position_agent WHERE idAgent = ?";
-        try (java.sql.Connection conn = DatabaseConnection.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, agentId);
             try (java.sql.ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return new double[]{rs.getDouble(1), rs.getDouble(2)};
@@ -173,8 +185,20 @@ public class GpsApiServer {
         }
     }
 
+        private static int parseParam(String query, String key) {
+        if (query == null) return -1;
+        for (String part : query.split("&")) {
+            String[] kv = part.split("=", 2);
+            if (kv.length == 2 && key.equals(kv[0])) {
+                try { return Integer.parseInt(kv[1]); } catch (NumberFormatException e) { return -1; }
+            }
+        }
+        return -1;
+    }
+
     private void sendResponse(HttpExchange exchange, int code, String body) throws IOException {
         exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(code, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
@@ -210,7 +234,6 @@ public class GpsApiServer {
             + "<script>"
             + "var agentId=" + agentId + ";"
             + "var apiUrl='" + apiUrl + "';"
-            + "var watchId=null;"
             + "function sendPosition(lat,lon){"
             + "  fetch(apiUrl,{method:'POST',"
             + "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
@@ -225,7 +248,7 @@ public class GpsApiServer {
             + "  });"
             + "}"
             + "if(navigator.geolocation){"
-            + "  watchId=navigator.geolocation.watchPosition("
+            + "  navigator.geolocation.watchPosition("
             + "    function(pos){sendPosition(pos.coords.latitude,pos.coords.longitude);},"
             + "    function(err){document.getElementById('status').innerHTML='&#9888; GPS: '+err.message;},"
             + "    {enableHighAccuracy:true,maximumAge:5000,timeout:10000}"

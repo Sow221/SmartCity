@@ -41,7 +41,7 @@ public class DatabaseConnection {
      */
     private static String getConfigProperty(String key, String defaultValue) {
         // 1. Variables d'environnement (priorité haute)
-        String envKey = key.replace(".", "_").toUpperCase();
+        String envKey = key.replace(".", "_").toUpperCase(java.util.Locale.ROOT);
         String envValue = System.getenv(envKey);
         if (envValue != null) {
             logger.info("✅ Configuration DB chargée depuis variable d'environnement: {}", envKey);
@@ -54,14 +54,28 @@ public class DatabaseConnection {
             return systemValue;
         }
 
-        // 3. Fichier de configuration
+        // 3. Fichier de configuration (répertoire courant d'abord, puis classpath)
+        java.io.File externalConfig = new java.io.File("config.properties");
+        if (externalConfig.exists()) {
+            try (InputStream input = new java.io.FileInputStream(externalConfig)) {
+                Properties props = new Properties();
+                props.load(input);
+                String propValue = props.getProperty(key);
+                if (propValue != null) {
+                    logger.info("📁 Configuration DB chargée depuis config.properties (externe): {}", key);
+                    return propValue;
+                }
+            } catch (IOException e) {
+                logger.warn("⚠️ Erreur lecture config.properties externe: {}", e.getMessage());
+            }
+        }
         try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream("config.properties")) {
             if (input != null) {
                 Properties props = new Properties();
                 props.load(input);
                 String propValue = props.getProperty(key);
                 if (propValue != null) {
-                    logger.info("📁 Configuration DB chargée depuis config.properties: {}", key);
+                    logger.info("📁 Configuration DB chargée depuis config.properties (classpath): {}", key);
                     return propValue;
                 }
             }
@@ -72,20 +86,38 @@ public class DatabaseConnection {
         return defaultValue;
     }
 
-    public static Connection getConnection() throws SQLException {
-        try {
-            Class.forName(DRIVER);
-            return DriverManager.getConnection(URL, USER, PASSWORD);
-        } catch (ClassNotFoundException e) {
-            logger.error("❌ Driver JDBC non trouvé: {}", e.getMessage());
-            throw new SQLException("Driver JDBC non trouvé", e);
-        } catch (SQLException e) {
-            logger.error("❌ Erreur obtention connexion JDBC: {}", e.getMessage());
-            throw e;
-        }
+    private static final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
+    private static final com.zaxxer.hikari.HikariDataSource ds;
+
+    static {
+        config.setJdbcUrl(URL);
+        config.setUsername(USER);
+        config.setPassword(PASSWORD);
+        config.setDriverClassName(DRIVER);
+        config.setMaximumPoolSize(20);
+        config.setMinimumIdle(5);
+        config.setConnectionTimeout(30000);
+        config.setIdleTimeout(600000);
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        ds = new com.zaxxer.hikari.HikariDataSource(config);
     }
 
-    public static void closeDataSource() {}
+    public static Connection getConnection() throws SQLException {
+        Connection conn = ds.getConnection();
+        if (conn == null) {
+            throw new SQLException("Impossible d'obtenir connexion depuis HikariCP");
+        }
+        return conn;
+    }
+
+    public static void closeDataSource() {
+        if (!ds.isClosed()) {
+            ds.close();
+            logger.info("HikariCP pool fermé.");
+        }
+    }
 
     public static boolean testConnection() {
         try (Connection conn = getConnection()) {

@@ -44,7 +44,6 @@ public class LoginController {
 
     private final UtilisateurService utilisateurService;
     private MainApp mainApp;
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$");
 
     public LoginController() {
         utilisateurService = new UtilisateurService();
@@ -66,15 +65,7 @@ public class LoginController {
         motPasseField.textProperty().addListener((observable, oldValue, newValue) -> validatePassword());
     }
 
-    @FXML
-    private void onBoutonHover() {
-        connexionButton.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;");
-    }
 
-    @FXML
-    private void onBoutonExit() {
-        connexionButton.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-background-radius: 12; -fx-cursor: hand;");
-    }
 
     @FXML
     private void handleConnexion() {
@@ -89,7 +80,7 @@ public class LoginController {
             return;
         }
 
-        if (!EMAIL_PATTERN.matcher(email).matches()) {
+        if (!com.smartcity.utils.ValidationUtils.isValidEmail(email)) {
             showErrorMessage("Format email invalide");
             emailField.requestFocus();
             return;
@@ -101,8 +92,10 @@ public class LoginController {
             return;
         }
 
-        if (motPasse.length() < 6) {
-            showErrorMessage("Le mot de passe doit contenir au moins 6 caractères");
+        com.smartcity.utils.ValidationUtils.ValidationResult pwCheck =
+            com.smartcity.utils.ValidationUtils.validatePassword(motPasse);
+        if (!pwCheck.isValid()) {
+            showErrorMessage(pwCheck.getMessage());
             motPasseField.requestFocus();
             return;
         }
@@ -126,7 +119,7 @@ public class LoginController {
         String email = emailField.getText().trim();
         if (email.isEmpty()) {
             showErrorMessage("Ce champ est requis");
-        } else if (!EMAIL_PATTERN.matcher(email).matches()) {
+        } else if (!com.smartcity.utils.ValidationUtils.isValidEmail(email)) {
             showErrorMessage("Format email invalide");
         } else {
             clearStatusMessage();

@@ -25,7 +25,7 @@ public class SignalementService {
     public boolean modifierSignalement(Signalement signalement) {
         String query = "UPDATE Signalement SET description=?, categorie=?, idZone=?, latitude=?, longitude=?, statut=?, photo=? WHERE idSignalement=?";
         try (Connection conn = getConn();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+                PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
             pstmt.setInt(3, signalement.getIdZone());
@@ -50,7 +50,8 @@ public class SignalementService {
     public boolean ajouterSignalement(Signalement signalement) {
         String query = "INSERT INTO Signalement (description, categorie, idZone, latitude, longitude, dateSignalement, statut, photo, idUser) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = getConn().prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, signalement.getDescription());
             pstmt.setString(2, signalement.getCategorie());
             pstmt.setInt(3, signalement.getIdZone());
@@ -78,8 +79,6 @@ public class SignalementService {
             return false;
         }
     }
-    // TODO: Ajouter push WebSocket dans les méthodes de modification et suppression
-    // de signalement
 
     // Récupérer tous les signalements
     public List<Signalement> getAllSignalements() {
@@ -140,33 +139,67 @@ public class SignalementService {
     }
 
     public boolean updateStatut(int idSignalement, String nouveauStatut) {
-        String query = "UPDATE Signalement SET statut = ? WHERE idSignalement = ?";
-        try (Connection conn = getConn();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setString(1, nouveauStatut);
-            pstmt.setInt(2, idSignalement);
-            return pstmt.executeUpdate() > 0;
+        boolean result = false;
+        try {
+            String query = "UPDATE Signalement SET statut = ? WHERE idSignalement = ?";
+            try (Connection conn = getConn();
+                    PreparedStatement pstmt = conn.prepareStatement(query)) {
+                pstmt.setString(1, nouveauStatut);
+                pstmt.setInt(2, idSignalement);
+                result = pstmt.executeUpdate() > 0;
+            }
+            if (result) {
+                Signalement sig = getSignalementById(idSignalement);
+                if (sig != null) {
+                    String missionJson = com.smartcity.utils.JsonUtils.toJson(sig);
+                    com.smartcity.websocket.AgentMissionEndpoint.pushMission(missionJson);
+                }
+            }
         } catch (SQLException e) {
             logger.error("Erreur lors de la mise à jour: " + e.getMessage(), e);
-            return false;
         }
+        return result;
+    }
+
+    private Signalement getSignalementById(int id) {
+        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom "
+                + "FROM Signalement s "
+                + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser "
+                + "LEFT JOIN Zone z ON s.idZone = z.idZone "
+                + "WHERE s.idSignalement = ?";
+        try (Connection conn = getConn();
+                PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return mapResultSetToSignalement(rs);
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getSignalementById: " + e.getMessage(), e);
+        }
+        return null;
     }
 
     public boolean supprimerSignalement(int idSignalement) {
+        Signalement sig = getSignalementById(idSignalement);
         try {
             new AffectationService().supprimerAffectationParSignalement(idSignalement);
         } catch (Exception e) {
             logger.warn("Affectation non supprimee pour signalement #{}: {}", idSignalement, e.getMessage());
         }
         String query = "DELETE FROM Signalement WHERE idSignalement = ?";
+        boolean result = false;
         try (Connection conn = getConn();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+                PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, idSignalement);
-            return pstmt.executeUpdate() > 0;
+            result = pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             logger.error("Erreur lors de la suppression: " + e.getMessage(), e);
-            return false;
         }
+        if (result && sig != null) {
+            String missionJson = com.smartcity.utils.JsonUtils.toJson(sig);
+            com.smartcity.websocket.AgentMissionEndpoint.pushMission(missionJson);
+        }
+        return result;
     }
 
     public int countAll() {
@@ -184,8 +217,8 @@ public class SignalementService {
 
     public int countByStatutAndZone(String statut, String zoneNom) {
         return countSimple(
-            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone WHERE s.statut = ? AND z.nomZone = ?",
-            statut, zoneNom);
+                "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone WHERE s.statut = ? AND z.nomZone = ?",
+                statut, zoneNom);
     }
 
     public int countByCategorie(String categorie) {
@@ -205,18 +238,26 @@ public class SignalementService {
         return countSimple("SELECT COUNT(*) FROM Signalement WHERE statut = ? AND idUser = ?", statut, idUser);
     }
 
+    public int countMissionsActivesParAgent(int idAgent) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Affectation a "
+            + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
+            + "WHERE a.idAgent = ? AND s.statut NOT IN ('Terminé', 'Termine')",
+            idAgent);
+    }
+
     public int countTraitesByAgent(int idAgent) {
         return countSimple(
                 "SELECT COUNT(*) FROM Affectation a "
                 + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-                + "WHERE a.idAgent = ? AND s.statut = 'Terminé'",
+                + "WHERE a.idAgent = ? AND (s.statut = 'Terminé' OR s.statut = 'Termine')",
                 idAgent);
     }
 
     // Méthode utilitaire pour compter
     private int countSimple(String query, Object... params) {
         try (Connection conn = getConn();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+                PreparedStatement pstmt = conn.prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 pstmt.setObject(i + 1, params[i]);
             }
@@ -232,7 +273,7 @@ public class SignalementService {
     private List<Signalement> executeSignalementQuery(String query, Object... params) {
         List<Signalement> liste = new ArrayList<>();
         try (Connection conn = getConn();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+                PreparedStatement pstmt = conn.prepareStatement(query)) {
             for (int i = 0; i < params.length; i++) {
                 pstmt.setObject(i + 1, params[i]);
             }

@@ -7,11 +7,11 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:id="rootPane"
             fx:controller="com.smartcity.controller.ReportsController"
             stylesheets="@../css/design-system.css"
             styleClass="app-root">
-    <fx:id>rootPane</fx:id>
     <top>
         <VBox spacing="10" styleClass="reports-header">
             <HBox alignment="CENTER_LEFT" spacing="20">

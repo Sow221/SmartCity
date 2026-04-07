@@ -23,14 +23,18 @@ public class SessionManager {
     private static SessionData currentSession;
     
     // Configuration de sécurité
-    private static final int SESSION_TIMEOUT_MINUTES = 30;
-    private static final int MAX_INACTIVE_MINUTES = 10;
+    private static final int SESSION_TIMEOUT_MINUTES = 480;
+    private static final int MAX_INACTIVE_MINUTES = 120;
     
     // Service de nettoyage automatique
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, r -> {
+        Thread t = new Thread(r, "session-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
     
     // Sessions multiples (pour évolutions futures)
-    private static final java.util.concurrent.ConcurrentHashMap<String, SessionData> activeSessions = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, SessionData> activeSessions = new ConcurrentHashMap<>();
     
     static {
         // Nettoyage automatique des sessions expirées toutes les 5 minutes

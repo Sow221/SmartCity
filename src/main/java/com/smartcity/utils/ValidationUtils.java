@@ -17,9 +17,9 @@ public class ValidationUtils {
         "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
     );
     
+    // Patterns ciblés : balises HTML dangereuses et SQL structurel uniquement
     private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
-        "(?i)(select|insert|update|delete|drop|create|alter|exec|execute|union|script)", 
-        Pattern.CASE_INSENSITIVE
+        "(?i)(;\\s*(drop|alter|truncate|create)\\s|--\\s|/\\*.*\\*/)"
     );
     
     private static final Pattern XSS_PATTERN = Pattern.compile(
@@ -35,7 +35,7 @@ public class ValidationUtils {
             return false;
         }
         
-        String cleanEmail = email.trim().toLowerCase();
+        String cleanEmail = email.trim().toLowerCase(java.util.Locale.ROOT);
         boolean valid = EMAIL_PATTERN.matcher(cleanEmail).matches() && cleanEmail.length() <= 254;
         
         if (!valid) {
@@ -62,7 +62,7 @@ public class ValidationUtils {
         }
         
         // Vérifier mots de passe faibles
-        String lowerPassword = password.toLowerCase();
+        String lowerPassword = password.toLowerCase(java.util.Locale.ROOT);
         String[] weakPasswords = {"123456", "password", "admin", "qwerty", "abc123"};
         
         for (String weak : weakPasswords) {

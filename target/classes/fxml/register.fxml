@@ -9,105 +9,185 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx/17"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.smartcity.controller.RegisterController"
-            prefWidth="800" prefHeight="700"
-            stylesheets="@../css/design-system.css"
-            styleClass="auth-root">
+<HBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.smartcity.controller.RegisterController"
+      prefWidth="1000" prefHeight="660"
+      minWidth="720" minHeight="560"
+      stylesheets="@../css/design-system.css"
+      styleClass="auth-root-split">
 
-    <center>
-        <StackPane BorderPane.alignment="CENTER">
-            <VBox alignment="CENTER" spacing="16">
-                
-                <!-- Logo + Nom -->
-                <VBox alignment="CENTER" spacing="8">
-                    <StackPane alignment="CENTER"
-                               style="-fx-background-color: white; -fx-background-radius: 55; -fx-pref-width: 110; -fx-pref-height: 110; -fx-effect: dropshadow(gaussian, rgba(27,94,32,0.35), 18, 0, 0, 5);">
-                        <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
-                            <image><Image url="@../images/EcoTrack.png"/></image>
-                        </ImageView>
+    <!-- ═══════════════════════════════════════════════════════
+         PANNEAU GAUCHE — Branding
+    ═══════════════════════════════════════════════════════ -->
+    <StackPane prefWidth="400" minWidth="300" maxWidth="420">
+
+        <VBox styleClass="auth-brand-panel" alignment="CENTER" spacing="0"/>
+        <StackPane styleClass="auth-deco-circle-1" alignment="CENTER"/>
+        <StackPane styleClass="auth-deco-circle-2" alignment="CENTER"/>
+        <StackPane styleClass="auth-deco-circle-3" alignment="CENTER"/>
+
+        <VBox alignment="CENTER" spacing="0">
+
+            <VBox alignment="CENTER" spacing="20" VBox.vgrow="ALWAYS">
+                <padding><Insets top="64" right="44" bottom="0" left="44"/></padding>
+
+                <StackPane alignment="CENTER">
+                    <StackPane styleClass="auth-logo-ring-outer" alignment="CENTER">
+                        <StackPane styleClass="auth-logo-ring-inner" alignment="CENTER">
+                            <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
+                                <image><Image url="@../images/EcoTrack.png"/></image>
+                            </ImageView>
+                        </StackPane>
                     </StackPane>
-                    <Label text="SmartCity" style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1B5E20;"/>
-                    <Label text="Créer un compte" styleClass="auth-subtitle"/>
+                </StackPane>
+
+                <VBox alignment="CENTER" spacing="6">
+                    <Label text="SmartCity" styleClass="auth-brand-title"/>
+                    <Label text="Rejoignez la communauté" styleClass="auth-brand-subtitle"/>
                 </VBox>
-                
-                <!-- Carte flottante blanche -->
-                <VBox alignment="CENTER" spacing="10" styleClass="auth-card">
-                    
-                    <!-- Nom -->
-                    <Label text="Nom complet" styleClass="form-label"/>
-                    <TextField fx:id="nomField"
-                               promptText="Votre nom complet"
-                               prefWidth="320"
-                               prefHeight="48"
-                               styleClass="auth-input"/>
-                    
-                    <!-- Email -->
-                    <Label text="Email" styleClass="form-label"/>
-                    <TextField fx:id="emailField"
-                               promptText="exemple@email.com"
-                               prefWidth="320"
-                               prefHeight="48"
-                               styleClass="auth-input"/>
-                    
-                    <!-- Zone -->
-                    <Label text="Zone" styleClass="form-label"/>
-                    <ComboBox fx:id="zoneCombo"
-                              prefWidth="320"
-                              prefHeight="48"
-                              styleClass="combo-box"/>
-                    
-                    <!-- Mot de passe -->
-                    <Label text="Mot de passe" styleClass="form-label"/>
-                    <PasswordField fx:id="motPasseField"
-                                   promptText="Minimum 6 caractères"
-                                   prefWidth="320"
-                                   prefHeight="48"
-                                   styleClass="auth-input"/>
-                    
-                    <!-- Confirmer mot de passe -->
-                    <Label text="Confirmer le mot de passe" styleClass="form-label"/>
-                    <PasswordField fx:id="confirmField"
-                                   promptText="Confirmez votre mot de passe"
-                                   prefWidth="320"
-                                   prefHeight="48"
-                                   styleClass="auth-input"/>
-                    
-                    <!-- Espace -->
-                    <StackPane prefHeight="12"/>
-                    
-                    <!-- Bouton S'inscrire -->
-                    <Button fx:id="inscriptionButton"
-                            text="S'INSCRIRE"
-                            prefWidth="320"
-                            prefHeight="50"
-                            onAction="#handleInscription"
-                            styleClass="auth-button"/>
-                    
-                    <!-- Lien retour -->
-                    <Hyperlink fx:id="backToLoginLink"
-                               text="← Retour à la connexion"
-                               styleClass="auth-link"/>
-                    
-                    <!-- Message de statut -->
-                    <Label fx:id="statusMessageLabel"
-                           text=""
-                           wrapText="true"
-                           maxWidth="320"
-                           styleClass="text-sm"
-                           visible="false"/>
-                    
+
+                <StackPane prefHeight="1" maxWidth="48" styleClass="auth-brand-divider"/>
+
+                <VBox spacing="16" alignment="CENTER_LEFT" maxWidth="270">
+
+                    <HBox spacing="14" alignment="CENTER_LEFT">
+                        <StackPane styleClass="auth-feature-badge" alignment="CENTER">
+                            <Label text="✅" style="-fx-font-size:15px;"/>
+                        </StackPane>
+                        <VBox spacing="3">
+                            <Label text="Inscription gratuite" styleClass="auth-feature-title"/>
+                            <Label text="Créez votre compte en moins d'une minute" styleClass="auth-feature-desc"/>
+                        </VBox>
+                    </HBox>
+
+                    <HBox spacing="14" alignment="CENTER_LEFT">
+                        <StackPane styleClass="auth-feature-badge" alignment="CENTER">
+                            <Label text="📍" style="-fx-font-size:15px;"/>
+                        </StackPane>
+                        <VBox spacing="3">
+                            <Label text="Signalez en un clic" styleClass="auth-feature-title"/>
+                            <Label text="Placez un marqueur sur la carte interactive" styleClass="auth-feature-desc"/>
+                        </VBox>
+                    </HBox>
+
+                    <HBox spacing="14" alignment="CENTER_LEFT">
+                        <StackPane styleClass="auth-feature-badge" alignment="CENTER">
+                            <Label text="🔔" style="-fx-font-size:15px;"/>
+                        </StackPane>
+                        <VBox spacing="3">
+                            <Label text="Suivi en temps réel" styleClass="auth-feature-title"/>
+                            <Label text="Statut de vos signalements mis à jour" styleClass="auth-feature-desc"/>
+                        </VBox>
+                    </HBox>
+
                 </VBox>
-                
-                <!-- Footer -->
-                <Label text="© 2026 SmartCity - Pikine &amp; Guédiawaye" styleClass="auth-footer"/>
-                
             </VBox>
-        </StackPane>
-    </center>
-</BorderPane>
+
+            <VBox alignment="CENTER">
+                <padding><Insets top="0" bottom="28"/></padding>
+                <Label text="© 2026 SmartCity — Pikine &amp; Guédiawaye, Sénégal" styleClass="auth-brand-footer"/>
+            </VBox>
+
+        </VBox>
+    </StackPane>
+
+    <!-- ═══════════════════════════════════════════════════════
+         PANNEAU DROIT — Formulaire inscription
+    ═══════════════════════════════════════════════════════ -->
+    <VBox styleClass="auth-form-panel" HBox.hgrow="ALWAYS" alignment="CENTER">
+
+        <VBox alignment="TOP_LEFT" spacing="0" maxWidth="420">
+            <padding><Insets left="40" right="40"/></padding>
+
+            <!-- En-tête -->
+            <Label text="Créer un compte" styleClass="auth-form-title"/>
+            <Region prefHeight="8"/>
+            <Label text="Remplissez les informations pour commencer" styleClass="auth-form-subtitle"/>
+            <Region prefHeight="16"/>
+
+            <!-- Indicateur de progression -->
+            <HBox spacing="6" alignment="CENTER_LEFT">
+                <StackPane styleClass="auth-step-active" prefWidth="28" prefHeight="4"/>
+                <StackPane styleClass="auth-step-active" prefWidth="28" prefHeight="4"/>
+                <StackPane styleClass="auth-step-inactive" prefWidth="28" prefHeight="4"/>
+                <Label text="Informations de base" styleClass="auth-step-label"/>
+            </HBox>
+            <Region prefHeight="24"/>
+
+            <!-- Nom complet -->
+            <Label text="Nom complet" styleClass="auth-field-label"/>
+            <Region prefHeight="8"/>
+            <TextField fx:id="nomField"
+                       promptText="Prénom et nom"
+                       maxWidth="Infinity" prefHeight="50"
+                       styleClass="auth-field"/>
+            <Region prefHeight="16"/>
+
+            <!-- Email -->
+            <Label text="Adresse email" styleClass="auth-field-label"/>
+            <Region prefHeight="8"/>
+            <TextField fx:id="emailField"
+                       promptText="exemple@email.com"
+                       maxWidth="Infinity" prefHeight="50"
+                       styleClass="auth-field"/>
+            <Region prefHeight="16"/>
+
+            <!-- Zone -->
+            <Label text="Votre zone" styleClass="auth-field-label"/>
+            <Region prefHeight="8"/>
+            <ComboBox fx:id="zoneCombo"
+                      promptText="Sélectionnez votre zone"
+                      maxWidth="Infinity" prefHeight="50"
+                      styleClass="auth-field-combo"/>
+            <Region prefHeight="16"/>
+
+            <!-- 2 colonnes : mot de passe + confirmation -->
+            <HBox spacing="12">
+                <VBox spacing="8" HBox.hgrow="ALWAYS">
+                    <Label text="Mot de passe" styleClass="auth-field-label"/>
+                    <PasswordField fx:id="motPasseField"
+                                   promptText="Min. 6 caractères"
+                                   prefHeight="50"
+                                   styleClass="auth-field"/>
+                </VBox>
+                <VBox spacing="8" HBox.hgrow="ALWAYS">
+                    <Label text="Confirmation" styleClass="auth-field-label"/>
+                    <PasswordField fx:id="confirmField"
+                                   promptText="Répétez"
+                                   prefHeight="50"
+                                   styleClass="auth-field"/>
+                </VBox>
+            </HBox>
+            <Region prefHeight="24"/>
+
+            <!-- Bouton principal -->
+            <Button fx:id="inscriptionButton"
+                    text="CRÉER MON COMPTE"
+                    maxWidth="Infinity" prefHeight="50"
+                    onAction="#handleInscription"
+                    styleClass="auth-submit-btn"/>
+
+            <Region prefHeight="20"/>
+
+            <!-- Retour connexion -->
+            <HBox alignment="CENTER" spacing="5">
+                <Label text="Déjà un compte ?" styleClass="auth-hint-label"/>
+                <Hyperlink fx:id="backToLoginLink" text="Se connecter →" styleClass="auth-link-accent"/>
+            </HBox>
+
+            <Region prefHeight="16"/>
+
+            <!-- Message statut -->
+            <Label fx:id="statusMessageLabel" text="" wrapText="true"
+                   maxWidth="Infinity" styleClass="auth-status-msg" visible="false"/>
+
+        </VBox>
+    </VBox>
+
+</HBox>

@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Service pour la gestion des utilisateurs.
@@ -19,7 +21,13 @@ public class UtilisateurService {
 
     private static final Logger logger = LoggerFactory.getLogger(UtilisateurService.class);
 
-        private Connection getConn() throws SQLException {
+    // Protection brute-force : compteur de tentatives par email
+    private static final ConcurrentHashMap<String, AtomicInteger> loginAttempts = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> lockoutUntil = new ConcurrentHashMap<>();
+    private static final int MAX_ATTEMPTS = 5;
+    private static final long LOCKOUT_MS = 15 * 60 * 1000L; // 15 minutes
+
+    private Connection getConn() throws SQLException {
         Connection conn = DatabaseConnection.getConnection();
         if (conn == null) {
             throw new SQLException("❌ Impossible d'obtenir une connexion à la base de données");
@@ -94,41 +102,64 @@ public class UtilisateurService {
             return null;
         }
         
-        String query = "SELECT * FROM Utilisateur WHERE email = ? AND actif = 1";
+        String key = email.toLowerCase().trim();
 
+        // Vérifier verrouillage
+        Long until = lockoutUntil.get(key);
+        if (until != null && System.currentTimeMillis() < until) {
+            long remaining = (until - System.currentTimeMillis()) / 1000 / 60;
+            logger.warn("🔒 Compte verrouillé pour: {} — encore {}min", key, remaining + 1);
+            return null;
+        }
+
+        String query = "SELECT * FROM Utilisateur WHERE email = ? AND actif = 1";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
-            
-            pstmt.setString(1, email.toLowerCase().trim());
-            
+
+            pstmt.setString(1, key);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     String storedPassword = rs.getString("motDePasse");
-                    boolean passwordMatches;
-                    
-                    if (storedPassword.startsWith("$")) {
-                        // Hashed password
-                        passwordMatches = BCrypt.checkpw(motPasse, storedPassword);
-                    } else {
-                        // Plain password (legacy) - à migrer
-                        passwordMatches = motPasse.equals(storedPassword);
-                        if (passwordMatches) {
-                            logger.warn("⚠️ Mot de passe non hashé détecté pour: {}", email);
-                        }
+                    if (!storedPassword.startsWith("$2")) {
+                        logger.warn("⚠️ Compte avec mot de passe non-BCrypt pour: {} — connexion refusée", key);
+                        return null;
                     }
-                    
-                    if (passwordMatches) {
-                        logger.info("✅ Connexion réussie pour: {}", email);
+                    if (BCrypt.checkpw(motPasse, storedPassword)) {
+                        loginAttempts.remove(key);
+                        lockoutUntil.remove(key);
+                        logger.info("✅ Connexion réussie pour: {}", key);
                         return mapResultSetToUtilisateur(rs);
                     } else {
-                        logger.warn("❌ Mot de passe incorrect pour: {}", email);
+                        recordFailedAttempt(key);
+                        logger.warn("❌ Mot de passe incorrect pour: {}", key);
                     }
                 } else {
-                    logger.warn("❌ Utilisateur non trouvé: {}", email);
+                    logger.warn("❌ Utilisateur non trouvé: {}", key);
                 }
             }
         } catch (SQLException e) {
-            logger.error("❌ Erreur SQL lors de la connexion pour {}: {}", email, e.getMessage());
+            logger.error("❌ Erreur SQL lors de la connexion pour {}: {}", key, e.getMessage());
+        }
+        return null;
+    }
+
+    private void recordFailedAttempt(String key) {
+        AtomicInteger attempts = loginAttempts.computeIfAbsent(key, k -> new AtomicInteger(0));
+        int count = attempts.incrementAndGet();
+        if (count >= MAX_ATTEMPTS) {
+            lockoutUntil.put(key, System.currentTimeMillis() + LOCKOUT_MS);
+            loginAttempts.remove(key);
+            logger.warn("🔒 Compte verrouillé 15min après {} tentatives: {}", MAX_ATTEMPTS, key);
+        }
+    }
+
+    /** Retourne le message d'erreur de verrouillage si applicable, null sinon. */
+    public String getLoginBlockMessage(String email) {
+        if (email == null) return null;
+        Long until = lockoutUntil.get(email.toLowerCase().trim());
+        if (until != null && System.currentTimeMillis() < until) {
+            long remaining = (until - System.currentTimeMillis()) / 1000 / 60;
+            return "Compte temporairement bloqué. Réessayez dans " + (remaining + 1) + " minute(s).";
         }
         return null;
     }

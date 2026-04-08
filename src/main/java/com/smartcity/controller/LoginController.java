@@ -6,13 +6,22 @@ import com.smartcity.service.UtilisateurService;
 import com.smartcity.utils.SessionManager;
 import com.smartcity.utils.ValidationUtils;
 import javafx.animation.PauseTransition;
+import javafx.animation.FadeTransition;
+import javafx.animation.TranslateTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.Interpolator;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +48,26 @@ public class LoginController {
     @FXML
     private Button connexionButton;
 
-    @FXML
-    private Label statusMessageLabel;
+    @FXML private Label statusMessageLabel;
+    @FXML private Label emailErrorLabel;
+    @FXML private Label passwordErrorLabel;
+
+    // Éléments pour le stagger — panneau gauche
+    @FXML private StackPane logoPane;
+    @FXML private VBox brandTitleBox;
+    @FXML private StackPane brandDivider;
+    @FXML private HBox feature1;
+    @FXML private HBox feature2;
+    @FXML private HBox feature3;
+    @FXML private VBox brandFooter;
+
+    // Éléments pour le stagger — panneau droit
+    @FXML private Label formTitle;
+    @FXML private Label formSubtitle;
+    @FXML private VBox emailGroup;
+    @FXML private VBox passwordGroup;
+    @FXML private HBox separatorBox;
+    @FXML private HBox registerLinkBox;
 
     private final UtilisateurService utilisateurService;
     private MainApp mainApp;
@@ -55,14 +82,130 @@ public class LoginController {
 
     @FXML
     private void initialize() {
-        Platform.runLater(() -> emailField.requestFocus());
-        clearStatusMessage();
-        forgotPasswordLink.setOnAction(evt -> showErrorMessage("Mot de passe oublié ? Contactez support@smartcity.sn"));
+        clearAllErrors();
+        forgotPasswordLink.setOnAction(evt -> mainApp.showForgotPassword());
         createAccountLink.setOnAction(evt -> mainApp.showRegisterScreen());
 
-        // Validation en temps réel
-        emailField.textProperty().addListener((observable, oldValue, newValue) -> validateEmail());
-        motPasseField.textProperty().addListener((observable, oldValue, newValue) -> validatePassword());
+        emailField.focusedProperty().addListener((obs, was, now) -> {
+            if (!now && !emailField.getText().isBlank()) validateEmailField();
+            else if (now) clearFieldError(emailField, emailErrorLabel);
+        });
+        motPasseField.focusedProperty().addListener((obs, was, now) -> {
+            if (!now && !motPasseField.getText().isBlank()) validatePasswordField();
+            else if (now) clearFieldError(motPasseField, passwordErrorLabel);
+        });
+
+        // Hover sur les liens
+        applyLinkHover(forgotPasswordLink);
+        applyLinkHover(createAccountLink);
+
+        // Stagger au chargement
+        Platform.runLater(() -> {
+            playStaggerAnimation();
+            emailField.requestFocus();
+        });
+    }
+
+    /** Appelé aussi après swapAuthScene pour rejouer le stagger. */
+    public void playStaggerAnimation() {
+        Interpolator spring = Interpolator.SPLINE(0.25, 0.46, 0.45, 0.94);
+
+        // Masquer tous les éléments avant l'animation
+        Node[] allNodes = {logoPane, brandTitleBox, brandDivider,
+                feature1, feature2, feature3, brandFooter,
+                formTitle, formSubtitle, emailGroup, passwordGroup,
+                connexionButton, separatorBox, registerLinkBox};
+        for (Node n : allNodes) {
+            if (n != null) { n.setOpacity(0); n.setTranslateY(14); }
+        }
+        // Logo : scale depuis 0.6 + fade
+        if (logoPane != null) {
+            logoPane.setScaleX(0.6); logoPane.setScaleY(0.6);
+            logoPane.setTranslateY(0); // logo pas de slide Y
+        }
+
+        // Délais en ms
+        int[] delays = {0, 80, 140, 200, 260, 320, 380,   // gauche
+                        120, 180, 260, 330, 400, 460, 510}; // droite
+
+        // Logo — scaleIn + fadeIn
+        staggerScaleIn(logoPane, delays[0], spring);
+        // Panneau gauche
+        staggerSlideIn(brandTitleBox,  delays[1],  spring);
+        staggerSlideIn(brandDivider,   delays[2],  spring);
+        staggerSlideIn(feature1,       delays[3],  spring);
+        staggerSlideIn(feature2,       delays[4],  spring);
+        staggerSlideIn(feature3,       delays[5],  spring);
+        staggerSlideIn(brandFooter,    delays[6],  spring);
+        // Panneau droit
+        staggerSlideIn(formTitle,      delays[7],  spring);
+        staggerSlideIn(formSubtitle,   delays[8],  spring);
+        staggerSlideIn(emailGroup,     delays[9],  spring);
+        staggerSlideIn(passwordGroup,  delays[10], spring);
+        staggerSlideIn(connexionButton, delays[11], spring);
+        staggerSlideIn(separatorBox,   delays[12], spring);
+        staggerSlideIn(registerLinkBox, delays[13], spring);
+    }
+
+    /** Micro-animation hover sur les Hyperlink. */
+    private void applyLinkHover(Hyperlink link) {
+        link.setOnMouseEntered(e -> {
+            ScaleTransition s = new ScaleTransition(Duration.millis(120), link);
+            s.setToX(1.04); s.setToY(1.04);
+            s.setInterpolator(Interpolator.EASE_OUT);
+            s.play();
+        });
+        link.setOnMouseExited(e -> {
+            ScaleTransition s = new ScaleTransition(Duration.millis(120), link);
+            s.setToX(1.0); s.setToY(1.0);
+            s.setInterpolator(Interpolator.EASE_IN);
+            s.play();
+        });
+    }
+
+    /** Fade + slide Y depuis le bas avec délai. */
+    private void staggerSlideIn(Node node, int delayMs, Interpolator interp) {
+        if (node == null) return;
+        PauseTransition wait = new PauseTransition(Duration.millis(delayMs));
+        wait.setOnFinished(e -> {
+            FadeTransition fade = new FadeTransition(Duration.millis(260), node);
+            fade.setFromValue(0.0); fade.setToValue(1.0);
+            fade.setInterpolator(interp);
+
+            TranslateTransition slide = new TranslateTransition(Duration.millis(260), node);
+            slide.setFromY(14); slide.setToY(0);
+            slide.setInterpolator(interp);
+
+            ParallelTransition anim = new ParallelTransition(fade, slide);
+            anim.setOnFinished(ev -> { node.setTranslateY(0); node.setOpacity(1.0); });
+            anim.play();
+        });
+        wait.play();
+    }
+
+    /** Scale 0.6→1.0 + fade pour le logo, avec léger rebond. */
+    private void staggerScaleIn(Node node, int delayMs, Interpolator interp) {
+        if (node == null) return;
+        PauseTransition wait = new PauseTransition(Duration.millis(delayMs));
+        wait.setOnFinished(e -> {
+            FadeTransition fade = new FadeTransition(Duration.millis(400), node);
+            fade.setFromValue(0.0); fade.setToValue(1.0);
+            fade.setInterpolator(interp);
+
+            ScaleTransition scale = new ScaleTransition(Duration.millis(400), node);
+            scale.setFromX(0.6); scale.setFromY(0.6);
+            scale.setToX(1.0);   scale.setToY(1.0);
+            // Rebond léger : dépasse 1.0 puis revient
+            scale.setInterpolator(Interpolator.SPLINE(0.34, 1.56, 0.64, 1.0));
+
+            ParallelTransition anim = new ParallelTransition(fade, scale);
+            anim.setOnFinished(ev -> {
+                node.setOpacity(1.0);
+                node.setScaleX(1.0); node.setScaleY(1.0);
+            });
+            anim.play();
+        });
+        wait.play();
     }
 
 
@@ -72,87 +215,108 @@ public class LoginController {
         String email = emailField.getText().trim();
         String motPasse = motPasseField.getText();
 
-        clearStatusMessage();
+        clearAllErrors();
+        boolean valid = true;
 
         if (email.isBlank()) {
-            showErrorMessage("Ce champ est requis");
-            emailField.requestFocus();
-            return;
-        }
-
-        if (!com.smartcity.utils.ValidationUtils.isValidEmail(email)) {
-            showErrorMessage("Format email invalide");
-            emailField.requestFocus();
-            return;
-        }
-
-        if (motPasse.isBlank()) {
-            showErrorMessage("Ce champ est requis");
-            motPasseField.requestFocus();
-            return;
-        }
-
-        com.smartcity.utils.ValidationUtils.ValidationResult pwCheck =
-            com.smartcity.utils.ValidationUtils.validatePassword(motPasse);
-        if (!pwCheck.isValid()) {
-            showErrorMessage(pwCheck.getMessage());
-            motPasseField.requestFocus();
-            return;
-        }
-
-        Utilisateur utilisateur = utilisateurService.connexion(email, motPasse);
-
-        if (utilisateur != null) {
-            showSuccessMessage("Connexion réussie !");
-            PauseTransition delay = new PauseTransition(Duration.seconds(0.5));
-            delay.setOnFinished(evt -> {
-                SessionManager.setUtilisateurConnecte(utilisateur);
-                mainApp.showDashboard(utilisateur.getRole());
-            });
-            delay.play();
-        } else {
-            showErrorMessage("Email ou mot de passe incorrect");
-        }
-    }
-
-    private void validateEmail() {
-        String email = emailField.getText().trim();
-        if (email.isEmpty()) {
-            showErrorMessage("Ce champ est requis");
+            showFieldError(emailField, emailErrorLabel, "Ce champ est requis");
+            valid = false;
         } else if (!com.smartcity.utils.ValidationUtils.isValidEmail(email)) {
-            showErrorMessage("Format email invalide");
-        } else {
-            clearStatusMessage();
+            showFieldError(emailField, emailErrorLabel, "Format email invalide");
+            valid = false;
         }
-    }
-
-    private void validatePassword() {
-        String password = motPasseField.getText();
-        if (password.isEmpty()) {
-            showErrorMessage("Ce champ est requis");
-        } else if (password.length() < 6) {
-            showErrorMessage("Le mot de passe doit contenir au moins 6 caractères");
-        } else {
-            clearStatusMessage();
+        if (motPasse.isBlank()) {
+            showFieldError(motPasseField, passwordErrorLabel, "Ce champ est requis");
+            valid = false;
         }
+        if (!valid) {
+            com.smartcity.utils.AnimationUtils.shake(connexionButton).play();
+            return;
+        }
+
+        // État loading
+        connexionButton.setText("Connexion en cours...");
+        connexionButton.setDisable(true);
+        connexionButton.setStyle("-fx-opacity: 0.75;");
+
+        // BCrypt sur thread séparé pour ne pas geler l'UI
+        javafx.concurrent.Task<Utilisateur> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected Utilisateur call() {
+                return utilisateurService.connexion(email, motPasse);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            Utilisateur utilisateur = task.getValue();
+            if (utilisateur != null) {
+                connexionButton.setText("✓ Connexion réussie");
+                connexionButton.setStyle("-fx-background-color: #16a34a; -fx-opacity: 1;");
+                // Pause 800ms pour lire le feedback, puis transition
+                PauseTransition delay = new PauseTransition(Duration.millis(800));
+                delay.setOnFinished(evt -> {
+                    SessionManager.setUtilisateurConnecte(utilisateur);
+                    mainApp.showDashboard(utilisateur.getRole());
+                });
+                delay.play();
+            } else {
+                connexionButton.setText("SE CONNECTER");
+                connexionButton.setDisable(false);
+                connexionButton.setStyle("");
+                showFieldError(emailField, emailErrorLabel, "Email ou mot de passe incorrect");
+                showFieldError(motPasseField, passwordErrorLabel, "Vérifiez vos identifiants");
+                com.smartcity.utils.AnimationUtils.shake(connexionButton).play();
+            }
+        });
+
+        task.setOnFailed(e -> {
+            connexionButton.setText("SE CONNECTER");
+            connexionButton.setDisable(false);
+            connexionButton.setStyle("");
+            showFieldError(emailField, emailErrorLabel, "Erreur de connexion. Réessayez.");
+        });
+
+        new Thread(task, "login-task").start();
     }
 
-    private void showErrorMessage(String message) {
-        showStatusMessage(message, "#D32F2F");
+    private void validateEmailField() {
+        String email = emailField.getText().trim();
+        if (!com.smartcity.utils.ValidationUtils.isValidEmail(email))
+            showFieldError(emailField, emailErrorLabel, "Format email invalide");
+        else clearFieldError(emailField, emailErrorLabel);
     }
 
-    private void showSuccessMessage(String message) {
-        showStatusMessage(message, "#388E3C");
+    private void validatePasswordField() {
+        if (motPasseField.getText().isEmpty())
+            showFieldError(motPasseField, passwordErrorLabel, "Ce champ est requis");
+        else clearFieldError(motPasseField, passwordErrorLabel);
     }
 
-    private void showStatusMessage(String message, String color) {
-        statusMessageLabel.setVisible(true);
+    private void showFieldError(javafx.scene.control.Control field, Label errorLabel, String msg) {
+        field.getStyleClass().remove("input-error");
+        field.getStyleClass().add("input-error");
+        errorLabel.setText(msg);
+        errorLabel.setVisible(true);
+        errorLabel.setManaged(true);
+    }
+
+    private void clearFieldError(javafx.scene.control.Control field, Label errorLabel) {
+        field.getStyleClass().remove("input-error");
+        errorLabel.setVisible(false);
+        errorLabel.setManaged(false);
+    }
+
+    private void clearAllErrors() {
+        clearFieldError(emailField, emailErrorLabel);
+        clearFieldError(motPasseField, passwordErrorLabel);
+        if (statusMessageLabel != null) { statusMessageLabel.setVisible(false); statusMessageLabel.setManaged(false); }
+    }
+
+    private void showGlobalSuccess(String message) {
         statusMessageLabel.setText(message);
-        statusMessageLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 12; -fx-text-alignment: center;");
-    }
-
-    private void clearStatusMessage() {
-        statusMessageLabel.setVisible(false);
-        statusMessageLabel.setText("");
+        statusMessageLabel.getStyleClass().removeAll("auth-status-success", "auth-status-error");
+        statusMessageLabel.getStyleClass().add("auth-status-success");
+        statusMessageLabel.setVisible(true);
+        statusMessageLabel.setManaged(true);
     }
 }

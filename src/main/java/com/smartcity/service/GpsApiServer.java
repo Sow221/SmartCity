@@ -12,6 +12,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -30,6 +32,14 @@ public class GpsApiServer {
 
     private static final Logger logger = LoggerFactory.getLogger(GpsApiServer.class);
     public static final int PORT = 8081;
+
+    // Token par agent : agentId -> token UUID
+    private static final ConcurrentHashMap<Integer, String> agentTokens = new ConcurrentHashMap<>();
+
+    /** Génère (ou récupère) un token pour un agent. */
+    public static String getOrCreateToken(int agentId) {
+        return agentTokens.computeIfAbsent(agentId, id -> UUID.randomUUID().toString().replace("-", ""));
+    }
 
     private HttpServer server;
 
@@ -75,8 +85,13 @@ public class GpsApiServer {
         }
     }
 
+    public static String getGpsPageUrl(int agentId, String ip) {
+        String token = getOrCreateToken(agentId);
+        return "http://" + ip + ":" + PORT + "/gps?agentId=" + agentId + "&token=" + token;
+    }
+
     public static String getGpsPageUrl(int agentId) {
-        return "http://" + getLocalIp() + ":" + PORT + "/gps?agentId=" + agentId;
+        return getGpsPageUrl(agentId, getLocalIp());
     }
 
     // ── Handlers ────────────────────────────────────────────────────────────
@@ -113,22 +128,29 @@ public class GpsApiServer {
         }
 
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        // body: agentId=1&lat=14.76460&lon=-17.39200
         try {
             String[] params = body.split("&");
             int agentId = 0;
             double lat = 0, lon = 0;
+            String token = null;
             for (String param : params) {
                 String[] kv = param.split("=");
                 if (kv.length == 2) {
-                    if ("agentId".equals(kv[0])) {
-                        agentId = Integer.parseInt(kv[1]);
-                    } else if ("lat".equals(kv[0])) {
-                        lat = Double.parseDouble(kv[1]);
-                    } else if ("lon".equals(kv[0])) {
-                        lon = Double.parseDouble(kv[1]);
+                    switch (kv[0]) {
+                        case "agentId" -> agentId = Integer.parseInt(kv[1]);
+                        case "lat"     -> lat = Double.parseDouble(kv[1]);
+                        case "lon"     -> lon = Double.parseDouble(kv[1]);
+                        case "token"   -> token = kv[1];
                     }
                 }
+            }
+
+            // Valider le token
+            String expected = agentTokens.get(agentId);
+            if (expected == null || !expected.equals(token)) {
+                logger.warn("🚫 Token GPS invalide pour agentId={}", agentId);
+                sendResponse(exchange, 403, "{\"status\":\"forbidden\"}");
+                return;
             }
 
             if (agentId > 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
@@ -211,6 +233,7 @@ public class GpsApiServer {
      * watchPosition() envoie la position toutes les 5s automatiquement.
      */
     private String buildGpsHtml(int agentId) {
+        String token = getOrCreateToken(agentId);
         String apiUrl = "http://" + getLocalIp() + ":" + PORT + "/api/position";
         return "<!DOCTYPE html><html><head>"
             + "<meta charset='UTF-8'>"
@@ -233,11 +256,12 @@ public class GpsApiServer {
             + "<div id='coords'></div>"
             + "<script>"
             + "var agentId=" + agentId + ";"
+            + "var token='" + token + "';"
             + "var apiUrl='" + apiUrl + "';"
             + "function sendPosition(lat,lon){"
             + "  fetch(apiUrl,{method:'POST',"
             + "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
-            + "    body:'agentId='+agentId+'&lat='+lat+'&lon='+lon})"
+            + "    body:'agentId='+agentId+'&lat='+lat+'&lon='+lon+'&token='+token})"
             + "  .then(()=>{"
             + "    document.getElementById('status').innerHTML="
             + "      '<span class=\"dot\"></span>Position envoy\u00e9e';"

@@ -94,7 +94,7 @@ public class AgentDashboardController {
     private TableColumn<Signalement, String> colHistStatut;
 
     @FXML
-    private Label mapDistanceLabel, mapTempsLabel, agentCardTotal, agentCardEnAttente, agentCardEnCours,
+    private Label mapDistanceLabel, mapTempsLabel, mapCommentaireLabel, agentCardTotal, agentCardEnAttente, agentCardEnCours,
             agentCardTerminees, agentMessageLabel, lblMissionsCount, mapMissionIdLabel, mapMissionZoneLabel,
             mapMissionAdresseLabel, mapMissionStatutLabel, agentNameLabel;
     @FXML
@@ -561,7 +561,8 @@ public class AgentDashboardController {
                             .setStyle("-fx-background-color: #9E9E9E; -fx-text-fill: white; -fx-background-radius: 8;");
                 }
                 startButton.setDisable(terminee);
-                doneButton.setDisable(terminee || (!enCours && !"En attente".equalsIgnoreCase(mission.getStatut())));
+                // FUNC-04: l'agent doit avoir demarre (En cours) pour pouvoir terminer
+                doneButton.setDisable(terminee || !enCours);
                 setGraphic(box);
             }
         });
@@ -765,8 +766,7 @@ public class AgentDashboardController {
         mapMissionIdLabel.setText(String.valueOf(mission.getIdSignalement()));
         mapMissionZoneLabel.setText(mission.getZoneNom());
         mapMissionAdresseLabel.setText(getAdresse(mission));
-        mapMissionStatutLabel.setText(getDisplayStatut(mission.getStatut()));
-    }
+        mapMissionStatutLabel.setText(getDisplayStatut(mission.getStatut())); if (mapCommentaireLabel != null) { String commentaire = new com.smartcity.service.AffectationService().getCommentaireBySignalement(mission.getIdSignalement()); mapCommentaireLabel.setText(commentaire != null && !commentaire.isBlank() ? commentaire : "—"); } }
 
     private void refreshMap(Signalement selectedMission, boolean showRoute) {
         if (mapWebView == null)

@@ -24,7 +24,7 @@ public class SessionManager {
     
     // Configuration de sécurité
     private static final int SESSION_TIMEOUT_MINUTES = 480;
-    private static final int MAX_INACTIVE_MINUTES = 120;
+    private static final int MAX_INACTIVE_MINUTES = 30; // SEC-08: réduit de 120 à 30 min
     
     // Service de nettoyage automatique
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, r -> {
@@ -246,5 +246,16 @@ public class SessionManager {
         scheduler.shutdown();
         activeSessions.clear();
         currentSession = null;
+    }
+
+    /**
+     * Retourne l'id de l'agent connecté, vide si non connecté ou pas un agent.
+     */
+    public static java.util.Optional<Integer> getAgentId() {
+        Utilisateur user = getUtilisateurConnecte();
+        if (user != null && "Agent".equals(user.getRole())) {
+            return java.util.Optional.of(user.getIdUser());
+        }
+        return java.util.Optional.empty();
     }
 }

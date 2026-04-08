@@ -123,7 +123,7 @@ public class AdminDashboardController {
     private final ObservableList<AgentStatsRow> agents = FXCollections.observableArrayList();
     private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", java.util.Locale.FRANCE);
     private static final String ALL_ZONES = "Toutes";
     private static final String ALL_STATUTS = "Tous";
     private static final String ALL_CATEGORIES = "Toutes";
@@ -139,6 +139,7 @@ public class AdminDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null || !SessionManager.isAdmin()) {
             showAdminMessage("Acces reserve au role Administrateur.", false);
+            if (mainApp != null) javafx.application.Platform.runLater(() -> mainApp.showLoginScreen());
             return;
         }
 
@@ -236,8 +237,13 @@ public class AdminDashboardController {
             showAdminMessage("Nom et email obligatoires.", false);
             return;
         }
+        String newEmail = adminProfilEmailField.getText().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!newEmail.equals(current.getEmail()) && utilisateurService.emailExiste(newEmail)) {
+            showAdminMessage("Cet email est déjà utilisé par un autre compte.", false);
+            return;
+        }
         current.setNom(adminProfilNomField.getText().trim());
-        current.setEmail(adminProfilEmailField.getText().trim());
+        current.setEmail(newEmail);
         if (utilisateurService.updateUtilisateur(current)) {
             adminNameLabel.setText(current.getNom());
             showAdminMessage("Profil mis a jour.", true);
@@ -523,6 +529,10 @@ public class AdminDashboardController {
     private void handleSupprimerSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
         if (selected == null) return;
+        if ("En cours".equalsIgnoreCase(selected.getStatut())) {
+            showAdminMessage("Impossible de supprimer un signalement en cours de traitement.", false);
+            return;
+        }
         if (!confirm("Confirmer", "Supprimer le signalement #" + selected.getIdSignalement() + " ?")) return;
         if (signalementService.supprimerSignalement(selected.getIdSignalement())) {
             showAdminMessage("Signalement supprimé.", true);
@@ -573,6 +583,20 @@ public class AdminDashboardController {
 
     private void refreshSignalements() {
         signalements.setAll(signalementService.getAllSignalements());
+        rebuildAgentColumn();
+    }
+
+    private void rebuildAgentColumn() {
+        if (colSignalementCommentaire == null) return;
+        java.util.Map<Integer, String> agentParSignalement = new java.util.HashMap<>();
+        affectationService.getAllAffectations().forEach(aff -> {
+            Utilisateur agent = utilisateurService.getUtilisateurById(aff.getIdAgent());
+            agentParSignalement.put(aff.getIdSignalement(),
+                agent != null ? agent.getNom() : "Agent #" + aff.getIdAgent());
+        });
+        colSignalementCommentaire.setCellValueFactory(cell ->
+            new SimpleStringProperty(
+                agentParSignalement.getOrDefault(cell.getValue().getIdSignalement(), "-")));
     }
 
     private void refreshCharts() {
@@ -775,14 +799,9 @@ public class AdminDashboardController {
         centerColumn(colSignalementStatut);
         centerColumn(colSignalementUtilisateur);
         if (colSignalementCommentaire != null) {
-            colSignalementCommentaire.setCellValueFactory(cell -> {
-                Affectation aff = affectationService.getAffectationBySignalement(cell.getValue().getIdSignalement());
-                if (aff == null) return new SimpleStringProperty("-");
-                Utilisateur agent = utilisateurService.getUtilisateurById(aff.getIdAgent());
-                return new SimpleStringProperty(agent != null ? agent.getNom() : "Agent #" + aff.getIdAgent());
-            });
             colSignalementCommentaire.setText("Agent affecté");
             centerColumn(colSignalementCommentaire);
+            // Le mapping agent est construit une seule fois dans refreshSignalements()
         }
 
         colSignalementStatut.setCellFactory(col -> new TableCell<>() {

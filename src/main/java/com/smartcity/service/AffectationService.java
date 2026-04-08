@@ -17,7 +17,18 @@ import org.slf4j.LoggerFactory;
 public class AffectationService {
     private static final Logger logger = LoggerFactory.getLogger(AffectationService.class);
 
+    private final javax.sql.DataSource dataSource;
+
+    public AffectationService() {
+        this.dataSource = null;
+    }
+
+    public AffectationService(javax.sql.DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     private Connection getConn() throws SQLException {
+        if (dataSource != null) return dataSource.getConnection();
         return DatabaseConnection.getConnection();
     }
 
@@ -99,15 +110,26 @@ public class AffectationService {
      * puis passe le statut du signalement a "Affecte".
      */
     public boolean affecterAgentParZone(int idSignalement, int idZone) {
-        if (estDejaAffecte(idSignalement)) return false;
         String queryAgent = "SELECT u.idUser FROM Utilisateur u "
                 + "LEFT JOIN Affectation a ON a.idAgent = u.idUser "
                 + "AND a.idSignalement IN (SELECT idSignalement FROM Signalement WHERE statut NOT IN ('Termin\u00e9','Termine')) "
                 + "WHERE u.idZone = ? AND u.role = 'Agent' AND u.actif = 1 "
-                + "GROUP BY u.idUser ORDER BY COUNT(a.idAffectation) ASC LIMIT 1";
+                + "GROUP BY u.idUser ORDER BY COUNT(a.idAffectation) ASC LIMIT 1 FOR UPDATE";
         try (Connection conn = getConn()) {
             conn.setAutoCommit(false);
             try {
+                // FUNC-02 : vérifier l'existence déjà dans la transaction (après le lock)
+                try (PreparedStatement chk = conn.prepareStatement(
+                        "SELECT idAffectation FROM Affectation WHERE idSignalement = ? FOR UPDATE")) {
+                    chk.setInt(1, idSignalement);
+                    try (ResultSet rsChk = chk.executeQuery()) {
+                        if (rsChk.next()) {
+                            conn.rollback();
+                            logger.info("Signalement #{} déjà affecté (race condition évitée)", idSignalement);
+                            return false;
+                        }
+                    }
+                }
                 int idAgent;
                 try (PreparedStatement pstmt = conn.prepareStatement(queryAgent)) {
                     pstmt.setInt(1, idZone);
@@ -234,7 +256,7 @@ public class AffectationService {
             pstmt.setInt(2, idSignalement);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            logger.error("Erreur sauvegarderCommentaire: {}", e.getMessage());
+            logger.error("Erreur sauvegarderCommentaire", e);
             return false;
         }
     }
@@ -248,7 +270,7 @@ public class AffectationService {
                 return rs.next() ? rs.getString("commentaire") : null;
             }
         } catch (SQLException e) {
-            logger.error("Erreur getCommentaireBySignalement: {}", e.getMessage());
+            logger.error("Erreur getCommentaireBySignalement", e);
             return null;
         }
     }

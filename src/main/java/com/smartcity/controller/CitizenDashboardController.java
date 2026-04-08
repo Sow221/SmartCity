@@ -128,6 +128,7 @@ public class CitizenDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null || !SessionManager.isCitoyen()) {
             showCitizenMessage("Acces reserve au role Citoyen.", false);
+            if (mainApp != null) javafx.application.Platform.runLater(() -> mainApp.showLoginScreen());
             return;
         }
 

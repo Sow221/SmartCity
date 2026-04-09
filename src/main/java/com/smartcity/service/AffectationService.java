@@ -1,6 +1,7 @@
 package com.smartcity.service;
 
 import com.smartcity.model.Affectation;
+import com.smartcity.model.SignalementStatut;
 import com.smartcity.utils.DatabaseConnection;
 
 import java.sql.*;
@@ -30,6 +31,20 @@ public class AffectationService {
     private Connection getConn() throws SQLException {
         if (dataSource != null) return dataSource.getConnection();
         return DatabaseConnection.getConnection();
+    }
+
+    public java.util.Map<Integer, String> getAgentNomParSignalement() {
+        java.util.Map<Integer, String> map = new java.util.HashMap<>();
+        String query = "SELECT a.idSignalement, u.nom FROM Affectation a "
+            + "JOIN Utilisateur u ON a.idAgent = u.idUser";
+        try (Connection conn = getConn();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(query);
+             java.sql.ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) map.put(rs.getInt("idSignalement"), rs.getString("nom"));
+        } catch (SQLException e) {
+            logger.error("Erreur getAgentNomParSignalement", e);
+        }
+        return map;
     }
 
     public boolean creerAffectation(int idSignalement, int idAgent) {
@@ -151,7 +166,7 @@ public class AffectationService {
                 }
                 try (PreparedStatement ps2 = conn.prepareStatement(
                         "UPDATE Signalement SET statut = ? WHERE idSignalement = ?")) {
-                    ps2.setString(1, "Affecté");
+                    ps2.setString(1, SignalementStatut.AFFECTE.dbValue());
                     ps2.setInt(2, idSignalement);
                     ps2.executeUpdate();
                 }
@@ -173,7 +188,7 @@ public class AffectationService {
 
     public List<com.smartcity.model.Signalement> getSignalementsByAgent(int idAgent) {
         List<com.smartcity.model.Signalement> liste = new ArrayList<>();
-        String query = "SELECT s.*, u.nom AS utilisateurNom, z.nomZone AS zoneNom "
+        String query = "SELECT s.*, a.dateCollecte AS dateCollecte, u.nom AS utilisateurNom, z.nomZone AS zoneNom "
                 + "FROM Affectation a "
                 + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
                 + "LEFT JOIN Utilisateur u ON s.idUser = u.idUser AND u.actif = 1 "
@@ -199,11 +214,13 @@ public class AffectationService {
         s.setIdZone(rs.getInt("idZone"));
         s.setLatitude(rs.getDouble("latitude"));
         s.setLongitude(rs.getDouble("longitude"));
-        s.setStatut(rs.getString("statut"));
+        s.setStatut(SignalementStatut.toLabelOrSelf(rs.getString("statut")));
         s.setPhoto(rs.getString("photo"));
         s.setIdUser(rs.getInt("idUser"));
         Timestamp ts = rs.getTimestamp("dateSignalement");
         if (ts != null) s.setDateSignalement(ts.toLocalDateTime());
+        Timestamp tsCollecte = rs.getTimestamp("dateCollecte");
+        if (tsCollecte != null) s.setDateCollecte(tsCollecte.toLocalDateTime());
         String zoneNom = rs.getString("zoneNom");
         s.setZoneNom(zoneNom != null ? zoneNom : "Zone #" + s.getIdZone());
         String utilisateurNom = rs.getString("utilisateurNom");
@@ -244,7 +261,7 @@ public class AffectationService {
         if (tsAffectation != null) a.setDateAffectation(tsAffectation.toLocalDateTime());
         Timestamp tsCollecte = rs.getTimestamp("dateCollecte");
         if (tsCollecte != null) a.setDateCollecte(tsCollecte.toLocalDateTime());
-        a.setCommentaire(rs.getString("commentaire"));
+        try { a.setCommentaire(rs.getString("commentaire")); } catch (SQLException ignored) {}
         return a;
     }
 
@@ -273,5 +290,59 @@ public class AffectationService {
             logger.error("Erreur getCommentaireBySignalement", e);
             return null;
         }
+    }
+
+    public List<AgentLiveStatus> getAgentLiveStatuses() {
+        List<AgentLiveStatus> list = new ArrayList<>();
+        String query = "SELECT u.idUser, u.nom, z.nomZone, pa.latitude, pa.longitude, pa.updatedAt, "
+            + "SUM(CASE WHEN s.statut IN ('En attente', 'Affecte', 'En cours') THEN 1 ELSE 0 END) AS missionsActives, "
+            + "SUM(CASE WHEN s.statut = 'En cours' THEN 1 ELSE 0 END) AS missionsEnCours, "
+            + "MIN(CASE WHEN s.statut IN ('En attente', 'Affecte', 'En cours') THEN s.dateSignalement END) AS prochaineMissionDate "
+            + "FROM Utilisateur u "
+            + "LEFT JOIN Zone z ON u.idZone = z.idZone "
+            + "LEFT JOIN position_agent pa ON pa.idAgent = u.idUser "
+            + "LEFT JOIN Affectation a ON a.idAgent = u.idUser "
+            + "LEFT JOIN Signalement s ON s.idSignalement = a.idSignalement "
+            + "WHERE u.role = 'Agent' AND u.actif = 1 "
+            + "GROUP BY u.idUser, u.nom, z.nomZone, pa.latitude, pa.longitude, pa.updatedAt "
+            + "ORDER BY missionsActives DESC, u.nom ASC";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                AgentLiveStatus status = new AgentLiveStatus();
+                status.idAgent = rs.getInt("idUser");
+                status.nomAgent = rs.getString("nom");
+                status.zoneNom = rs.getString("nomZone");
+                status.latitude = rs.getObject("latitude") != null ? rs.getDouble("latitude") : null;
+                status.longitude = rs.getObject("longitude") != null ? rs.getDouble("longitude") : null;
+                Timestamp updated = rs.getTimestamp("updatedAt");
+                if (updated != null) {
+                    status.dernierePosition = updated.toLocalDateTime();
+                }
+                status.missionsActives = rs.getInt("missionsActives");
+                status.missionsEnCours = rs.getInt("missionsEnCours");
+                Timestamp prochaineMission = rs.getTimestamp("prochaineMissionDate");
+                if (prochaineMission != null) {
+                    status.prochaineMission = prochaineMission.toLocalDateTime();
+                }
+                list.add(status);
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getAgentLiveStatuses", e);
+        }
+        return list;
+    }
+
+    public static class AgentLiveStatus {
+        public int idAgent;
+        public String nomAgent;
+        public String zoneNom;
+        public Integer missionsActives;
+        public Integer missionsEnCours;
+        public Double latitude;
+        public Double longitude;
+        public LocalDateTime dernierePosition;
+        public LocalDateTime prochaineMission;
     }
 }

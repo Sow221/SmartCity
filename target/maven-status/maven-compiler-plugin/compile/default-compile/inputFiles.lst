@@ -1,4 +1,5 @@
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\service\ZoneService.java
+C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\service\SuiviService.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\utils\ValidationUtils.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\utils\MapResourceUtils.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\controller\CitizenDashboardController.java
@@ -6,7 +7,9 @@ C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\model\Affectation.j
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\controller\RegisterController.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\service\AffectationService.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\service\RealTimeGPSService.java
+C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\utils\NavigationUtils.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\service\SignalementService.java
+C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\controller\AgentLiveRow.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\utils\QrCodeUtils.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\app\MainApp.java
 C:\Users\MS\Desktop\SC\SmartCity\src\main\java\com\smartcity\model\Zone.java

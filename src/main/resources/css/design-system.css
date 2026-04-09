@@ -825,6 +825,25 @@
 .auth-footer { -fx-font-size: 12px; -fx-text-fill: #9CA3AF; }
 .auth-subtitle { -fx-font-size: 16px; -fx-text-fill: #4B5563; }
 
+/* Ajout des classes CSS manquantes */
+.auth-field-error {
+    -fx-border-color: #dc2626 !important;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.15), 6, 0, 0, 0);
+}
+
+.notification-badge {
+    -fx-background-color: #dc2626;
+    -fx-background-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-min-width: 18px;
+    -fx-min-height: 18px;
+    -fx-alignment: CENTER;
+    -fx-padding: 2 4;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.3), 4, 0, 0, 1);
+}
+
 /* ============================================================================
  * 13. QUICK ACTIONS BAR AGENT (seule version active)
  * ============================================================================ */

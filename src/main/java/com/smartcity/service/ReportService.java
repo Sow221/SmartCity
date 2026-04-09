@@ -1,6 +1,7 @@
 package com.smartcity.service;
 
 import com.smartcity.model.Signalement;
+import com.smartcity.model.SignalementStatut;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.utils.DatabaseConnection;
 
@@ -40,9 +41,9 @@ public class ReportService {
         
         // Statistiques générales
         report.totalSignalements = countSignalementsByDateRange(startDate, endDate);
-        report.signalementsResolus = countSignalementsByDateRangeAndStatus(startDate, endDate, "Terminé");
-        report.signalementsEnCours = countSignalementsByDateRangeAndStatus(startDate, endDate, "En cours");
-        report.signalementsEnAttente = countSignalementsByDateRangeAndStatus(startDate, endDate, "En attente");
+        report.signalementsResolus = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.TERMINE.dbValue());
+        report.signalementsEnCours = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.EN_COURS.dbValue());
+        report.signalementsEnAttente = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.EN_ATTENTE.dbValue());
         
         // Performances par zone
         report.performanceParZone = getPerformanceByZone(startDate, endDate);
@@ -131,16 +132,16 @@ public class ReportService {
 
     private double calculateResolutionRate(LocalDate start, LocalDate end) {
         int total = countSignalementsByDateRange(start, end);
-        int resolved = countSignalementsByDateRangeAndStatus(start, end, "Terminé");
+        int resolved = countSignalementsByDateRangeAndStatus(start, end, SignalementStatut.TERMINE.dbValue());
         return total > 0 ? (double) resolved / total * 100 : 0.0;
     }
 
     private double calculateAverageProcessingTime(LocalDate start, LocalDate end) {
-        String query = "SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateAffectation)) as avgTime "
+        String query = "SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)) as avgTime "
             + "FROM Signalement s "
             + "JOIN Affectation a ON s.idSignalement = a.idSignalement "
             + "WHERE DATE(s.dateSignalement) BETWEEN ? AND ? "
-            + "AND s.statut = 'Termin\u00e9'";
+            + "AND s.statut IN ('Termine', 'Termin\u00e9') AND a.dateCollecte IS NOT NULL";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
@@ -194,7 +195,7 @@ public class ReportService {
     private List<AgentStats> getTopActiveAgents(LocalDate start, LocalDate end) {
         List<AgentStats> agents = new ArrayList<>();
         String query = "SELECT u.nom, u.email, COUNT(a.idAffectation) as missions, "
-            + "SUM(CASE WHEN s.statut = 'Termin\u00e9' THEN 1 ELSE 0 END) as terminees "
+            + "SUM(CASE WHEN s.statut IN ('Termine', 'Termin\u00e9', 'Collecte') THEN 1 ELSE 0 END) as terminees "
             + "FROM Utilisateur u "
             + "LEFT JOIN Affectation a ON u.idUser = a.idAgent "
             + "LEFT JOIN Signalement s ON a.idSignalement = s.idSignalement "
@@ -279,14 +280,22 @@ public class ReportService {
 
     private Map<String, Integer> getDailyEvolution(LocalDate start, LocalDate end) {
         Map<String, Integer> evolution = new LinkedHashMap<>();
-        
-        LocalDate current = start;
-        while (!current.isAfter(end)) {
-            int count = countSignalementsByDateRange(current, current);
-            evolution.put(current.toString(), count);
-            current = current.plusDays(1);
+        // Initialiser tous les jours à 0
+        LocalDate cur = start;
+        while (!cur.isAfter(end)) { evolution.put(cur.toString(), 0); cur = cur.plusDays(1); }
+        // Une seule requête SQL GROUP BY
+        String query = "SELECT DATE(dateSignalement) as jour, COUNT(*) as cnt FROM Signalement "
+            + "WHERE DATE(dateSignalement) BETWEEN ? AND ? GROUP BY DATE(dateSignalement)";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setDate(1, Date.valueOf(start));
+            pstmt.setDate(2, Date.valueOf(end));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) evolution.put(rs.getString("jour"), rs.getInt("cnt"));
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getDailyEvolution", e);
         }
-        
         return evolution;
     }
 
@@ -320,7 +329,7 @@ public class ReportService {
         s.setDescription(rs.getString("description"));
         s.setCategorie(rs.getString("categorie"));
         s.setIdZone(rs.getInt("idZone"));
-        s.setStatut(rs.getString("statut"));
+        s.setStatut(SignalementStatut.toLabelOrSelf(rs.getString("statut")));
         s.setIdUser(rs.getInt("idUser"));
         
         try {

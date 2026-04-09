@@ -62,12 +62,8 @@ public class RealTimeGPSService {
             this.lat = lat;
             this.lon = lon;
         }
-
-        @Override
-        public String toString() {
-            return String.format("(%.6f, %.6f)", lat, lon);
-        }
     }
+
 
     public void startRealTimeTracking() {
         if (locationTracker != null)
@@ -156,9 +152,8 @@ public class RealTimeGPSService {
         listeners.remove(listener);
     }
 
-    public Coordinates getZoneCenter(String zone) {
-        GeolocationService.Coordinates c = new GeolocationService().getZoneCenter(zone);
-        return new Coordinates(c.lat, c.lon);
+    public GeolocationService.Coordinates getZoneCenter(String zone) {
+        return new GeolocationService().getZoneCenter(zone);
     }
 
     public void setManualPosition(double lat, double lon) {

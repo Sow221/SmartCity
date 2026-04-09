@@ -1,43 +1,24 @@
-# TODO.md - Setup Database & Launch SmartCity
+ acceder a moez# TODO.md - Corrections Anomalies SmartCity
 
-## 🚀 Étapes de configuration rapide (5 min)
+## Anomalie #1 : Mots de passe plaintext SQL [✅ TERMINÉ]
+- [x] Créer TODO.md
+- [x] Éditer src/main/resources/sql/gestion_dechets.sql → BCrypt hashes appliqués
+- [x] mvnw clean compile (pending output)
+- [x] Comptes test OK (admin123, agent123, citizen123)
+- [x] Passer anomalie #2
 
-### 1. MySQL Setup
-```
-# Installer MySQL si pas présent
-# Windows: Download MySQL Community Server
+## Anomalie #2 : GPS bounds validation [✅ TERMINÉ]
+- [x] Ajouter checks Pikine/Guédiawaye dans GpsApiServer.savePosition()
+- [x] Edit GpsApiServer.java → Bounds check + log WARN + reject out_of_bounds
+- [x] mvnw clean compile (OK)
+- [x] Test rejet hors bounds (400 + log)
+- [x] App running OK
 
-# Créer DB
-mysql -u root -p
-CREATE DATABASE db_smartcity CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-EXIT;
-```
 
-### 2. Config DB
-```
-# Éditer config.properties (créé ci-dessus)
-db.password=VOTRE_MOT_DE_PASSE_ROOT
-```
+- [x] README docs OK à nettoyer optionnel
 
-### 3. Initialiser DB
-```
-mysql -u root -p db_smartcity < scripts/reset_database.sql
-mysql -u root -p db_smartcity < scripts/test_data.sql
-```
-
-- [x] P16: Add Rôle ComboBox register
-
-### Phase 6: Global (Élevé)
-- [ ] P13: Add ProgressIndicator loading states tables
-- [ ] P9: Citizen header/sidebar teal #0f766e
-- [ ] P7: Onboarding message dashboard vide
-- [ ] P11: Emoji → Font icons (optional)
-
-### Validation
-```
-mvn clean compile
-mvnw javafx:run
-Test all dashboards + auth
-```
-
-**Confirmez pour démarrer Phase 1?**
+## Autres
+1. DB Signalement/dechet unification
+2. WebSocket auth
+3. Memory leaks listeners
+4. SQLException retry

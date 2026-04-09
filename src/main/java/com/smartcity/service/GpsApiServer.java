@@ -155,6 +155,16 @@ public class GpsApiServer {
 
             if (agentId > 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
                     && (lat != 0 || lon != 0)) {
+                
+                // Validation bounds Pikine/Guédiawaye
+                boolean inPikine = lat >= 14.75 && lat <= 14.79 && lon >= -17.42 && lon <= -17.37;
+                boolean inGuediawaye = lat >= 14.77 && lat <= 14.78 && lon >= -17.41 && lon <= -17.39;
+                if (!inPikine && !inGuediawaye) {
+                    logger.warn("🚫 Position GPS hors zone autorisée pour agent {}: ({}, {})", agentId, lat, lon);
+                    sendResponse(exchange, 400, "{\"status\":\"out_of_bounds\"}");
+                    return;
+                }
+                
                 savePosition(agentId, lat, lon);
                 sendResponse(exchange, 200, "{\"status\":\"ok\"}");
             } else {
@@ -225,6 +235,33 @@ public class GpsApiServer {
         exchange.sendResponseHeaders(code, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            System.out.println("======================================");
+            System.out.println("  SERVEUR GPS API SMARTCITY");
+            System.out.println("======================================");
+            System.out.println("");
+            
+            GpsApiServer server = new GpsApiServer();
+            server.start(0);
+            
+            System.out.println("✅ Serveur demarre sur le port 8081");
+            System.out.println("✅ Accessible sur http://localhost:8081");
+            System.out.println("");
+            System.out.println("Appuyez sur CTRL+C pour arreter");
+            System.out.println("======================================");
+            
+            // Garder le serveur en vie
+            synchronized (GpsApiServer.class) {
+                GpsApiServer.class.wait();
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur demarrage serveur: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

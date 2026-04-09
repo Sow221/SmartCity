@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.smartcity.utils.ValidationUtilsTest
+-------------------------------------------------------------------------------
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in com.smartcity.utils.ValidationUtilsTest

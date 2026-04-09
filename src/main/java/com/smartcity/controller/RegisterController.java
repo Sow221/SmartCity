@@ -1,4 +1,4 @@
-// package com.smartcity.controller;
+package com.smartcity.controller;
 
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Utilisateur;

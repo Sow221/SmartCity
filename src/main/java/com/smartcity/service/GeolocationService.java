@@ -29,7 +29,11 @@ public class GeolocationService {
     }
 
     public Coordinates getCurrentPosition() {
-        // Position par defaut : centre de Pikine (utilise si GPS agent inactif)
+        // Position par defaut : centre de la ZONE ASSIGNEE a l'agent connecte
+        com.smartcity.model.Utilisateur user = com.smartcity.utils.SessionManager.getUtilisateurConnecte();
+        if (user != null) {
+            return new ZoneService().getCenterById(user.getIdZone());
+        }
         return new ZoneService().getCenter("Pikine");
     }
 

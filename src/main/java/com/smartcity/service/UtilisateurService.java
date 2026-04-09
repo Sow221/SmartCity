@@ -206,6 +206,21 @@ public class UtilisateurService {
         return utilisateurs;
     }
 
+    public Utilisateur getUtilisateurByEmail(String email) {
+        if (email == null) return null;
+        String query = "SELECT * FROM Utilisateur WHERE email = ? AND actif = 1";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, email.toLowerCase().trim());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return mapResultSetToUtilisateur(rs);
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getUtilisateurByEmail", e);
+        }
+        return null;
+    }
+
     public Utilisateur getUtilisateurById(int idUser) {
         String query = "SELECT * FROM Utilisateur WHERE idUser = ? AND actif = 1";
         try (Connection conn = getConn();
@@ -285,7 +300,7 @@ public class UtilisateurService {
     public boolean deleteUtilisateur(int idUser) {
         // Libérer les affectations actives du citoyen avant désactivation
         String queryAffectations = "SELECT s.idSignalement FROM Signalement s "
-            + "WHERE s.idUser = ? AND s.statut NOT IN ('Terminé', 'Termine')";
+            + "WHERE s.idUser = ? AND s.statut NOT IN ('Termine', 'Terminé')";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(queryAffectations)) {
             ps.setInt(1, idUser);
@@ -308,6 +323,40 @@ public class UtilisateurService {
             return false;
         }
     }
+
+    /**
+     * Retourne les agents avec leurs stats en une seule requête SQL (élimine le N+1).
+     */
+    public List<AgentStats> getAgentsWithStats() {
+        List<AgentStats> result = new ArrayList<>();
+        String query =
+            "SELECT u.idUser, u.nom, z.nomZone, " +
+            "COUNT(CASE WHEN s.statut IN ('Termine','Terminé','Collecte') THEN 1 END) AS traites " +
+            "FROM Utilisateur u " +
+            "LEFT JOIN Zone z ON u.idZone = z.idZone " +
+            "LEFT JOIN Affectation a ON a.idAgent = u.idUser " +
+            "LEFT JOIN Signalement s ON s.idSignalement = a.idSignalement " +
+            "WHERE u.role = 'Agent' AND u.actif = 1 " +
+            "GROUP BY u.idUser, u.nom, z.nomZone ORDER BY u.nom";
+        try (Connection conn = getConn();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(query);
+             java.sql.ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                result.add(new AgentStats(
+                    rs.getInt("idUser"),
+                    rs.getString("nom"),
+                    rs.getString("nomZone") != null ? rs.getString("nomZone") : "Zone inconnue",
+                    rs.getInt("traites")
+                ));
+            }
+        } catch (SQLException e) {
+            logger.error("Erreur getAgentsWithStats: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /** DTO léger pour les stats agent — évite de charger l'objet Utilisateur complet. */
+    public record AgentStats(int idUser, String nom, String zoneNom, int traites) {}
 
     public int countAllActifs() {
         String query = "SELECT COUNT(*) FROM Utilisateur WHERE actif = 1";

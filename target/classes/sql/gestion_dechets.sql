@@ -1,4 +1,4 @@
--- Script SQL pour la base de données SmartCity Déchets
+ou-- Script SQL pour la base de données SmartCity Déchets
 -- Création de la base de données
 
 CREATE DATABASE IF NOT EXISTS db_smartcity CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS Signalement (
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
     dateSignalement DATETIME DEFAULT CURRENT_TIMESTAMP,
-    statut ENUM('En attente', 'Affecté', 'En cours', 'Terminé') DEFAULT 'En attente',
+    statut ENUM('En attente', 'Affecte', 'En cours', 'Termine') DEFAULT 'En attente',
     photo VARCHAR(255),
     idUser INT,
     FOREIGN KEY (idZone) REFERENCES Zone(idZone),

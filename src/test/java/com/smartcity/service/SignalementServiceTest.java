@@ -1,6 +1,7 @@
 package com.smartcity.service;
 
 import com.smartcity.model.Signalement;
+import com.smartcity.model.SignalementStatut;
 import com.smartcity.utils.DatabaseConnection;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -56,7 +57,7 @@ class SignalementServiceTest {
     @DisplayName("countByStatut() retourne un entier >= 0 pour chaque statut")
     void testCountByStatut() {
         if (!dbAvailable) return;
-        for (String statut : new String[]{"En attente", "Affecté", "En cours", "Terminé"}) {
+        for (String statut : new String[]{SignalementStatut.EN_ATTENTE.label(), SignalementStatut.AFFECTE.label(), SignalementStatut.EN_COURS.label(), SignalementStatut.TERMINE.label()}) {
             int count = signalementService.countByStatut(statut);
             assertTrue(count >= 0, "countByStatut(" + statut + ") doit retourner >= 0");
         }
@@ -124,10 +125,10 @@ class SignalementServiceTest {
     void testCountByStatutAndZone() {
         if (!dbAvailable) return;
         int total = signalementService.countByZone("Pikine");
-        int attente = signalementService.countByStatutAndZone("En attente", "Pikine");
-        int affecte = signalementService.countByStatutAndZone("Affecté", "Pikine");
-        int enCours = signalementService.countByStatutAndZone("En cours", "Pikine");
-        int termine = signalementService.countByStatutAndZone("Terminé", "Pikine");
+        int attente = signalementService.countByStatutAndZone(SignalementStatut.EN_ATTENTE.label(), "Pikine");
+        int affecte = signalementService.countByStatutAndZone(SignalementStatut.AFFECTE.label(), "Pikine");
+        int enCours = signalementService.countByStatutAndZone(SignalementStatut.EN_COURS.label(), "Pikine");
+        int termine = signalementService.countByStatutAndZone(SignalementStatut.TERMINE.label(), "Pikine");
         assertEquals(total, attente + affecte + enCours + termine,
             "La somme des statuts doit égaler le total pour Pikine");
     }

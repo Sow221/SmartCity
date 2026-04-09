@@ -13,7 +13,7 @@ SmartCity gere les signalements de dechets via 3 profils:
 
 ## 2. Technologies et frameworks utilises
 
-- `Java 11`
+- `Java 17`
 - `JavaFX 17`:
   - `javafx-controls` (UI)
   - `javafx-fxml` (vues FXML + controleurs)
@@ -23,8 +23,8 @@ SmartCity gere les signalements de dechets via 3 profils:
 - `Leaflet + OpenStreetMap` (carte dans l'espace agent via WebView)
 
 Note securite actuelle:
-- Les mots de passe sont volontairement conserves en clair (choix projet actuel).
-- Dependance `jbcrypt` presente dans le `pom.xml` mais non utilisee dans la logique active.
+- Les mots de passe sont hashes avec `BCrypt`.
+- Le fichier racine `config.properties` contient des secrets locaux et ne doit jamais etre committe.
 
 ## 3. Architecture code
 
@@ -88,11 +88,12 @@ Tables principales:
 Important:
 - Des incoherences historiques existent entre certaines tables/services (`Signalement` vs `dechet`).
 - Avant sprint de stabilisation, valider le modele cible unique avec l'equipe.
+- Les statuts `Signalement` doivent etre normalises en base sur `En attente`, `Affecte`, `En cours`, `Termine`.
 
 ## 7. Configuration locale
 
 ### Prerequis
-- JDK 11
+- JDK 17
 - MySQL 8+
 - Maven (ou wrapper `mvnw`)
 

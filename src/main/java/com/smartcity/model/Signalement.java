@@ -14,6 +14,7 @@ public class Signalement {
     private double latitude;
     private double longitude;
     private LocalDateTime dateSignalement;
+    private LocalDateTime dateCollecte;
     private String statut;
     private String photo;
     private int idUser;
@@ -90,6 +91,14 @@ public class Signalement {
 
     public void setDateSignalement(LocalDateTime dateSignalement) {
         this.dateSignalement = dateSignalement;
+    }
+
+    public LocalDateTime getDateCollecte() {
+        return dateCollecte;
+    }
+
+    public void setDateCollecte(LocalDateTime dateCollecte) {
+        this.dateCollecte = dateCollecte;
     }
 
     public String getStatut() {

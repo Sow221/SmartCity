@@ -1,6 +1,7 @@
 package com.smartcity.controller;
 
 import com.smartcity.model.Signalement;
+import com.smartcity.model.SignalementStatut;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.ZoneService;
@@ -64,7 +65,7 @@ public class GestionDechetsController {
     private void configureFilters() {
         if (filterStatutCombo != null) {
             filterStatutCombo.setItems(FXCollections.observableArrayList(
-                "Tous", "En attente", "Affecté", "En cours", "Terminé"));
+                "Tous", SignalementStatut.EN_ATTENTE.label(), SignalementStatut.AFFECTE.label(), SignalementStatut.EN_COURS.label(), SignalementStatut.TERMINE.label()));
             filterStatutCombo.setValue("Tous");
         }
     }
@@ -104,7 +105,7 @@ public class GestionDechetsController {
             return;
         }
         ChoiceDialog<String> dialog = new ChoiceDialog<>(selected.getStatut(),
-            "En attente", "Affecté", "En cours", "Terminé");
+            SignalementStatut.EN_ATTENTE.label(), SignalementStatut.AFFECTE.label(), SignalementStatut.EN_COURS.label(), SignalementStatut.TERMINE.label());
         dialog.setTitle("Modifier statut");
         dialog.setHeaderText("Signalement #" + selected.getIdSignalement());
         dialog.setContentText("Nouveau statut :");

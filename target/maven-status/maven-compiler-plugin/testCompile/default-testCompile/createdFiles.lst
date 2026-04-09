@@ -1,0 +1,6 @@
+com\smartcity\service\SignalementServiceTest.class
+com\smartcity\service\InscriptionConnexionTest.class
+com\smartcity\service\UtilisateurServiceTest.class
+com\smartcity\ui\DashboardFxmlLoadTest.class
+com\smartcity\service\AffectationServiceTest.class
+com\smartcity\utils\ValidationUtilsTest.class

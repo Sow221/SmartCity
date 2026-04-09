@@ -2,6 +2,7 @@ package com.smartcity.controller;
 
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Signalement;
+import com.smartcity.model.SignalementStatut;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
@@ -18,6 +19,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
 
@@ -51,9 +53,9 @@ public class CitizenDashboardController {
     @FXML
     private javafx.scene.control.ScrollPane pageAjouterSignalement;
     @FXML
-    private VBox pageMesSignalements;
+    private ScrollPane pageMesSignalements;
     @FXML
-    private VBox pageMonProfil;
+    private ScrollPane pageMonProfil;
 
     @FXML
     private Label citizenCardTotal;
@@ -113,6 +115,7 @@ public class CitizenDashboardController {
     private final SignalementService signalementService = new SignalementService();
     private final UtilisateurService utilisateurService = new UtilisateurService();
     private final ZoneService zoneService = new ZoneService();
+    private final com.smartcity.service.SuiviService suiviService = new com.smartcity.service.SuiviService();
     private final ObservableList<Signalement> mesSignalements = FXCollections.observableArrayList();
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -287,7 +290,7 @@ public class CitizenDashboardController {
 
         if (signalementService.ajouterSignalement(signalement)) {
             // Vérifier si le signalement a été affecté ou reste en attente
-            String msg = signalement.getStatut() != null && "Affect\u00e9".equals(signalement.getStatut())
+            String msg = SignalementStatut.AFFECTE.matches(signalement.getStatut())
                 ? "Signalement enregistr\u00e9 et affect\u00e9 \u00e0 un agent !"
                 : "Signalement enregistr\u00e9. Un agent sera assign\u00e9 d\u00e8s que possible.";
             showCitizenMessage(msg, true);
@@ -303,7 +306,7 @@ public class CitizenDashboardController {
     private void handleSupprimerSignalement() {
         Signalement selected = tableMesSignalements.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        if (!"En attente".equalsIgnoreCase(selected.getStatut())) {
+        if (!SignalementStatut.EN_ATTENTE.matches(selected.getStatut())) {
             showCitizenMessage("❌ Seuls les signalements en attente peuvent être supprimés.", false);
             return;
         }
@@ -471,6 +474,7 @@ public class CitizenDashboardController {
             + "});"
             + "</script></body></html>";
 
+        installMapFallbackHandlers(mapWebView.getEngine(), "Carte citoyen indisponible. Verifiez la connexion reseau ou relancez l'ecran.");
         mapWebView.getEngine().loadContent(html);
         // Enregistrer le pont JS une seule fois (eviter l'empilement de listeners)
         mapWebView.getEngine().getLoadWorker().stateProperty().addListener(
@@ -504,24 +508,63 @@ public class CitizenDashboardController {
 
     // Référence forte pour éviter que le GC ne collecte le JSBridge
     private JSBridge jsBridgeRef;
+    private boolean mapFallbackHandlersInstalled;
+
+    private void installMapFallbackHandlers(WebEngine engine, String message) {
+        if (engine == null || mapFallbackHandlersInstalled) {
+            return;
+        }
+        mapFallbackHandlersInstalled = true;
+        engine.getLoadWorker().exceptionProperty().addListener((obs, oldValue, error) -> {
+            if (error != null) {
+                showCitizenMessage(message, false);
+                engine.loadContent(buildMapFallbackHtml(message));
+            }
+        });
+        engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.FAILED) {
+                showCitizenMessage(message, false);
+                engine.loadContent(buildMapFallbackHtml(message));
+            }
+        });
+    }
+
+    private String buildMapFallbackHtml(String message) {
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
+            + "body{font-family:Arial,sans-serif;background:#f6f8fb;color:#1f2937;display:flex;"
+            + "align-items:center;justify-content:center;height:100%;margin:0;padding:24px;text-align:center;}"
+            + ".card{max-width:420px;background:white;border-radius:16px;padding:24px;"
+            + "box-shadow:0 8px 24px rgba(15,23,42,0.12);}"
+            + ".title{font-size:18px;font-weight:700;margin-bottom:8px;color:#b45309;}"
+            + "</style></head><body><div class='card'><div class='title'>Carte indisponible</div><div>"
+            + message + "</div></div></body></html>";
+    }
 
     private void refreshCards() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
 
-        int total   = signalementService.countByUtilisateur(current.getIdUser());
-        int attente = signalementService.countByStatutAndUtilisateur("En attente", current.getIdUser());
-        int affecte = signalementService.countByStatutAndUtilisateur("Affect\u00e9", current.getIdUser());
-        int enCours = signalementService.countByStatutAndUtilisateur("En cours", current.getIdUser()) + affecte;
-        int collectes = signalementService.countByStatutAndUtilisateur("Termin\u00e9", current.getIdUser());
+        int total     = signalementService.countByUtilisateur(current.getIdUser());
+        int attente   = signalementService.countByStatutAndUtilisateur(SignalementStatut.EN_ATTENTE.label(), current.getIdUser());
+        int affecte   = signalementService.countByStatutAndUtilisateur(SignalementStatut.AFFECTE.label(), current.getIdUser());
+        int enCours   = signalementService.countByStatutAndUtilisateur(SignalementStatut.EN_COURS.label(), current.getIdUser()) + affecte;
+        int collectes = signalementService.countByStatutAndUtilisateur(SignalementStatut.TERMINE.label(), current.getIdUser());
 
-        com.smartcity.utils.AnimationUtils.animateCounter(citizenCardTotal, 0, total).play();
-        com.smartcity.utils.AnimationUtils.animateCounter(citizenCardAttente, 0, attente).play();
-        com.smartcity.utils.AnimationUtils.animateCounter(citizenCardEnCours, 0, enCours).play();
-        com.smartcity.utils.AnimationUtils.animateCounter(citizenCardCollectes, 0, collectes).play();
+        boolean dashboardVisible = pageCitizenDashboard != null && pageCitizenDashboard.isVisible();
+        if (dashboardVisible) {
+            com.smartcity.utils.AnimationUtils.animateCounter(citizenCardTotal,    0, total).play();
+            com.smartcity.utils.AnimationUtils.animateCounter(citizenCardAttente,  0, attente).play();
+            com.smartcity.utils.AnimationUtils.animateCounter(citizenCardEnCours,  0, enCours).play();
+            com.smartcity.utils.AnimationUtils.animateCounter(citizenCardCollectes, 0, collectes).play();
+        } else {
+            citizenCardTotal.setText(String.valueOf(total));
+            citizenCardAttente.setText(String.valueOf(attente));
+            citizenCardEnCours.setText(String.valueOf(enCours));
+            citizenCardCollectes.setText(String.valueOf(collectes));
+        }
 
         if (total > 0) {
-            citizenPieChart.setAnimated(true);
+            citizenPieChart.setAnimated(dashboardVisible);
             citizenPieChart.setData(FXCollections.observableArrayList(
                 new PieChart.Data("En attente (" + attente + ")", Math.max(attente, 0.01)),
                 new PieChart.Data("En cours (" + enCours + ")", Math.max(enCours, 0.01)),
@@ -573,21 +616,102 @@ public class CitizenDashboardController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("-fx-alignment: CENTER;");
-                    return;
-                }
+                if (empty || item == null) { setText(null); setStyle("-fx-alignment: CENTER;"); return; }
                 setText(item);
                 String color = "#F57C00";
-                if ("En cours".equalsIgnoreCase(item)) {
-                    color = "#1565C0";
-                } else if ("Terminé".equalsIgnoreCase(item)) {
-                    color = "#2E7D32";
-                } else if ("Affecté".equalsIgnoreCase(item)) {
-                    color = "#7B1FA2";
-                }
+                if ("En cours".equalsIgnoreCase(item))  color = "#1565C0";
+                else if (SignalementStatut.TERMINE.matches(item)) color = "#2E7D32";
+                else if (SignalementStatut.AFFECTE.matches(item)) color = "#7B1FA2";
                 setStyle("-fx-alignment: CENTER; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
+            }
+        });
+
+        // Colonne Agent affecté (suivi citoyen)
+        TableColumn<Signalement, String> colAgent = new TableColumn<>("Agent");
+        colAgent.setStyle("-fx-alignment: CENTER;");
+        colAgent.setPrefWidth(130);
+        colAgent.setCellValueFactory(cell -> {
+            com.smartcity.service.SuiviService.SuiviSignalement suivi =
+                suiviService.getSuiviComplet(cell.getValue().getIdSignalement());
+            String agent = (suivi != null && suivi.nomAgent != null) ? suivi.nomAgent : "-";
+            return new SimpleStringProperty(agent);
+        });
+
+        // Colonne Délai (heures écoulées)
+        TableColumn<Signalement, String> colDelai = new TableColumn<>("Délai");
+        colDelai.setStyle("-fx-alignment: CENTER;");
+        colDelai.setPrefWidth(90);
+        colDelai.setCellValueFactory(cell -> {
+            com.smartcity.service.SuiviService.SuiviSignalement suivi =
+                suiviService.getSuiviComplet(cell.getValue().getIdSignalement());
+            if (suivi == null) return new SimpleStringProperty("-");
+            if (suivi.heuresResolution != null)
+                return new SimpleStringProperty(suivi.heuresResolution + "h ✅");
+            return new SimpleStringProperty(suivi.heuresEcoules + "h");
+        });
+
+        // Colonne Évaluation (bouton pour les terminés)
+        TableColumn<Signalement, Void> colEval = new TableColumn<>("★ Évaluer");
+        colEval.setStyle("-fx-alignment: CENTER;");
+        colEval.setPrefWidth(100);
+        colEval.setCellFactory(col -> new TableCell<>() {
+            private final Button btn = new Button("★ Évaluer");
+            { btn.setStyle("-fx-background-color:#FF9800;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:3 8;");
+              btn.setOnAction(e -> ouvrirEvaluation(getTableView().getItems().get(getIndex()))); }
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                if (empty) { setGraphic(null); return; }
+                Signalement s = getTableView().getItems().get(getIndex());
+                boolean termine = SignalementStatut.TERMINE.matches(s.getStatut());
+                com.smartcity.service.SuiviService.EvaluationEntry eval =
+                    termine ? suiviService.getEvaluationBySignalement(s.getIdSignalement()) : null;
+                if (!termine) { setGraphic(null); return; }
+                if (eval != null) {
+                    btn.setText("\u2605".repeat(eval.note));
+                    btn.setStyle("-fx-background-color:#4CAF50;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:3 8;");
+                }
+                setGraphic(btn);
+            }
+        });
+
+        tableMesSignalements.getColumns().addAll(colAgent, colDelai, colEval);
+    }
+
+    private void ouvrirEvaluation(Signalement signalement) {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+        Dialog<int[]> dialog = new Dialog<>();
+        dialog.setTitle("★ Évaluer la collecte");
+        dialog.setHeaderText("Signalement #" + signalement.getIdSignalement()
+            + " — " + signalement.getCategorie());
+        ButtonType saveType = new ButtonType("Envoyer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(12);
+        content.setPadding(new javafx.geometry.Insets(10));
+        Label lblNote = new Label("Note (1 = mauvais, 5 = excellent) :");
+        javafx.scene.control.Slider slider = new javafx.scene.control.Slider(1, 5, 3);
+        slider.setMajorTickUnit(1); slider.setMinorTickCount(0);
+        slider.setSnapToTicks(true); slider.setShowTickLabels(true); slider.setShowTickMarks(true);
+        Label lblValeur = new Label("★★★");
+        slider.valueProperty().addListener((obs, o, n) ->
+            lblValeur.setText("★".repeat(n.intValue()) + "☆".repeat(5 - n.intValue())));
+        TextArea taComment = new TextArea();
+        taComment.setPromptText("Commentaire optionnel...");
+        taComment.setPrefRowCount(3); taComment.setWrapText(true);
+        content.getChildren().addAll(lblNote, slider, lblValeur,
+            new Label("Commentaire :"), taComment);
+        dialog.getDialogPane().setContent(content);
+        dialog.setResultConverter(bt -> bt == saveType
+            ? new int[]{(int) slider.getValue()}
+            : null);
+        dialog.showAndWait().ifPresent(res -> {
+            if (suiviService.ajouterEvaluation(signalement.getIdSignalement(),
+                    current.getIdUser(), res[0], taComment.getText().trim())) {
+                showCitizenMessage("✅ Merci pour votre évaluation !", true);
+                refreshMesSignalements();
+            } else {
+                showCitizenMessage("❌ Erreur lors de l'envoi.", false);
             }
         });
     }

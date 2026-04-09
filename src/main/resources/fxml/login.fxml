@@ -126,7 +126,9 @@
                        promptText="exemple@email.com"
                        maxWidth="Infinity" prefHeight="50"
                        styleClass="auth-field"/>
-            <Region prefHeight="16"/>
+            <Label fx:id="emailErrorLabel" text="" styleClass="auth-field-error"
+                   visible="false" managed="false"/>
+            <Region prefHeight="8"/>
 
             <!-- Champ Mot de passe -->
             <HBox alignment="CENTER_LEFT">
@@ -138,7 +140,9 @@
                            promptText="••••••••"
                            maxWidth="Infinity" prefHeight="50"
                            styleClass="auth-field"/>
-            <Region prefHeight="24"/>
+            <Label fx:id="passwordErrorLabel" text="" styleClass="auth-field-error"
+                   visible="false" managed="false"/>
+            <Region prefHeight="16"/>
 
             <!-- Bouton principal -->
             <Button fx:id="connexionButton"

@@ -6,17 +6,25 @@ import com.smartcity.service.SignalementService;
 import com.smartcity.service.ZoneService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+
 import javafx.fxml.FXML;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,6 +53,35 @@ public class ReportsController {
     private final ReportService reportService = new ReportService();
     private final SignalementService signalementService = new SignalementService();
     private final ZoneService zoneService = new ZoneService();
+
+    private static final String SEPARATEUR  = "=".repeat(60);
+    private static final String SEPARATEUR2 = "-".repeat(60);
+    private static final DateTimeFormatter FMT_DATE  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FMT_HEURE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final java.util.Locale FR = java.util.Locale.FRENCH;
+
+    private String entete(String titre, String sousTitre) {
+        return SEPARATEUR + "\n"
+            + "  SMARTCITY \u2014 GESTION DES D\u00c9CHETS M\u00c9NAGERS\n"
+            + "  Pikine & Gu\u00e9diawaye, S\u00e9n\u00e9gal\n"
+            + SEPARATEUR + "\n"
+            + "  " + titre + "\n"
+            + "  " + sousTitre + "\n"
+            + "  G\u00e9n\u00e9r\u00e9 le : " + java.time.LocalDateTime.now().format(FMT_HEURE) + "\n"
+            + SEPARATEUR + "\n\n";
+    }
+
+    private String kpi(String label, String valeur, String tendance) {
+        String t = (tendance != null && !tendance.isBlank()) ? "  [" + tendance + "]" : "";
+        return String.format("  %-38s %s%s%n", label + " :", valeur, t);
+    }
+
+    private String barre(int valeur, int total, int largeur) {
+        if (total == 0) return "[" + " ".repeat(largeur) + "] 0%";
+        int rempli = (int) Math.round((double) valeur / total * largeur);
+        return "[" + "\u2588".repeat(rempli) + "\u2591".repeat(largeur - rempli) + "] "
+            + String.format("%.1f%%", (double) valeur / total * 100);
+    }
 
     private MainApp mainApp;
     private ReportService.WeeklyReport currentWeeklyReport;
@@ -112,111 +149,197 @@ public class ReportsController {
         ReportService.RealTimeDashboard dashboard = reportService.getRealTimeDashboard();
 
         ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
-        pieData.add(new PieChart.Data("En attente", signalementService.countByStatut("En attente")));
-        pieData.add(new PieChart.Data("En cours", signalementService.countByStatut("En cours")));
-        pieData.add(new PieChart.Data("Termin\u00e9", signalementService.countByStatut("Termin\u00e9")));
+        int nbAttente = signalementService.countByStatut("En attente");
+        int nbCours   = signalementService.countByStatut("En cours");
+        int nbTermine = signalementService.countByStatut("Termin\u00e9");
+        int nbAffecte = signalementService.countByStatut("Affect\u00e9");
+        if (nbAttente > 0) pieData.add(new PieChart.Data("En attente (" + nbAttente + ")", nbAttente));
+        if (nbCours   > 0) pieData.add(new PieChart.Data("En cours ("   + nbCours   + ")", nbCours));
+        if (nbTermine > 0) pieData.add(new PieChart.Data("Termin\u00e9 ("  + nbTermine + ")", nbTermine));
+        if (nbAffecte > 0) pieData.add(new PieChart.Data("Affect\u00e9 ("  + nbAffecte + ")", nbAffecte));
         statusPieChart.setData(pieData);
 
         XYChart.Series<String, Number> zoneSeries = new XYChart.Series<>();
-        zoneSeries.setName("Signalements par Zone");
-        for (Map.Entry<String, Integer> entry : dashboard.zonesActives.entrySet()) {
-            zoneSeries.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
-        }
-        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
-
-        ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
-        stats.add(new StatisticRow("Total Signalements", String.valueOf(dashboard.totalSignalements)));
-        stats.add(new StatisticRow("Aujourd'hui", String.valueOf(dashboard.signalementsAujourdhui)));
-        stats.add(new StatisticRow("Utilisateurs Actifs", String.valueOf(dashboard.utilisateursActifs)));
-        stats.add(new StatisticRow("Signalements Urgents", String.valueOf(dashboard.signalementsUrgents.size())));
-        for (Map.Entry<String, Double> trend : dashboard.tendances.entrySet()) {
-            String symbol = trend.getValue() >= 0 ? "+" : "-";
-            stats.add(new StatisticRow("Tendance " + trend.getKey(),
-                String.format("%s%.1f%%", symbol, Math.abs(trend.getValue()))));
-        }
-        statsTable.setItems(stats);
-
-        StringBuilder report = new StringBuilder();
-        report.append("=== DASHBOARD TEMPS REEL ===\n");
-        report.append("Genere le : ").append(dashboard.timestamp.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("\n\n");
-        report.append("STATISTIQUES GLOBALES\n");
-        report.append("- Total des signalements : ").append(dashboard.totalSignalements).append("\n");
-        report.append("- Signalements aujourd'hui : ").append(dashboard.signalementsAujourdhui).append("\n");
-        report.append("- Utilisateurs actifs : ").append(dashboard.utilisateursActifs).append("\n\n");
-        if (!dashboard.signalementsUrgents.isEmpty()) {
-            report.append("SIGNALEMENTS URGENTS (").append(dashboard.signalementsUrgents.size()).append(")\n");
-            dashboard.signalementsUrgents.forEach(s ->
-                report.append("- #").append(s.getIdSignalement())
-                      .append(" - ").append(s.getCategorie())
-                      .append(" (").append(s.getZoneNom()).append(")\n"));
-            report.append("\n");
-        }
-        report.append("ZONES LES PLUS ACTIVES\n");
+        zoneSeries.setName("Signalements (7 derniers jours)");
         dashboard.zonesActives.entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .forEach(entry -> report.append("- ").append(entry.getKey()).append(" : ").append(entry.getValue()).append(" signalements\n"));
-        reportTextArea.setText(report.toString());
+            .forEach(e -> zoneSeries.getData().add(new XYChart.Data<>(e.getKey(), e.getValue())));
+        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
+
+        int total = dashboard.totalSignalements;
+        int tauxRes = total > 0 ? (int) Math.round(nbTermine * 100.0 / total) : 0;
+        String tendHebdo = dashboard.tendances.containsKey("hebdomadaire")
+            ? String.format("%+.1f%% vs sem. pr\u00e9c.", dashboard.tendances.get("hebdomadaire")) : "";
+
+        ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
+        stats.add(new StatisticRow("Total signalements",    String.valueOf(total)));
+        stats.add(new StatisticRow("Aujourd'hui",           String.valueOf(dashboard.signalementsAujourdhui)));
+        stats.add(new StatisticRow("En attente",            String.valueOf(nbAttente)));
+        stats.add(new StatisticRow("En cours",              String.valueOf(nbCours)));
+        stats.add(new StatisticRow("Termin\u00e9s",          String.valueOf(nbTermine)));
+        stats.add(new StatisticRow("Taux de r\u00e9solution", tauxRes + "%"));
+        stats.add(new StatisticRow("Urgents (>24h)",        String.valueOf(dashboard.signalementsUrgents.size())));
+        stats.add(new StatisticRow("Utilisateurs actifs",   String.valueOf(dashboard.utilisateursActifs)));
+        if (!tendHebdo.isBlank()) stats.add(new StatisticRow("Tendance hebdo", tendHebdo));
+        statsTable.setItems(stats);
+
+        StringBuilder r = new StringBuilder();
+        r.append(entete("TABLEAU DE BORD EN TEMPS R\u00c9EL",
+                        "Situation instantan\u00e9e de la plateforme"));
+
+        r.append("1. INDICATEURS CL\u00c9S\n").append(SEPARATEUR2).append("\n");
+        r.append(kpi("Total signalements",    String.valueOf(total), tendHebdo));
+        r.append(kpi("Signalements aujourd'hui", String.valueOf(dashboard.signalementsAujourdhui), ""));
+        r.append(kpi("Taux de r\u00e9solution global", tauxRes + "%",
+                     tauxRes >= 70 ? "\u2705 BON" : tauxRes >= 40 ? "\u26a0\ufe0f MOYEN" : "\u274c FAIBLE"));
+        r.append(kpi("Signalements urgents (>24h)", String.valueOf(dashboard.signalementsUrgents.size()),
+                     dashboard.signalementsUrgents.isEmpty() ? "\u2705 Aucun" : "\u26a0\ufe0f Action requise"));
+        r.append(kpi("Utilisateurs actifs", String.valueOf(dashboard.utilisateursActifs), ""));
+        r.append("\n");
+
+        r.append("2. R\u00c9PARTITION DES STATUTS\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  En attente  %s%n", barre(nbAttente, total, 30)));
+        r.append(String.format("  En cours    %s%n", barre(nbCours,   total, 30)));
+        r.append(String.format("  Affect\u00e9    %s%n", barre(nbAffecte, total, 30)));
+        r.append(String.format("  Termin\u00e9    %s%n", barre(nbTermine, total, 30)));
+        r.append("\n");
+
+        r.append("3. ACTIVIT\u00c9 PAR ZONE (7 derniers jours)\n").append(SEPARATEUR2).append("\n");
+        int totalZones = dashboard.zonesActives.values().stream().mapToInt(Integer::intValue).sum();
+        dashboard.zonesActives.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .forEach(e -> r.append(String.format("  %-20s %s%n",
+                e.getKey(), barre(e.getValue(), Math.max(totalZones, 1), 25) + "  (" + e.getValue() + " sign.)")));
+        r.append("\n");
+
+        if (!dashboard.signalementsUrgents.isEmpty()) {
+            r.append("4. SIGNALEMENTS URGENTS \u2014 ACTION IMM\u00c9DIATE REQUISE\n").append(SEPARATEUR2).append("\n");
+            dashboard.signalementsUrgents.forEach(s -> r.append(String.format(
+                "  [#%d] %-12s | Zone: %-15s | Depuis: %s%n",
+                s.getIdSignalement(), s.getCategorie(), s.getZoneNom(),
+                s.getDateSignalement() != null ? s.getDateSignalement().format(FMT_DATE) : "N/A")));
+            r.append("\n");
+        }
+
+        r.append("5. RECOMMANDATIONS\n").append(SEPARATEUR2).append("\n");
+        if (!dashboard.signalementsUrgents.isEmpty())
+            r.append("  \u26a0\ufe0f  Traiter en priorit\u00e9 les ").append(dashboard.signalementsUrgents.size()).append(" signalement(s) en attente depuis plus de 24h.\n");
+        if (tauxRes < 50)
+            r.append("  \u26a0\ufe0f  Taux de r\u00e9solution inf\u00e9rieur \u00e0 50% \u2014 renforcer les \u00e9quipes de collecte.\n");
+        if (nbAttente > nbCours * 2)
+            r.append("  \u26a0\ufe0f  File d'attente \u00e9lev\u00e9e \u2014 envisager des affectations suppl\u00e9mentaires.\n");
+        if (tauxRes >= 70 && dashboard.signalementsUrgents.isEmpty())
+            r.append("  \u2705  Situation satisfaisante. Maintenir le rythme actuel.\n");
+        r.append("\n").append(SEPARATEUR).append("\n");
+        r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
+        r.append(SEPARATEUR).append("\n");
+        reportTextArea.setText(r.toString());
     }
 
     private void generateWeeklyReport() {
         LocalDate startDate = startDatePicker.getValue();
-        if (startDate == null) startDate = LocalDate.now().minusDays(7);
+        if (startDate == null) startDate = LocalDate.now().minusDays(6);
         currentWeeklyReport = reportService.generateWeeklyReport(startDate);
 
+        // Semaine précédente pour comparaison
+        LocalDate prevStart = startDate.minusDays(7);
+        ReportService.WeeklyReport prevReport = reportService.generateWeeklyReport(prevStart);
+
         ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
-        pieData.add(new PieChart.Data("En attente", currentWeeklyReport.signalementsEnAttente));
-        pieData.add(new PieChart.Data("En cours", currentWeeklyReport.signalementsEnCours));
-        pieData.add(new PieChart.Data("R\u00e9solus", currentWeeklyReport.signalementsResolus));
+        if (currentWeeklyReport.signalementsEnAttente > 0)
+            pieData.add(new PieChart.Data("En attente (" + currentWeeklyReport.signalementsEnAttente + ")", currentWeeklyReport.signalementsEnAttente));
+        if (currentWeeklyReport.signalementsEnCours > 0)
+            pieData.add(new PieChart.Data("En cours (" + currentWeeklyReport.signalementsEnCours + ")", currentWeeklyReport.signalementsEnCours));
+        if (currentWeeklyReport.signalementsResolus > 0)
+            pieData.add(new PieChart.Data("R\u00e9solus (" + currentWeeklyReport.signalementsResolus + ")", currentWeeklyReport.signalementsResolus));
         statusPieChart.setData(pieData);
 
         XYChart.Series<String, Number> zoneSeries = new XYChart.Series<>();
-        zoneSeries.setName("Performance par Zone");
-        for (Map.Entry<String, Integer> entry : currentWeeklyReport.performanceParZone.entrySet()) {
-            zoneSeries.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
-        }
-        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
+        zoneSeries.setName("Cette semaine");
+        XYChart.Series<String, Number> prevZoneSeries = new XYChart.Series<>();
+        prevZoneSeries.setName("Semaine pr\u00e9c.");
+        currentWeeklyReport.performanceParZone.forEach((z, v) -> zoneSeries.getData().add(new XYChart.Data<>(z, v)));
+        prevReport.performanceParZone.forEach((z, v) -> prevZoneSeries.getData().add(new XYChart.Data<>(z, v)));
+        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries, prevZoneSeries));
 
-        double tauxResolution = currentWeeklyReport.totalSignalements > 0
-            ? (double) currentWeeklyReport.signalementsResolus / currentWeeklyReport.totalSignalements * 100 : 0;
+        int total = currentWeeklyReport.totalSignalements;
+        int prevTotal = prevReport.totalSignalements;
+        double tauxRes = total > 0 ? (double) currentWeeklyReport.signalementsResolus / total * 100 : 0;
+        double prevTauxRes = prevTotal > 0 ? (double) prevReport.signalementsResolus / prevTotal * 100 : 0;
+        String evoTotal = prevTotal > 0 ? String.format("%+d (%.0f%%)", total - prevTotal, (double)(total - prevTotal)/prevTotal*100) : "N/A";
+        String evoTaux  = String.format("%+.1f pts", tauxRes - prevTauxRes);
 
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
-        stats.add(new StatisticRow("P\u00e9riode",
-            startDate.format(DateTimeFormatter.ofPattern("dd/MM")) + " - " +
-            currentWeeklyReport.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
-        stats.add(new StatisticRow("Total Signalements", String.valueOf(currentWeeklyReport.totalSignalements)));
-        stats.add(new StatisticRow("R\u00e9solus", String.valueOf(currentWeeklyReport.signalementsResolus)));
-        stats.add(new StatisticRow("En Cours", String.valueOf(currentWeeklyReport.signalementsEnCours)));
-        stats.add(new StatisticRow("En Attente", String.valueOf(currentWeeklyReport.signalementsEnAttente)));
-        stats.add(new StatisticRow("Taux de R\u00e9solution", String.format("%.1f%%", tauxResolution)));
+        stats.add(new StatisticRow("P\u00e9riode", startDate.format(FMT_DATE) + " \u2192 " + currentWeeklyReport.endDate.format(FMT_DATE)));
+        stats.add(new StatisticRow("Total signalements", total + "  (" + evoTotal + ")"));
+        stats.add(new StatisticRow("R\u00e9solus",          currentWeeklyReport.signalementsResolus + " / " + total));
+        stats.add(new StatisticRow("En cours",           String.valueOf(currentWeeklyReport.signalementsEnCours)));
+        stats.add(new StatisticRow("En attente",         String.valueOf(currentWeeklyReport.signalementsEnAttente)));
+        stats.add(new StatisticRow("Taux de r\u00e9solution", String.format("%.1f%%  (%s)", tauxRes, evoTaux)));
         statsTable.setItems(stats);
 
-        StringBuilder report = new StringBuilder();
-        report.append("=== RAPPORT HEBDOMADAIRE ===\n");
-        report.append("Periode : ")
-              .append(currentWeeklyReport.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-              .append(" - ")
-              .append(currentWeeklyReport.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-              .append("\n\n");
-        report.append("RESUME EXECUTIF\n");
-        report.append("- Total signalements traites : ").append(currentWeeklyReport.totalSignalements).append("\n");
-        report.append("- Signalements resolus : ").append(currentWeeklyReport.signalementsResolus).append("\n");
-        report.append("- Taux de resolution : ").append(String.format("%.1f%%", tauxResolution)).append("\n\n");
-        report.append("PERFORMANCE PAR ZONE\n");
+        StringBuilder r = new StringBuilder();
+        r.append(entete("RAPPORT HEBDOMADAIRE",
+            "P\u00e9riode : " + startDate.format(FMT_DATE) + " au " + currentWeeklyReport.endDate.format(FMT_DATE)));
+
+        r.append("1. R\u00c9SUM\u00c9 EX\u00c9CUTIF\n").append(SEPARATEUR2).append("\n");
+        r.append(kpi("Total signalements re\u00e7us",  String.valueOf(total), evoTotal));
+        r.append(kpi("Signalements r\u00e9solus",       currentWeeklyReport.signalementsResolus + " / " + total, ""));
+        r.append(kpi("Taux de r\u00e9solution",         String.format("%.1f%%", tauxRes),
+                     tauxRes >= 70 ? "\u2705 BON" : tauxRes >= 40 ? "\u26a0\ufe0f MOYEN" : "\u274c FAIBLE"));
+        r.append(kpi("\u00c9volution vs semaine pr\u00e9c.", evoTotal, ""));
+        r.append(kpi("\u00c9volution taux r\u00e9solution",  evoTaux,
+                     tauxRes > prevTauxRes ? "\u2191 Progression" : tauxRes < prevTauxRes ? "\u2193 R\u00e9gression" : "= Stable"));
+        r.append("\n");
+
+        r.append("2. PERFORMANCE PAR ZONE\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-20s %8s %8s %8s%n", "Zone", "Total", "Pr\u00e9c.", "\u00c9volution"));
+        r.append("  " + "-".repeat(48) + "\n");
         currentWeeklyReport.performanceParZone.entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .forEach(entry -> report.append("- ").append(entry.getKey()).append(" : ").append(entry.getValue()).append(" signalements\n"));
-        report.append("\nCATEGORIES LES PLUS SIGNALEE\n");
+            .forEach(e -> {
+                int prev = prevReport.performanceParZone.getOrDefault(e.getKey(), 0);
+                String evo = prev > 0 ? String.format("%+d", e.getValue() - prev) : "N/A";
+                r.append(String.format("  %-20s %8d %8d %8s%n", e.getKey(), e.getValue(), prev, evo));
+            });
+        r.append("\n");
+
+        r.append("3. TOP CAT\u00c9GORIES DE D\u00c9CHETS\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-20s %8s %8s%n", "Cat\u00e9gorie", "Nb", "Part"));
+        r.append("  " + "-".repeat(40) + "\n");
         currentWeeklyReport.categoriesPopulaires.entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .limit(5)
-            .forEach(entry -> report.append("- ").append(entry.getKey()).append(" : ").append(entry.getValue()).append(" signalements\n"));
-        report.append("\nTOP AGENTS ACTIFS\n");
-        currentWeeklyReport.agentsActifs.stream()
-            .limit(5)
-            .forEach(agent -> report.append("- ").append(agent.nom)
-                .append(" : ").append(agent.missionsTerminees).append("/").append(agent.missionsTotal)
-                .append(" missions (").append(String.format("%.1f%%", agent.tauxReussite)).append(")\n"));
-        reportTextArea.setText(report.toString());
+            .forEach(e -> r.append(String.format("  %-20s %8d %8s%n",
+                e.getKey(), e.getValue(),
+                total > 0 ? String.format("%.1f%%", e.getValue() * 100.0 / total) : "N/A")));
+        r.append("\n");
+
+        r.append("4. CLASSEMENT DES AGENTS\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-3s %-22s %8s %8s %10s%n", "Rg", "Agent", "Total", "Termin\u00e9s", "Taux"));
+        r.append("  " + "-".repeat(56) + "\n");
+        final int[] rang = {1};
+        currentWeeklyReport.agentsActifs.stream().limit(10).forEach(a -> {
+            String medaille = rang[0] == 1 ? "\uD83E\uDD47" : rang[0] == 2 ? "\uD83E\uDD48" : rang[0] == 3 ? "\uD83E\uDD49" : "  ";
+            r.append(String.format("  %s  %-22s %8d %8d %9.1f%%%n",
+                medaille, a.nom, a.missionsTotal, a.missionsTerminees, a.tauxReussite));
+            rang[0]++;
+        });
+        r.append("\n");
+
+        r.append("5. RECOMMANDATIONS\n").append(SEPARATEUR2).append("\n");
+        if (total > prevTotal * 1.2)
+            r.append("  \u26a0\ufe0f  Hausse significative des signalements (+20%). Renforcer les effectifs.\n");
+        if (tauxRes < prevTauxRes - 5)
+            r.append("  \u26a0\ufe0f  Baisse du taux de r\u00e9solution. Identifier les blocages op\u00e9rationnels.\n");
+        if (currentWeeklyReport.signalementsEnAttente > currentWeeklyReport.signalementsEnCours)
+            r.append("  \u26a0\ufe0f  Plus de signalements en attente qu'en cours. Acc\u00e9l\u00e9rer les affectations.\n");
+        if (!currentWeeklyReport.agentsActifs.isEmpty() && currentWeeklyReport.agentsActifs.get(0).tauxReussite >= 80)
+            r.append("  \u2705  Agent " + currentWeeklyReport.agentsActifs.get(0).nom + " : performance exemplaire (" +
+                String.format("%.0f%%", currentWeeklyReport.agentsActifs.get(0).tauxReussite) + "). \u00c0 valoriser.\n");
+        r.append("\n").append(SEPARATEUR).append("\n");
+        r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
+        r.append(SEPARATEUR).append("\n");
+        reportTextArea.setText(r.toString());
     }
 
     private void generateMonthlyReport() {
@@ -224,159 +347,367 @@ public class ReportsController {
         if (date == null) date = LocalDate.now();
         currentMonthlyReport = reportService.generateMonthlyReport(date.getMonthValue(), date.getYear());
 
+        // Mois précédent pour comparaison
+        LocalDate prevMonth = date.minusMonths(1);
+        ReportService.MonthlyReport prevReport = reportService.generateMonthlyReport(prevMonth.getMonthValue(), prevMonth.getYear());
+
         XYChart.Series<String, Number> trendSeries = new XYChart.Series<>();
-        trendSeries.setName("Signalements par jour");
-        for (Map.Entry<String, Integer> entry : currentMonthlyReport.evolutionQuotidienne.entrySet()) {
-            String dayOfMonth = entry.getKey().substring(8);
-            trendSeries.getData().add(new XYChart.Data<>(dayOfMonth, entry.getValue()));
-        }
-        trendLineChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(trendSeries));
+        trendSeries.setName(date.format(java.time.format.DateTimeFormatter.ofPattern("MMMM", FR)));
+        XYChart.Series<String, Number> prevTrendSeries = new XYChart.Series<>();
+        prevTrendSeries.setName(prevMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM", FR)));
+        currentMonthlyReport.evolutionQuotidienne.forEach((jour, cnt) ->
+            trendSeries.getData().add(new XYChart.Data<>(jour.substring(8), cnt)));
+        prevReport.evolutionQuotidienne.forEach((jour, cnt) ->
+            prevTrendSeries.getData().add(new XYChart.Data<>(jour.substring(8), cnt)));
+        trendLineChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(trendSeries, prevTrendSeries));
+
+        int total     = currentMonthlyReport.totalSignalements;
+        int prevTotal = prevReport.totalSignalements;
+        double tauxRes     = currentMonthlyReport.tauxResolution;
+        double prevTauxRes = prevReport.tauxResolution;
+        String evoTotal = prevTotal > 0 ? String.format("%+d (%.0f%%)", total - prevTotal, (double)(total-prevTotal)/prevTotal*100) : "N/A";
+        String evoTaux  = String.format("%+.1f pts", tauxRes - prevTauxRes);
+        String nomMois  = date.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", FR));
+        String nomPrev  = prevMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", FR));
 
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
-        stats.add(new StatisticRow("Mois", date.getMonth().name() + " " + date.getYear()));
-        stats.add(new StatisticRow("Total Signalements", String.valueOf(currentMonthlyReport.totalSignalements)));
-        stats.add(new StatisticRow("Taux de R\u00e9solution", String.format("%.1f%%", currentMonthlyReport.tauxResolution)));
-        stats.add(new StatisticRow("Temps Traitement Moyen", String.format("%.1f heures", currentMonthlyReport.tempsTraitementMoyen)));
+        stats.add(new StatisticRow("Mois analys\u00e9",          nomMois));
+        stats.add(new StatisticRow("Total signalements",     total + "  (" + evoTotal + ")"));
+        stats.add(new StatisticRow("Taux de r\u00e9solution",   String.format("%.1f%%  (%s)", tauxRes, evoTaux)));
+        stats.add(new StatisticRow("Temps traitement moyen", String.format("%.1f h", currentMonthlyReport.tempsTraitementMoyen)));
+        stats.add(new StatisticRow("Zone la plus active",    currentMonthlyReport.zoneLaPlusActive));
         statsTable.setItems(stats);
 
-        StringBuilder report = new StringBuilder();
-        report.append("=== RAPPORT MENSUEL ===\n");
-        report.append("Mois : ").append(date.getMonth().name()).append(" ").append(date.getYear()).append("\n\n");
-        report.append("INDICATEURS CLES\n");
-        report.append("- Signalements traites : ").append(currentMonthlyReport.totalSignalements).append("\n");
-        report.append("- Taux de resolution : ").append(String.format("%.1f%%", currentMonthlyReport.tauxResolution)).append("\n");
-        report.append("- Temps de traitement moyen : ").append(String.format("%.1f heures", currentMonthlyReport.tempsTraitementMoyen)).append("\n\n");
-        report.append("ANALYSE GEOGRAPHIQUE\n");
-        report.append("- Zone la plus active : ").append(currentMonthlyReport.zoneLaPlusActive).append("\n");
-        if (currentMonthlyReport.performanceParZone != null) {
-            currentMonthlyReport.performanceParZone.forEach((zone, count) ->
-                report.append("  - ").append(zone).append(" : ").append(count).append(" signalements\n"));
-        }
-        report.append("\nPERFORMANCE DES AGENTS\n");
-        currentMonthlyReport.performanceAgents.stream()
-            .limit(10)
-            .forEach(agent -> report.append("- ").append(agent.nom)
-                .append(" : ").append(agent.missionsTerminees).append(" missions terminees")
-                .append(" (").append(String.format("%.1f%%", agent.tauxReussite)).append(" de reussite)\n"));
-        reportTextArea.setText(report.toString());
+        StringBuilder r = new StringBuilder();
+        r.append(entete("RAPPORT MENSUEL \u2014 " + nomMois.toUpperCase(FR),
+                        "Analyse compar\u00e9e avec " + nomPrev));
+
+        r.append("1. INDICATEURS CL\u00c9S\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-38s %12s %12s %10s%n", "Indicateur", nomMois.split(" ")[0], nomPrev.split(" ")[0], "\u00c9volution"));
+        r.append("  " + "-".repeat(74) + "\n");
+        r.append(String.format("  %-38s %12d %12d %10s%n", "Total signalements", total, prevTotal, evoTotal));
+        r.append(String.format("  %-38s %11.1f%% %11.1f%% %10s%n", "Taux de r\u00e9solution", tauxRes, prevTauxRes, evoTaux));
+        r.append(String.format("  %-38s %11.1fh %11.1fh%n", "Temps traitement moyen",
+            currentMonthlyReport.tempsTraitementMoyen, prevReport.tempsTraitementMoyen));
+        r.append("\n");
+
+        r.append("2. ANALYSE PAR ZONE\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-20s %8s %8s %8s%n", "Zone", nomMois.split(" ")[0], nomPrev.split(" ")[0], "\u00c9vol."));
+        r.append("  " + "-".repeat(48) + "\n");
+        currentMonthlyReport.performanceParZone.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .forEach(e -> {
+                int prev = prevReport.performanceParZone.getOrDefault(e.getKey(), 0);
+                r.append(String.format("  %-20s %8d %8d %8s%n",
+                    e.getKey(), e.getValue(), prev,
+                    prev > 0 ? String.format("%+d", e.getValue() - prev) : "N/A"));
+            });
+        r.append("\n");
+
+        r.append("3. PERFORMANCE DES AGENTS\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-3s %-22s %8s %8s %10s%n", "Rg", "Agent", "Total", "Termin\u00e9s", "Taux"));
+        r.append("  " + "-".repeat(56) + "\n");
+        final int[] rang = {1};
+        currentMonthlyReport.performanceAgents.stream().limit(10).forEach(a -> {
+            String medaille = rang[0] == 1 ? "\uD83E\uDD47" : rang[0] == 2 ? "\uD83E\uDD48" : rang[0] == 3 ? "\uD83E\uDD49" : "  ";
+            r.append(String.format("  %s  %-22s %8d %8d %9.1f%%%n",
+                medaille, a.nom, a.missionsTotal, a.missionsTerminees, a.tauxReussite));
+            rang[0]++;
+        });
+        r.append("\n");
+
+        r.append("4. \u00c9VOLUTION QUOTIDIENNE (pic d'activit\u00e9)\n").append(SEPARATEUR2).append("\n");
+        currentMonthlyReport.evolutionQuotidienne.entrySet().stream()
+            .filter(e -> e.getValue() > 0)
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .limit(5)
+            .forEach(e -> r.append(String.format("  %s : %s%n",
+                e.getKey(), barre(e.getValue(),
+                    currentMonthlyReport.evolutionQuotidienne.values().stream().mapToInt(Integer::intValue).max().orElse(1), 30)
+                    + "  " + e.getValue() + " sign.")));
+        r.append("\n");
+
+        r.append("5. RECOMMANDATIONS\n").append(SEPARATEUR2).append("\n");
+        if (total > prevTotal * 1.15)
+            r.append("  \u26a0\ufe0f  Hausse de +15% des signalements vs mois pr\u00e9c. Anticiper les ressources.\n");
+        if (tauxRes < prevTauxRes - 5)
+            r.append("  \u26a0\ufe0f  Baisse du taux de r\u00e9solution de " + String.format("%.1f", prevTauxRes - tauxRes) + " pts. Analyser les causes.\n");
+        if (currentMonthlyReport.tempsTraitementMoyen > 48)
+            r.append("  \u26a0\ufe0f  Temps de traitement moyen > 48h. Optimiser le processus d'affectation.\n");
+        if (tauxRes >= 75)
+            r.append("  \u2705  Taux de r\u00e9solution " + String.format("%.1f%%", tauxRes) + " : objectif atteint.\n");
+        r.append("\n").append(SEPARATEUR).append("\n");
+        r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
+        r.append(SEPARATEUR).append("\n");
+        reportTextArea.setText(r.toString());
     }
 
     private void generateAgentPerformanceReport() {
         LocalDate startDate = startDatePicker.getValue();
-        if (startDate == null) startDate = LocalDate.now().minusDays(7);
+        if (startDate == null) startDate = LocalDate.now().minusDays(6);
         ReportService.WeeklyReport weeklyReport = reportService.generateWeeklyReport(startDate);
+        ReportService.WeeklyReport prevReport   = reportService.generateWeeklyReport(startDate.minusDays(7));
 
-        XYChart.Series<String, Number> agentSeries = new XYChart.Series<>();
-        agentSeries.setName("Missions Terminees");
-        weeklyReport.agentsActifs.stream()
-            .limit(10)
-            .forEach(agent -> agentSeries.getData().add(new XYChart.Data<>(
-                agent.nom.length() > 10 ? agent.nom.substring(0, 10) + "..." : agent.nom,
-                agent.missionsTerminees)));
-        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(agentSeries));
+        XYChart.Series<String, Number> seriesMissions  = new XYChart.Series<>();
+        XYChart.Series<String, Number> seriesTerminees = new XYChart.Series<>();
+        seriesMissions.setName("Missions assign\u00e9es");
+        seriesTerminees.setName("Missions termin\u00e9es");
+        weeklyReport.agentsActifs.stream().limit(8).forEach(a -> {
+            String nom = a.nom.length() > 12 ? a.nom.substring(0, 12) + "." : a.nom;
+            seriesMissions.getData().add(new XYChart.Data<>(nom, a.missionsTotal));
+            seriesTerminees.getData().add(new XYChart.Data<>(nom, a.missionsTerminees));
+        });
+        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(seriesMissions, seriesTerminees));
+
+        double tauxMoyen   = weeklyReport.agentsActifs.stream().mapToDouble(a -> a.tauxReussite).average().orElse(0);
+        double prevTauxMoy = prevReport.agentsActifs.stream().mapToDouble(a -> a.tauxReussite).average().orElse(0);
+        int totalMissions  = weeklyReport.agentsActifs.stream().mapToInt(a -> a.missionsTotal).sum();
 
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
-        stats.add(new StatisticRow("Nombre d'agents actifs", String.valueOf(weeklyReport.agentsActifs.size())));
+        stats.add(new StatisticRow("P\u00e9riode", startDate.format(FMT_DATE) + " \u2192 " + startDate.plusDays(6).format(FMT_DATE)));
+        stats.add(new StatisticRow("Agents actifs",          String.valueOf(weeklyReport.agentsActifs.size())));
+        stats.add(new StatisticRow("Total missions",         String.valueOf(totalMissions)));
+        stats.add(new StatisticRow("Taux moyen",             String.format("%.1f%%  (%+.1f pts)", tauxMoyen, tauxMoyen - prevTauxMoy)));
         if (!weeklyReport.agentsActifs.isEmpty()) {
-            double tauxMoyen = weeklyReport.agentsActifs.stream().mapToDouble(a -> a.tauxReussite).average().orElse(0);
-            int totalMissions = weeklyReport.agentsActifs.stream().mapToInt(a -> a.missionsTotal).sum();
-            stats.add(new StatisticRow("Taux de reussite moyen", String.format("%.1f%%", tauxMoyen)));
-            stats.add(new StatisticRow("Total missions assignees", String.valueOf(totalMissions)));
-            ReportService.AgentStats meilleur = weeklyReport.agentsActifs.stream()
-                .max((a, b) -> Double.compare(a.tauxReussite, b.tauxReussite))
-                .orElse(null);
-            if (meilleur != null) {
-                stats.add(new StatisticRow("Meilleur agent", meilleur.nom + " (" + String.format("%.1f%%", meilleur.tauxReussite) + ")"));
-            }
+            ReportService.AgentStats top = weeklyReport.agentsActifs.get(0);
+            stats.add(new StatisticRow("Meilleur agent", top.nom + " " + String.format("(%.0f%%)", top.tauxReussite)));
         }
         statsTable.setItems(stats);
 
-        StringBuilder report = new StringBuilder();
-        report.append("=== RAPPORT PERFORMANCE AGENTS ===\n");
-        report.append("Periode : ").append(startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-              .append(" - ").append(startDate.plusDays(6).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\n\n");
-        report.append("CLASSEMENT DES AGENTS\n");
-        final LocalDate finalStartDate = startDate;
+        StringBuilder r = new StringBuilder();
+        r.append(entete("RAPPORT PERFORMANCE DES AGENTS",
+            "P\u00e9riode : " + startDate.format(FMT_DATE) + " au " + startDate.plusDays(6).format(FMT_DATE)));
+
+        r.append("1. SYNTH\u00c8SE\n").append(SEPARATEUR2).append("\n");
+        r.append(kpi("Nombre d'agents actifs",    String.valueOf(weeklyReport.agentsActifs.size()), ""));
+        r.append(kpi("Total missions assign\u00e9es", String.valueOf(totalMissions), ""));
+        r.append(kpi("Taux de r\u00e9ussite moyen",   String.format("%.1f%%", tauxMoyen),
+                     String.format("%+.1f pts vs sem. pr\u00e9c.", tauxMoyen - prevTauxMoy)));
+        r.append("\n");
+
+        r.append("2. CLASSEMENT D\u00c9TAILL\u00c9\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-3s %-22s %8s %8s %10s  %s%n",
+            "Rg", "Agent", "Assign.", "Termin.", "Taux", "Performance"));
+        r.append("  " + "-".repeat(72) + "\n");
+        final int[] rang = {1};
+        weeklyReport.agentsActifs.forEach(a -> {
+            String medaille = rang[0] == 1 ? "\uD83E\uDD47" : rang[0] == 2 ? "\uD83E\uDD48" : rang[0] == 3 ? "\uD83E\uDD49" : "  ";
+            String perf = a.tauxReussite >= 80 ? "\u2605\u2605\u2605 Excellent"
+                        : a.tauxReussite >= 60 ? "\u2605\u2605  Bien"
+                        : a.tauxReussite >= 40 ? "\u2605   Moyen"
+                        : "\u26a0\ufe0f  Insuffisant";
+            r.append(String.format("  %s  %-22s %8d %8d %9.1f%%  %s%n",
+                medaille, a.nom, a.missionsTotal, a.missionsTerminees, a.tauxReussite, perf));
+            rang[0]++;
+        });
+        r.append("\n");
+
+        r.append("3. RECOMMANDATIONS RH\n").append(SEPARATEUR2).append("\n");
         weeklyReport.agentsActifs.stream()
-            .sorted((a, b) -> Double.compare(b.tauxReussite, a.tauxReussite))
-            .forEach(agent -> {
-                report.append(agent.nom).append("\n");
-                report.append("  - Missions : ").append(agent.missionsTerminees).append("/").append(agent.missionsTotal).append("\n");
-                report.append("  - Taux de reussite : ").append(String.format("%.1f%%", agent.tauxReussite)).append("\n");
-                report.append("  - Email : ").append(agent.email).append("\n\n");
-            });
-        reportTextArea.setText(report.toString());
+            .filter(a -> a.tauxReussite < 40 && a.missionsTotal >= 3)
+            .forEach(a -> r.append("  \u26a0\ufe0f  " + a.nom + " : taux insuffisant ("
+                + String.format("%.0f%%", a.tauxReussite) + "). Accompagnement recommand\u00e9.\n"));
+        weeklyReport.agentsActifs.stream()
+            .filter(a -> a.tauxReussite >= 90)
+            .forEach(a -> r.append("  \u2b50  " + a.nom + " : performance exceptionnelle ("
+                + String.format("%.0f%%", a.tauxReussite) + "). \u00c0 valoriser.\n"));
+        if (weeklyReport.agentsActifs.stream().allMatch(a -> a.tauxReussite >= 60))
+            r.append("  \u2705  Toute l'\u00e9quipe est au-dessus de 60%. Bonne dynamique collective.\n");
+        r.append("\n").append(SEPARATEUR).append("\n");
+        r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
+        r.append(SEPARATEUR).append("\n");
+        reportTextArea.setText(r.toString());
     }
 
     private void generateGeographicAnalysis() {
-        ReportService.RealTimeDashboard dashboard = reportService.getRealTimeDashboard();
+        ReportService.RealTimeDashboard now  = reportService.getRealTimeDashboard();
+        ReportService.RealTimeDashboard prev = reportService.getRealTimeDashboard(); // même source, on compare 7j vs 30j
+        LocalDate debut7j  = LocalDate.now().minusDays(6);
+        LocalDate debut30j = LocalDate.now().minusDays(29);
 
-        XYChart.Series<String, Number> zoneSeries = new XYChart.Series<>();
-        zoneSeries.setName("Activite par Zone");
-        dashboard.zonesActives.forEach((zone, count) ->
-            zoneSeries.getData().add(new XYChart.Data<>(zone, count)));
-        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
+        // Deux séries : 7 jours et 30 jours
+        ReportService.WeeklyReport  w7  = reportService.generateWeeklyReport(debut7j);
+        // Pour 30j on utilise le rapport mensuel du mois courant
+        ReportService.MonthlyReport m30 = reportService.generateMonthlyReport(
+            LocalDate.now().getMonthValue(), LocalDate.now().getYear());
+
+        XYChart.Series<String, Number> s7  = new XYChart.Series<>();
+        XYChart.Series<String, Number> s30 = new XYChart.Series<>();
+        s7.setName("7 derniers jours");
+        s30.setName("Mois en cours");
+        w7.performanceParZone.forEach((z, v)  -> s7.getData().add(new XYChart.Data<>(z, v)));
+        m30.performanceParZone.forEach((z, v) -> s30.getData().add(new XYChart.Data<>(z, v)));
+        zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(s7, s30));
+
+        int total7j  = w7.performanceParZone.values().stream().mapToInt(Integer::intValue).sum();
+        int total30j = m30.performanceParZone.values().stream().mapToInt(Integer::intValue).sum();
 
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
-        stats.add(new StatisticRow("Nombre de zones", String.valueOf(dashboard.zonesActives.size())));
-        String zonePlusActive = dashboard.zonesActives.entrySet().stream()
-            .max(Map.Entry.<String, Integer>comparingByValue())
-            .map(Map.Entry::getKey)
-            .orElse("Aucune");
-        stats.add(new StatisticRow("Zone la plus active", zonePlusActive));
-        int totalSignalements = dashboard.zonesActives.values().stream().mapToInt(Integer::intValue).sum();
-        stats.add(new StatisticRow("Total signalements", String.valueOf(totalSignalements)));
-        if (totalSignalements > 0) {
-            dashboard.zonesActives.forEach((zone, count) -> {
-                double pourcentage = (double) count / totalSignalements * 100;
-                stats.add(new StatisticRow(zone, String.format("%d (%.1f%%)", count, pourcentage)));
-            });
-        }
+        stats.add(new StatisticRow("Zones couvertes",      String.valueOf(m30.performanceParZone.size())));
+        stats.add(new StatisticRow("Zone la plus active",  m30.zoneLaPlusActive));
+        stats.add(new StatisticRow("Total (7 jours)",      String.valueOf(total7j)));
+        stats.add(new StatisticRow("Total (mois)",         String.valueOf(total30j)));
+        m30.performanceParZone.forEach((z, v) -> stats.add(new StatisticRow(
+            z, v + "  (" + (total30j > 0 ? String.format("%.1f%%", v * 100.0 / total30j) : "N/A") + ")")));
         statsTable.setItems(stats);
 
-        StringBuilder report = new StringBuilder();
-        report.append("=== ANALYSE GEOGRAPHIQUE ===\n");
-        report.append("Genere le : ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\n\n");
-        report.append("REPARTITION PAR ZONE\n");
-        dashboard.zonesActives.entrySet().stream()
+        StringBuilder r = new StringBuilder();
+        r.append(entete("ANALYSE G\u00c9OGRAPHIQUE",
+                        "Pikine & Gu\u00e9diawaye \u2014 Comparaison 7 jours vs mois en cours"));
+
+        r.append("1. R\u00c9PARTITION PAR ZONE\n").append(SEPARATEUR2).append("\n");
+        r.append(String.format("  %-20s %10s %10s %10s %10s%n",
+            "Zone", "7 jours", "Part 7j", "Mois", "Part mois"));
+        r.append("  " + "-".repeat(64) + "\n");
+        m30.performanceParZone.entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .forEach(entry -> {
-                double pourcentage = totalSignalements > 0 ? (double) entry.getValue() / totalSignalements * 100 : 0;
-                report.append("- ").append(entry.getKey())
-                      .append(" : ").append(entry.getValue()).append(" signalements")
-                      .append(" (").append(String.format("%.1f%%", pourcentage)).append(")\n");
+            .forEach(e -> {
+                int v7 = w7.performanceParZone.getOrDefault(e.getKey(), 0);
+                r.append(String.format("  %-20s %10d %9.1f%% %10d %9.1f%%%n",
+                    e.getKey(), v7,
+                    total7j  > 0 ? v7 * 100.0 / total7j  : 0,
+                    e.getValue(),
+                    total30j > 0 ? e.getValue() * 100.0 / total30j : 0));
             });
-        report.append("\nRECOMMANDATIONS\n");
-        if (!dashboard.zonesActives.isEmpty()) {
-            String zoneMax = dashboard.zonesActives.entrySet().stream()
-                .max(Map.Entry.<String, Integer>comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse("");
-            report.append("- Renforcer la presence des agents dans la zone ").append(zoneMax).append("\n");
-            report.append("- Sensibiliser davantage les citoyens dans les zones moins actives\n");
-            report.append("- Optimiser les itineraires de collecte entre les zones\n");
-        }
-        reportTextArea.setText(report.toString());
+        r.append("\n");
+
+        r.append("2. VISUALISATION (mois en cours)\n").append(SEPARATEUR2).append("\n");
+        m30.performanceParZone.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .forEach(e -> r.append(String.format("  %-20s %s  (%d sign.)%n",
+                e.getKey(), barre(e.getValue(), Math.max(total30j, 1), 30), e.getValue())));
+        r.append("\n");
+
+        r.append("3. ANALYSE DES CAT\u00c9GORIES PAR ZONE\n").append(SEPARATEUR2).append("\n");
+        w7.categoriesPopulaires.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            .forEach(e -> r.append(String.format("  %-20s %s  (%d sign.)%n",
+                e.getKey(), barre(e.getValue(), Math.max(total7j, 1), 25), e.getValue())));
+        r.append("\n");
+
+        r.append("4. RECOMMANDATIONS TERRITORIALES\n").append(SEPARATEUR2).append("\n");
+        m30.performanceParZone.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .ifPresent(e -> r.append("  \u26a0\ufe0f  Zone " + e.getKey() + " : zone la plus charg\u00e9e. Renforcer la pr\u00e9sence des agents.\n"));
+        m30.performanceParZone.entrySet().stream()
+            .min(Map.Entry.comparingByValue())
+            .filter(e -> e.getValue() > 0)
+            .ifPresent(e -> r.append("  \u2139\ufe0f  Zone " + e.getKey() + " : activit\u00e9 plus faible. V\u00e9rifier la couverture citoyenne.\n"));
+        r.append("  \uD83D\uDDFA\ufe0f  Optimiser les itin\u00e9raires de collecte entre les zones pour r\u00e9duire les d\u00e9placements.\n");
+        r.append("  \uD83D\uDCF1  Encourager les citoyens des zones peu actives \u00e0 signaler via l'application.\n");
+        r.append("\n").append(SEPARATEUR).append("\n");
+        r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
+        r.append(SEPARATEUR).append("\n");
+        reportTextArea.setText(r.toString());
     }
 
     @FXML
     private void exportReport() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Exporter le rapport");
-        fileChooser.setInitialFileName("rapport_smartcity_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".txt");
+        fileChooser.setInitialFileName("rapport_smartcity_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".pdf");
         fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Fichiers PDF", "*.pdf"),
+            new FileChooser.ExtensionFilter("Fichiers Excel compatibles", "*.xls"),
             new FileChooser.ExtensionFilter("Fichiers texte", "*.txt"),
             new FileChooser.ExtensionFilter("Fichiers CSV", "*.csv")
         );
         File file = fileChooser.showSaveDialog(rootPane.getScene().getWindow());
         if (file != null) {
-            try (FileWriter writer = new FileWriter(file)) {
-                writer.write(reportTextArea.getText());
+            try {
+                exportReportFile(file);
                 showAlert("Export reussi", "Le rapport a ete exporte vers : " + file.getAbsolutePath());
             } catch (IOException e) {
                 showAlert("Erreur d'export", "Impossible d'exporter le rapport : " + e.getMessage());
             }
         }
+    }
+
+    private void exportReportFile(File file) throws IOException {
+        String lowerName = file.getName().toLowerCase(java.util.Locale.ROOT);
+        if (lowerName.endsWith(".pdf")) {
+            exportPdf(file);
+            return;
+        }
+        if (lowerName.endsWith(".xls")) {
+            exportExcelCompatible(file);
+            return;
+        }
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+                new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
+            writer.write('\uFEFF');
+            writer.write(reportTextArea.getText());
+        }
+    }
+
+    private void exportPdf(File file) throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            List<String> lines = wrapLines(reportTextArea.getText(), 95);
+            int index = 0;
+            while (index < lines.size()) {
+                PDPage page = new PDPage(PDRectangle.A4);
+                document.addPage(page);
+                try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                    content.beginText();
+                    content.setFont(PDType1Font.COURIER, 10);
+                    content.newLineAtOffset(40, 800);
+                    int lineCount = 0;
+                    while (index < lines.size() && lineCount < 68) {
+                        content.showText(sanitizePdfText(lines.get(index++)));
+                        content.newLineAtOffset(0, -11);
+                        lineCount++;
+                    }
+                    content.endText();
+                }
+            }
+            document.save(file);
+        }
+    }
+
+    private void exportExcelCompatible(File file) throws IOException {
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+                new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
+            writer.write("<html><head><meta charset=\"UTF-8\"></head><body>\n");
+            writer.write("<table border=\"1\"><tr><th>Metrique</th><th>Valeur</th></tr>\n");
+            for (StatisticRow row : statsTable.getItems()) {
+                writer.write("<tr><td>" + escapeHtml(row.getMetric()) + "</td><td>" + escapeHtml(row.getValue()) + "</td></tr>\n");
+            }
+            writer.write("</table><br/><pre>");
+            writer.write(escapeHtml(reportTextArea.getText()));
+            writer.write("</pre></body></html>");
+        }
+    }
+
+    private List<String> wrapLines(String text, int maxLength) {
+        List<String> lines = new ArrayList<>();
+        for (String rawLine : text.split("\\R", -1)) {
+            if (rawLine.length() <= maxLength) {
+                lines.add(rawLine);
+                continue;
+            }
+            String remaining = rawLine;
+            while (remaining.length() > maxLength) {
+                int split = remaining.lastIndexOf(' ', maxLength);
+                if (split <= 0) {
+                    split = maxLength;
+                }
+                lines.add(remaining.substring(0, split));
+                remaining = remaining.substring(Math.min(split + 1, remaining.length()));
+            }
+            lines.add(remaining);
+        }
+        return lines;
+    }
+
+    private String sanitizePdfText(String value) {
+        return value.replace('\t', ' ').replace('\u0000', ' ');
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private void loadDefaultData() {

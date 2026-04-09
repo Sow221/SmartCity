@@ -6,13 +6,14 @@ SET NAMES utf8mb4;
 ALTER TABLE Signalement MODIFY statut VARCHAR(50) DEFAULT 'En attente';
 
 -- Etape 2 : normaliser toutes les valeurs existantes
-UPDATE Signalement SET statut = 'En attente' WHERE statut IN ('En attente', 'Affect??', 'Affecté', 'Affecte');
-UPDATE Signalement SET statut = 'En cours'   WHERE statut = 'En cours';
-UPDATE Signalement SET statut = 'Terminé'    WHERE statut IN ('Terminé', 'Termin??', 'Termine', 'Collecte', 'Archivé', 'Archiv??');
+UPDATE Signalement SET statut = 'En attente' WHERE statut IN ('En attente', 'En Attente', 'en attente');
+UPDATE Signalement SET statut = 'Affecte'    WHERE statut IN ('Affect??', 'Affecté', 'Affecte', 'Affectée');
+UPDATE Signalement SET statut = 'En cours'   WHERE statut IN ('En cours', 'En Cours');
+UPDATE Signalement SET statut = 'Termine'    WHERE statut IN ('Terminé', 'Termin??', 'Termine', 'Collecte', 'Archivé', 'Archiv??', 'Résolu');
 
 -- Etape 3 : remettre l'ENUM propre avec utf8mb4
 ALTER TABLE Signalement MODIFY statut 
-    ENUM('En attente','En cours','Terminé') 
+    ENUM('En attente','Affecte','En cours','Termine') 
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
     DEFAULT 'En attente';
 

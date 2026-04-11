@@ -32,28 +32,39 @@ public class ReportService {
      * Rapport hebdomadaire
      */
     public WeeklyReport generateWeeklyReport(LocalDate startDate) {
-        if (startDate == null) throw new IllegalArgumentException("startDate ne peut pas être null");
-        LocalDate endDate = startDate.plusDays(6);
-        
+        if (startDate == null) throw new IllegalArgumentException("startDate ne peut pas etre null");
+        return generateWeeklyReport(startDate, startDate.plusDays(6));
+    }
+
+    public WeeklyReport generateWeeklyReport(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Les dates de debut et de fin sont obligatoires");
+        }
+        if (endDate.isBefore(startDate)) {
+            LocalDate tmp = startDate;
+            startDate = endDate;
+            endDate = tmp;
+        }
+
         WeeklyReport report = new WeeklyReport();
         report.startDate = startDate;
         report.endDate = endDate;
-        
-        // Statistiques générales
+
+        // Statistiques generales
         report.totalSignalements = countSignalementsByDateRange(startDate, endDate);
         report.signalementsResolus = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.TERMINE.dbValue());
         report.signalementsEnCours = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.EN_COURS.dbValue());
         report.signalementsEnAttente = countSignalementsByDateRangeAndStatus(startDate, endDate, SignalementStatut.EN_ATTENTE.dbValue());
-        
+
         // Performances par zone
         report.performanceParZone = getPerformanceByZone(startDate, endDate);
-        
-        // Catégories les plus signalées
+
+        // Categories les plus signalees
         report.categoriesPopulaires = getTopCategories(startDate, endDate);
-        
+
         // Agents les plus actifs
         report.agentsActifs = getTopActiveAgents(startDate, endDate);
-        
+
         return report;
     }
 
@@ -62,35 +73,47 @@ public class ReportService {
      */
     public MonthlyReport generateMonthlyReport(int month, int year) {
         if (month < 1 || month > 12) throw new IllegalArgumentException("Mois invalide: " + month);
-        if (year < 2000 || year > 2100) throw new IllegalArgumentException("Année invalide: " + year);
+        if (year < 2000 || year > 2100) throw new IllegalArgumentException("Annee invalide: " + year);
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-        
+        return generateMonthlyReport(startDate, endDate);
+    }
+
+    public MonthlyReport generateMonthlyReport(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException("Les dates de debut et de fin sont obligatoires");
+        }
+        if (endDate.isBefore(startDate)) {
+            LocalDate tmp = startDate;
+            startDate = endDate;
+            endDate = tmp;
+        }
+
         MonthlyReport report = new MonthlyReport();
-        report.month = month;
-        report.year = year;
+        report.month = startDate.getMonthValue();
+        report.year = startDate.getYear();
         report.startDate = startDate;
         report.endDate = endDate;
-        
+
         // Statistiques de base
         report.totalSignalements = countSignalementsByDateRange(startDate, endDate);
         report.tauxResolution = calculateResolutionRate(startDate, endDate);
         report.tempsTraitementMoyen = calculateAverageProcessingTime(startDate, endDate);
-        
-        // Évolution quotidienne
+
+        // Evolution quotidienne
         report.evolutionQuotidienne = getDailyEvolution(startDate, endDate);
-        
+
         // Performance des agents
         report.performanceAgents = getAgentPerformanceDetailed(startDate, endDate);
-        
-        // Analyse géographique
+
+        // Analyse geographique
         Map<String, Integer> perfParZone = getPerformanceByZone(startDate, endDate);
         report.performanceParZone = perfParZone;
         report.zoneLaPlusActive = perfParZone.entrySet().stream()
             .max(Map.Entry.comparingByValue())
             .map(Map.Entry::getKey)
             .orElse("Aucune");
-        
+
         return report;
     }
 
@@ -141,11 +164,12 @@ public class ReportService {
             + "FROM Signalement s "
             + "JOIN Affectation a ON s.idSignalement = a.idSignalement "
             + "WHERE DATE(s.dateSignalement) BETWEEN ? AND ? "
-            + "AND s.statut IN ('Termine', 'Termin\u00e9') AND a.dateCollecte IS NOT NULL";
+            + "AND s.statut = ? AND a.dateCollecte IS NOT NULL";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setDate(1, Date.valueOf(start));
             pstmt.setDate(2, Date.valueOf(end));
+            pstmt.setString(3, SignalementStatut.TERMINE.dbValue());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) return rs.getDouble("avgTime");
             }
@@ -194,18 +218,21 @@ public class ReportService {
 
     private List<AgentStats> getTopActiveAgents(LocalDate start, LocalDate end) {
         List<AgentStats> agents = new ArrayList<>();
+        // Utilise dateSignalement au lieu de dateAffectation (peut être NULL)
         String query = "SELECT u.nom, u.email, COUNT(a.idAffectation) as missions, "
-            + "SUM(CASE WHEN s.statut IN ('Termine', 'Termin\u00e9', 'Collecte') THEN 1 ELSE 0 END) as terminees "
+            + "SUM(CASE WHEN s.statut = ? THEN 1 ELSE 0 END) as terminees "
             + "FROM Utilisateur u "
             + "LEFT JOIN Affectation a ON u.idUser = a.idAgent "
             + "LEFT JOIN Signalement s ON a.idSignalement = s.idSignalement "
-            + "WHERE u.role = 'Agent' AND DATE(a.dateAffectation) BETWEEN ? AND ? "
+            + "WHERE u.role = 'Agent' AND u.actif = 1 "
+            + "AND (a.idAffectation IS NULL OR DATE(s.dateSignalement) BETWEEN ? AND ?) "
             + "GROUP BY u.idUser, u.nom, u.email "
             + "ORDER BY missions DESC, terminees DESC LIMIT 10";
         try (Connection conn = getConn();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setDate(1, Date.valueOf(start));
-            pstmt.setDate(2, Date.valueOf(end));
+            pstmt.setString(1, SignalementStatut.TERMINE.dbValue());
+            pstmt.setDate(2, Date.valueOf(start));
+            pstmt.setDate(3, Date.valueOf(end));
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     AgentStats stats = new AgentStats();
@@ -393,3 +420,4 @@ public class ReportService {
         public double tauxReussite;
     }
 }
+

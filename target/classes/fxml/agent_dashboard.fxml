@@ -2,14 +2,13 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -26,13 +25,12 @@
             stylesheets="@../css/design-system.css"
             styleClass="app-root">
 
-    
     <top>
         <HBox alignment="CENTER_LEFT" spacing="14" styleClass="header-agent">
             <padding><Insets left="20" right="20"/></padding>
-            <ImageView fitWidth="30" fitHeight="30" preserveRatio="true" smooth="true">
-                <image><Image url="@../images/EcoTrack.png"/></image>
-            </ImageView>
+            <StackPane styleClass="header-logo-badge header-logo-badge-agent" alignment="CENTER">
+                <Label text="SC" styleClass="header-logo-text"/>
+            </StackPane>
             <Label text="SmartCity" styleClass="header-brand"/>
             <Label text="/" styleClass="header-sep"/>
             <Label text="Espace Agent" styleClass="header-title"/>
@@ -41,68 +39,68 @@
                 <Label fx:id="agentAvatarLabel" text="A" styleClass="header-avatar-text"/>
             </StackPane>
             <Label fx:id="agentNameLabel" styleClass="header-user" text="Agent"/>
-            <Button fx:id="themeToggleButton" text="Mode" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
-            <Button text="DÃ©connexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
+            <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
+            <Button text="Déconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
         </HBox>
     </top>
 
-    
     <left>
         <VBox styleClass="sidebar-agent" prefWidth="220" spacing="4" minHeight="600">
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
-
             <Label text="NAVIGATION" styleClass="sidebar-section-label-agent"/>
-            <Button fx:id="btnAgentDashboard" text="Dashboard" styleClass="sidebar-agent-button, sidebar-agent-button-active" onAction="#handleShowAgentDashboard"/>
+            <Button fx:id="btnAgentDashboard" text="Vue d'ensemble" styleClass="sidebar-agent-button, sidebar-agent-button-active" onAction="#handleShowAgentDashboard"/>
             <Button fx:id="btnMesMissions" text="Mes missions" styleClass="sidebar-agent-button" onAction="#handleShowMesMissions"/>
             <Button fx:id="btnCarteZones" text="Carte zones" styleClass="sidebar-agent-button" onAction="#handleShowCarteZones"/>
-
             <Region prefHeight="8"/>
             <Label text="HISTORIQUE" styleClass="sidebar-section-label-agent"/>
             <Button fx:id="btnHistorique" text="Historique" styleClass="sidebar-agent-button" onAction="#handleShowHistorique"/>
-
             <Region VBox.vgrow="ALWAYS"/>
             <Label text="COMPTE" styleClass="sidebar-section-label-agent"/>
-            <Button fx:id="btnMonProfil" text="Mon profil" styleClass="sidebar-agent-button" onAction="#handleShowMonProfil"/> 
+            <Button fx:id="btnMonProfil" text="Mon profil" styleClass="sidebar-agent-button" onAction="#handleShowMonProfil"/>
         </VBox>
     </left>
 
-    
     <center>
         <VBox styleClass="content-root" spacing="12">
             <padding><Insets top="20" right="24" bottom="24" left="24"/></padding>
 
-            
-            <HBox spacing="10" alignment="CENTER_LEFT" styleClass="quick-actions-bar-agent">
-                <Label text="Actions rapides :" styleClass="quick-actions-label-agent"/>
-                <Button fx:id="btnActionDemarrerProchaine" text="DÃ©marrer" styleClass="action-rapid-btn-agent" onAction="#handleDemarrerProchaineMission"/>
-                
-                <Button fx:id="btnActionItineraireRapide" text="ItinÃ©raire" styleClass="action-rapid-btn-agent" onAction="#handleItineraireRapide"/>
-                <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="action-rapid-btn-agent" onAction="#chargerDonnees"/>
+            <HBox spacing="10" alignment="CENTER_LEFT" styleClass="quick-actions-bar-agent" fx:id="quickActionsBar">
+                <Button fx:id="btnActionDemarrerProchaine" text="Demarrer mission" styleClass="action-rapid-btn-agent" onAction="#handleDemarrerProchaineMission"/>
+                <Button fx:id="btnActionVoirEnCours" text="En cours" styleClass="action-rapid-btn-agent" onAction="#handleVoirMissionsEnCours"/>
+                <Button fx:id="btnActionItineraireRapide" text="Itineraire" styleClass="action-rapid-btn-agent" onAction="#handleItineraireRapide"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="lblMissionsCount" text="0 missions actives" styleClass="missions-count-badge"/>
+                <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="btn-outline-sm" onAction="#chargerDonnees"/>
+                <Button fx:id="btnGpsActiver" text="GPS" styleClass="btn-outline-sm" onAction="#handleToggleGps"/>
+                <Label fx:id="lblPositionActuelle" text="Position..." styleClass="missions-count-badge" wrapText="false"/>
+                <Label fx:id="lblMissionsCount" text="0 missions" styleClass="missions-count-badge"/>
             </HBox>
 
-            
             <Label fx:id="agentMessageLabel" text="" styleClass="floating-message" visible="false" managed="false"/>
 
             <StackPane VBox.vgrow="ALWAYS">
 
-                
+                <!-- PAGE DASHBOARD AGENT -->
                 <ScrollPane fx:id="pageAgentDashboard" fitToWidth="true" styleClass="dash-scroll">
                 <VBox spacing="20" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
-                            <Label text="Missions du jour" styleClass="page-title-agent"/>
-                            <Label text="Vue d'ensemble de vos missions assignÃ©es" styleClass="page-subtitle"/>
+                            <Label text="Vue d'ensemble" styleClass="page-title-agent"/>
+                            <Label text="Toutes vos missions actives du jour" styleClass="page-subtitle"/>
                         </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <HBox spacing="8" alignment="CENTER_RIGHT">
+                            <Label text="Date :" styleClass="quick-actions-label-agent"/>
+                            <DatePicker fx:id="dashboardDatePicker" prefWidth="150" prefHeight="36" styleClass="dash-datepicker"/>
+                            <Button text="🔍 Filtrer" prefHeight="36" onAction="#handleFiltrerDashboard" styleClass="button-agent"/>
+                            <Button text="↺ Aujourd'hui" prefHeight="36" onAction="#handleResetDashboard" styleClass="btn-outline-sm"/>
+                        </HBox>
                     </HBox>
 
-                    
                     <HBox spacing="16">
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="T" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardTotal" text="0" styleClass="stat-card-number-agent"/>
@@ -113,7 +111,7 @@
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="A" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardEnAttente" text="0" styleClass="stat-card-number-agent"/>
@@ -124,7 +122,7 @@
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="~" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardEnCours" text="0" styleClass="stat-card-number-agent"/>
@@ -135,11 +133,11 @@
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="V" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardTerminees" text="0" styleClass="stat-card-number-agent"/>
-                                    <Label text="TerminÃ©es" styleClass="stat-card-label"/>
+                                    <Label text="Terminees" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
@@ -149,33 +147,33 @@
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="D" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="tourneeDistanceLabel" text="0 km" styleClass="stat-card-number-agent"/>
-                                    <Label text="Distance tournÃ©e" styleClass="stat-card-label"/>
+                                    <Label text="Distance tournee" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="N" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="tourneeProchaineLabel" text="Aucune" styleClass="stat-card-number-agent"/>
-                                    <Label text="Prochaine Ã©tape" styleClass="stat-card-label"/>
+                                    <Label text="Prochaine etape" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
                         <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                    <Label text="â€¢" style="-fx-font-size:18px;"/>
+                                    <Label text="H" styleClass="stat-icon-letter"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="tourneeTempsLabel" text="0 min" styleClass="stat-card-number-agent"/>
-                                    <Label text="Temps estimÃ©" styleClass="stat-card-label"/>
+                                    <Label text="Temps estime" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
@@ -186,36 +184,41 @@
                             <TableColumn fx:id="colUrgId" text="ID" prefWidth="70"/>
                             <TableColumn fx:id="colUrgZone" text="Zone" prefWidth="130"/>
                             <TableColumn fx:id="colUrgAdresse" text="Adresse" prefWidth="280"/>
-                            <TableColumn fx:id="colUrgType" text="Type dÃ©chet" prefWidth="140"/>
+                            <TableColumn fx:id="colUrgType" text="Type déchet" prefWidth="140"/>
                             <TableColumn fx:id="colUrgDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colUrgStatut" text="Statut" prefWidth="130"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
-                                <Label text="â€¢" style="-fx-font-size:36px;"/>
+                                <Label text="✅" style="-fx-font-size:36px;"/>
                                 <Label text="Aucune mission pour aujourd'hui" styleClass="empty-state-title"/>
-                                <Label text="Profitez de cette journÃ©e calme !" styleClass="empty-state-desc"/>
+                                <Label text="Profitez de cette journée calme !" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
                 </VBox>
                 </ScrollPane>
 
-                
+                <!-- PAGE MES MISSIONS -->
                 <ScrollPane fx:id="pageMesMissions" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                 <VBox spacing="20" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
-                            <Label text="Mes Missions" styleClass="page-title-agent"/>
-                            <Label text="GÃ©rez et suivez l'avancement de vos missions" styleClass="page-subtitle"/>
+                            <Label text="Gérer mes missions" styleClass="page-title-agent"/>
+                            <Label text="Actions : démarrer, terminer, filtrer" styleClass="page-subtitle"/>
                         </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <HBox spacing="8" alignment="CENTER_RIGHT">
+                            <Label text="Statut :" styleClass="quick-actions-label-agent"/>
+                            <ComboBox fx:id="filterMissionsStatutCombo" prefWidth="140" prefHeight="36"/>
+                        </HBox>
                     </HBox>
                     <TableView fx:id="tableMesMissions" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
                         <columns>
                             <TableColumn fx:id="colMissionId" text="ID" prefWidth="60"/>
                             <TableColumn fx:id="colMissionZone" text="Zone" prefWidth="110"/>
                             <TableColumn fx:id="colMissionAdresse" text="Adresse" prefWidth="180"/>
-                            <TableColumn fx:id="colMissionType" text="Type dÃ©chet" prefWidth="130"/>
+                            <TableColumn fx:id="colMissionType" text="Type déchet" prefWidth="130"/>
                             <TableColumn fx:id="colMissionDate" text="Date" prefWidth="140"/>
                             <TableColumn fx:id="colMissionStatut" text="Statut" prefWidth="120"/>
                             <TableColumn fx:id="colMissionDistance" text="Distance GPS" prefWidth="110"/>
@@ -223,21 +226,21 @@
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
-                                <Label text="â€¢" style="-fx-font-size:36px;"/>
-                                <Label text="Aucune mission assignÃ©e" styleClass="empty-state-title"/>
-                                <Label text="Vos missions apparaÃ®tront ici" styleClass="empty-state-desc"/>
+                                <Label text="📋" style="-fx-font-size:36px;"/>
+                                <Label text="Aucune mission assignée" styleClass="empty-state-title"/>
+                                <Label text="Vos missions apparaîtront ici" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
                 </VBox>
                 </ScrollPane>
 
-                
+                <!-- PAGE CARTE ZONES -->
                 <VBox fx:id="pageCarteZones" spacing="16" styleClass="page-box" VBox.vgrow="ALWAYS" visible="false" managed="false">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
-                            <Label text="TournÃ©e du jour" styleClass="page-title-agent"/>
-                            <Label text="Visualisez la tournÃ©e optimisÃ©e et votre progression GPS" styleClass="page-subtitle"/>
+                            <Label text="Tournée du jour" styleClass="page-title-agent"/>
+                            <Label text="Visualisez la tournée optimisée et votre progression GPS" styleClass="page-subtitle"/>
                         </VBox>
                     </HBox>
                     <BorderPane VBox.vgrow="ALWAYS">
@@ -247,64 +250,56 @@
                         <right>
                             <VBox spacing="12" prefWidth="260" styleClass="map-detail-panel">
                                 <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
-                                <Label text="DÃ©tails mission" styleClass="map-detail-title"/>
+                                <Label text="Détails mission" styleClass="map-detail-title"/>
                                 <Region styleClass="profile-divider" prefHeight="1"/>
-
                                 <VBox spacing="4">
                                     <Label text="ID" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapMissionIdLabel" text="?" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapMissionIdLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Zone" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapMissionZoneLabel" text="?" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapMissionZoneLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Adresse" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapMissionAdresseLabel" text="?" wrapText="true" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapMissionAdresseLabel" text="-" wrapText="true" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Statut" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapMissionStatutLabel" text="?" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapMissionStatutLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Distance" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapDistanceLabel" text="?" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapDistanceLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
-                                    <Label text="Temps estimÃ©" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapTempsLabel" text="?" styleClass="map-detail-value"/>
-                                </VBox>
-                                <VBox spacing="4">
-                                    <Label text="Position GPS" styleClass="map-detail-label"/>
-                                    <Label fx:id="lblPositionActuelle" text="Localisation..." wrapText="true" styleClass="map-detail-gps"/>
-                                </VBox>
-                                <VBox spacing="4">
-                                    <Label text="URL mobile" styleClass="map-detail-label"/>
-                                    <Label fx:id="qrUrlLabel" text="" wrapText="true" styleClass="map-detail-url"/>
+                                    <Label text="Temps estimé" styleClass="map-detail-label"/>
+                                    <Label fx:id="mapTempsLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Commentaire" styleClass="map-detail-label"/>
-                                    <Label fx:id="mapCommentaireLabel" text="?" wrapText="true" styleClass="map-detail-value"/>
+                                    <Label fx:id="mapCommentaireLabel" text="-" wrapText="true" styleClass="map-detail-value"/>
                                 </VBox>
                                 <Region VBox.vgrow="ALWAYS"/>
-                                <Button text="ItinÃ©raire optimal" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent" maxWidth="Infinity"/>
+                                <Button text="Itinéraire optimal" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent" maxWidth="Infinity"/>
                             </VBox>
                         </right>
                     </BorderPane>
                 </VBox>
 
-                
+                <!-- PAGE HISTORIQUE -->
                 <ScrollPane fx:id="pageHistorique" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                 <VBox spacing="20" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Historique des missions" styleClass="page-title-agent"/>
-                            <Label text="Consultez vos missions passÃ©es par date" styleClass="page-subtitle"/>
+                            <Label text="Consultez vos missions passées par date" styleClass="page-subtitle"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <HBox spacing="10" alignment="CENTER_RIGHT">
                             <DatePicker fx:id="historiqueDatePicker" prefWidth="180" prefHeight="40" styleClass="dash-datepicker"/>
                             <Button text="Filtrer" prefHeight="40" onAction="#handleFiltrerHistorique" styleClass="button-agent"/>
+                            <Button text="Réinitialiser" prefHeight="40" onAction="#handleResetHistorique" styleClass="btn-outline-sm"/>
                         </HBox>
                     </HBox>
                     <TableView fx:id="tableHistorique" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
@@ -312,22 +307,22 @@
                             <TableColumn fx:id="colHistId" text="ID" prefWidth="70"/>
                             <TableColumn fx:id="colHistZone" text="Zone" prefWidth="130"/>
                             <TableColumn fx:id="colHistAdresse" text="Adresse" prefWidth="280"/>
-                            <TableColumn fx:id="colHistType" text="Type dÃ©chet" prefWidth="140"/>
+                            <TableColumn fx:id="colHistType" text="Type déchet" prefWidth="140"/>
                             <TableColumn fx:id="colHistDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colHistStatut" text="Statut" prefWidth="130"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
-                                <Label text="â€¢" style="-fx-font-size:36px;"/>
+                                <Label text="📅" style="-fx-font-size:36px;"/>
                                 <Label text="Aucune mission pour cette date" styleClass="empty-state-title"/>
-                                <Label text="SÃ©lectionnez une autre date" styleClass="empty-state-desc"/>
+                                <Label text="Sélectionnez une autre date" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
                 </VBox>
                 </ScrollPane>
 
-                
+                <!-- PAGE MON PROFIL -->
                 <ScrollPane fx:id="pageMonProfil" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                 <VBox spacing="24" styleClass="page-box" VBox.vgrow="ALWAYS" alignment="TOP_CENTER">
                     <Label text="Mon Profil" styleClass="page-title-agent"/>
@@ -355,8 +350,19 @@
                             <TextField fx:id="profilEmailField" styleClass="dash-field"/>
                         </VBox>
                         <VBox spacing="6">
-                            <Label text="Zone assignÃ©e" styleClass="auth-field-label"/>
+                            <Label text="Zone assignée" styleClass="auth-field-label"/>
                             <TextField fx:id="profilZoneField" styleClass="dash-field" editable="false"/>
+                        </VBox>
+                        <VBox spacing="6">
+                            <Label text="URL GPS mobile" styleClass="auth-field-label"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <Label fx:id="qrUrlLabel" text="" wrapText="true" styleClass="map-detail-url" HBox.hgrow="ALWAYS"/>
+                                <Button text="Copier" onAction="#handleCopierUrlGps" styleClass="btn-outline-sm"/>
+                            </HBox>
+                        </VBox>
+                        <VBox spacing="6" alignment="CENTER">
+                            <Label text="QR Code — scannez depuis votre téléphone" styleClass="auth-field-label"/>
+                            <ImageView fx:id="qrCodeImageView" fitWidth="160" fitHeight="160" preserveRatio="true"/>
                         </VBox>
 
                         <HBox spacing="12">
@@ -372,6 +378,3 @@
     </center>
 
 </BorderPane>
-
-
-

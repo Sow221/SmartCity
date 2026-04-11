@@ -21,7 +21,7 @@ public class PositionAgentService {
     private static final String SERVER_URL = "http://localhost:" + GpsApiServer.PORT;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(3))
+        .connectTimeout(Duration.ofSeconds(1))
         .build();
 
     public static class Position {
@@ -32,9 +32,10 @@ public class PositionAgentService {
 
     public Position getPosition(int agentId) {
         try {
+            String token = GpsApiServer.getOrCreateToken(agentId);
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/api/position?agentId=" + agentId))
-                .timeout(Duration.ofSeconds(3))
+                .uri(URI.create(SERVER_URL + "/api/position?agentId=" + agentId + "&token=" + token))
+                .timeout(Duration.ofSeconds(1))
                 .GET()
                 .build();
             HttpResponse<String> response = HTTP_CLIENT.send(request,
@@ -56,7 +57,8 @@ public class PositionAgentService {
         return GpsApiServer.getLocalIp();
     }
 
+    /** Utilise GpsApiServer.getGpsPageUrl() qui inclut le token de sécurité. */
     public static String getGpsPageUrl(int agentId, String serverIp) {
-        return "http://" + serverIp + ":" + GpsApiServer.PORT + "/gps?agentId=" + agentId;
+        return GpsApiServer.getGpsPageUrl(agentId, serverIp);
     }
 }

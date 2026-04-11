@@ -14,8 +14,6 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -35,9 +33,9 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="14" styleClass="header">
             <padding><Insets left="20" right="20"/></padding>
-            <ImageView fitWidth="30" fitHeight="30" preserveRatio="true" smooth="true">
-                <image><Image url="@../images/EcoTrack.png"/></image>
-            </ImageView>
+            <StackPane styleClass="header-logo-badge" alignment="CENTER">
+                <Label text="SC" styleClass="header-logo-text"/>
+            </StackPane>
             <Label text="SmartCity" styleClass="header-brand"/>
             <Label text="/" styleClass="header-sep"/>
             <Label text="Espace Administrateur" styleClass="header-title"/>
@@ -46,7 +44,7 @@
                 <Label fx:id="adminAvatarLabel" text="A" styleClass="header-avatar-text"/>
             </StackPane>
             <Label fx:id="adminNameLabel" styleClass="header-user" text="Administrateur"/>
-            <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="action-button"/>
+            <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
             <Button text="Déconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
         </HBox>
     </top>
@@ -56,7 +54,7 @@
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
 
             <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnAdminDashboard" text="Dashboard" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowAdminDashboard"/>
+            <Button fx:id="btnAdminDashboard" text="Vue générale" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowAdminDashboard"/>
             <Button fx:id="btnGestionSignalements" text="Signalements" styleClass="sidebar-button" onAction="#handleShowGestionSignalements"/>
 
             <Region prefHeight="8"/>
@@ -72,7 +70,7 @@
             <Region VBox.vgrow="ALWAYS"/>
             <Label text="COMPTE" styleClass="sidebar-section-label"/>
             <Button fx:id="btnAdminProfil" text="Mon profil" styleClass="sidebar-button" onAction="#handleShowAdminProfil"/>
-            <Button fx:id="btnParametres" text="Paramètres" styleClass="sidebar-button" onAction="#handleShowParametres"/>
+            <Button fx:id="btnParametres" text="Parametres" styleClass="sidebar-button" onAction="#handleShowParametres"/>
         </VBox>
     </left>
 
@@ -98,14 +96,16 @@
                                 <Label text="Tableau de bord de l'administration" styleClass="page-subtitle"/>
                             </VBox>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button text="Actualiser" onAction="#chargerDonnees" styleClass="btn-outline-sm"/>
+                            <Button text="Actualiser" onAction="#chargerDonnees" styleClass="btn-outline-sm">
+                                <tooltip><Tooltip text="Raccourci : F5"/></tooltip>
+                            </Button>
                         </HBox>
 
                         <HBox spacing="16">
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="📊" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardTotalSignalements" text="0" styleClass="stat-card-number"/>
@@ -116,7 +116,7 @@
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="⏳" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardEnAttente" text="0" styleClass="stat-card-number"/>
@@ -127,7 +127,7 @@
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="🔄" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardEnCours" text="0" styleClass="stat-card-number"/>
@@ -138,7 +138,7 @@
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="✅" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardCollectes" text="0" styleClass="stat-card-number"/>
@@ -149,7 +149,7 @@
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-teal" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="👥" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardTotalUtilisateurs" text="0" styleClass="stat-card-number"/>
@@ -160,7 +160,7 @@
                             <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                                 <HBox alignment="CENTER_LEFT" spacing="12">
                                     <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
+                                        <Label text="🚨" style="-fx-font-size:18px;"/>
                                     </StackPane>
                                     <VBox spacing="2">
                                         <Label fx:id="adminCardUrgents" text="0" styleClass="stat-card-number"/>
@@ -274,27 +274,33 @@
                             <tooltip><Tooltip text="Exporter les signalements en fichier CSV"/></tooltip>
                         </Button>
                     </HBox>
-                    <HBox spacing="10" styleClass="filter-bar" alignment="CENTER_LEFT">
-                        <Label text="Filtres :" styleClass="filter-bar-label"/>
-                        <ComboBox fx:id="filterZoneCombo" prefWidth="140" prefHeight="40" promptText="Zone" styleClass="dash-combo"/>
-                        <ComboBox fx:id="filterStatutCombo" prefWidth="140" prefHeight="40" promptText="Statut" styleClass="dash-combo"/>
-                        <ComboBox fx:id="filterPrioriteCombo" prefWidth="150" prefHeight="40" promptText="Priorité" styleClass="dash-combo"/>
-                        <ComboBox fx:id="filterAffectationCombo" prefWidth="150" prefHeight="40" promptText="Affectation" styleClass="dash-combo"/>
-                        <ComboBox fx:id="filterCategorieCombo" prefWidth="140" prefHeight="40" promptText="Catégorie" styleClass="dash-combo"/>
-                        <DatePicker fx:id="filterDateDebutPicker" prefWidth="140" prefHeight="40" promptText="Date début"/>
-                        <DatePicker fx:id="filterDateFinPicker" prefWidth="140" prefHeight="40" promptText="Date fin"/>
-                        <Button text="Filtrer" onAction="#handleFiltrerSignalements" styleClass="action-button"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="btnModifierStatutSignalement" text="Modifier statut" onAction="#handleModifierStatutSignalement" styleClass="btn-outline-sm">
-                            <tooltip><Tooltip text="Modifier le statut du signalement sélectionné"/></tooltip>
-                        </Button>
-                        <Button fx:id="btnReaffecterSignalement" text="Réaffecter" onAction="#handleReaffecterSignalement" styleClass="btn-outline-sm">
-                            <tooltip><Tooltip text="Réaffecter ce signalement à un autre agent"/></tooltip>
-                        </Button>
-                        <Button fx:id="btnSupprimerSignalement" text="Supprimer" onAction="#handleSupprimerSignalement" styleClass="danger-button">
-                            <tooltip><Tooltip text="Supprimer le signalement sélectionné"/></tooltip>
-                        </Button>
-                    </HBox>
+                    <VBox spacing="8" styleClass="filter-bar">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Filtres :" styleClass="filter-bar-label"/>
+                            <ComboBox fx:id="filterZoneCombo" prefWidth="130" prefHeight="36" promptText="Zone" styleClass="dash-combo"/>
+                            <ComboBox fx:id="filterStatutCombo" prefWidth="130" prefHeight="36" promptText="Statut" styleClass="dash-combo"/>
+                            <ComboBox fx:id="filterPrioriteCombo" prefWidth="140" prefHeight="36" promptText="Priorité" styleClass="dash-combo"/>
+                            <ComboBox fx:id="filterAffectationCombo" prefWidth="140" prefHeight="36" promptText="Affectation" styleClass="dash-combo"/>
+                            <ComboBox fx:id="filterCategorieCombo" prefWidth="130" prefHeight="36" promptText="Catégorie" styleClass="dash-combo"/>
+                            <DatePicker fx:id="filterDateDebutPicker" prefWidth="130" prefHeight="36" promptText="Date début"/>
+                            <DatePicker fx:id="filterDateFinPicker" prefWidth="130" prefHeight="36" promptText="Date fin"/>
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Button text="🔍 Filtrer" onAction="#handleFiltrerSignalements" styleClass="action-button" prefHeight="36"/>
+                            <Button text="↺ Réinitialiser" onAction="#handleResetFiltresSignalements" styleClass="btn-outline-sm" prefHeight="36"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button fx:id="btnReaffecterSignalement" text="Réaffecter" onAction="#handleReaffecterSignalement" styleClass="btn-outline-sm" prefHeight="36">
+                                <tooltip><Tooltip text="Réaffecter ce signalement à un autre agent"/></tooltip>
+                            </Button>
+                            <Button fx:id="btnModifierStatutSignalement" text="Clôturer" onAction="#handleModifierStatutSignalement" styleClass="btn-outline-sm" prefHeight="36">
+                                <tooltip><Tooltip text="Marquer ce signalement comme Terminé"/></tooltip>
+                            </Button>
+                            <Region prefWidth="12"/>
+                            <Button fx:id="btnSupprimerSignalement" text="Supprimer" onAction="#handleSupprimerSignalement" styleClass="danger-button" prefHeight="36">
+                                <tooltip><Tooltip text="Supprimer le signalement sélectionné"/></tooltip>
+                            </Button>
+                        </HBox>
+                    </VBox>
                     <TableView fx:id="tableSignalements" VBox.vgrow="ALWAYS" styleClass="data-table">
                         <columns>
                             <TableColumn fx:id="colSignalementId" text="ID" prefWidth="55"/>
@@ -304,7 +310,7 @@
                             <TableColumn fx:id="colSignalementDate" text="Date" prefWidth="140"/>
                             <TableColumn fx:id="colSignalementStatut" text="Statut" prefWidth="120"/>
                             <TableColumn fx:id="colSignalementUtilisateur" text="Citoyen" prefWidth="140"/>
-                            <TableColumn fx:id="colSignalementCommentaire" text="Commentaire" prefWidth="180"/>
+                            <TableColumn fx:id="colSignalementCommentaire" text="Agent affecté" prefWidth="180"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
@@ -328,93 +334,57 @@
                             <tooltip><Tooltip text="Exporter les statistiques en fichier CSV"/></tooltip>
                         </Button>
                         </HBox>
-                        <HBox spacing="16">
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardTauxResolution" text="0%" styleClass="stat-card-number"/>
-                                        <Label text="Taux résolution global" styleClass="stat-card-label"/>
-                                    </VBox>
+                        <!-- Ligne 1 KPIs -->
+                        <HBox spacing="12">
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="✓" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardTauxResolution" text="0%" styleClass="stat-card-number"/><Label text="Taux résolution" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardTauxPikine" text="0%" styleClass="stat-card-number"/>
-                                        <Label text="Taux Pikine" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="P" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardTauxPikine" text="0%" styleClass="stat-card-number"/><Label text="Taux Pikine" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardTauxGuediawaye" text="0%" styleClass="stat-card-number"/>
-                                        <Label text="Taux Guédiawaye" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER"><Label text="G" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardTauxGuediawaye" text="0%" styleClass="stat-card-number"/><Label text="Taux Guédiawaye" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardMoyenneJour" text="0" styleClass="stat-card-number"/>
-                                        <Label text="Signalements / jour" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER"><Label text="~" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardMoyenneJour" text="0" styleClass="stat-card-number"/><Label text="Moy. / jour" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardCritiques72h" text="0" styleClass="stat-card-number"/>
-                                        <Label text="Critiques &gt;72h" styleClass="stat-card-label"/>
-                                    </VBox>
+                        </HBox>
+                        <!-- Ligne 2 KPIs -->
+                        <HBox spacing="12">
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-red" alignment="CENTER"><Label text="!" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardCritiques72h" text="0" styleClass="stat-card-number"/><Label text="Critiques &gt;72h" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardNonAssignes" text="0" styleClass="stat-card-number"/>
-                                        <Label text="Non assignés" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="?" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardNonAssignes" text="0" styleClass="stat-card-number"/><Label text="Non assignés" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardAgentsGps" text="0" styleClass="stat-card-number"/>
-                                        <Label text="Agents GPS live" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="📡" style="-fx-font-size:14px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardAgentsGps" text="0" styleClass="stat-card-number"/><Label text="Agents GPS live" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
-                                <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER">
-                                        <Label text="•" style="-fx-font-size:18px;"/>
-                                    </StackPane>
-                                    <VBox spacing="2">
-                                        <Label fx:id="statCardTourneesActives" text="0" styleClass="stat-card-number"/>
-                                        <Label text="Tournées actives" styleClass="stat-card-label"/>
-                                    </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER"><Label text="↻" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardTourneesActives" text="0" styleClass="stat-card-number"/><Label text="Tournées actives" styleClass="stat-card-label"/></VBox>
                                 </HBox>
                             </VBox>
                         </HBox>
@@ -426,8 +396,8 @@
                             <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
                                 <Label text="Signalements par zone et statut" styleClass="chart-card-title"/>
                                 <BarChart fx:id="statBarZone" prefHeight="260">
-                                    <xAxis><CategoryAxis/></xAxis>
-                                    <yAxis><NumberAxis/></yAxis>
+                                    <xAxis><CategoryAxis label="Zone"/></xAxis>
+                                    <yAxis><NumberAxis label="Nombre"/></yAxis>
                                 </BarChart>
                             </VBox>
                         </HBox>
@@ -437,7 +407,7 @@
                         </VBox>
                         <HBox spacing="20">
                             <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                                <Label text="Suivi des tournées en temps réel" styleClass="chart-card-title"/>
+                                <Label text="Supervision terrain — Tournées en temps réelle" styleClass="chart-card-title"/>
                                 <WebView fx:id="agentLiveMapWebView" prefHeight="320"/>
                             </VBox>
                             <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
@@ -451,6 +421,13 @@
                                         <TableColumn fx:id="colLiveAgentPosition" text="Position" prefWidth="150"/>
                                         <TableColumn fx:id="colLiveAgentFraicheur" text="Fraîcheur" prefWidth="90"/>
                                     </columns>
+                                    <placeholder>
+                                        <VBox alignment="CENTER" spacing="8">
+                                            <Label text="📡" style="-fx-font-size:32px;"/>
+                                            <Label text="Aucun agent en ligne" styleClass="empty-state-title"/>
+                                            <Label text="Les agents GPS actifs apparaîtront ici" styleClass="empty-state-desc"/>
+                                        </VBox>
+                                    </placeholder>
                                 </TableView>
                             </VBox>
                         </HBox>
@@ -538,7 +515,7 @@
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Plateforme" styleClass="settings-info-label"/>
-                                    <Label text="JavaFX 17 à Java 11" styleClass="settings-info-value"/>
+                                    <Label text="JavaFX 17 / Java 17" styleClass="settings-info-value"/>
                                 </VBox>
                                 <VBox spacing="4">
                                     <Label text="Région" styleClass="settings-info-label"/>

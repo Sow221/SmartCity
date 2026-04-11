@@ -12,26 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Endpoint WebSocket pour le push temps réel des missions aux agents
+ * Endpoint WebSocket pour le push temps réel des missions aux agents.
  */
 @ServerEndpoint("/ws/agent-missions")
 public class AgentMissionEndpoint {
-    // Méthode utilitaire pour push une mise à jour historique/profil à tous les
-    // agents connectés
-    public static void pushHistoriqueProfil(String type) {
-        String msg = String.format("{\"type\":\"%s\"}", type);
-        for (Session session : sessions) {
-            if (session.isOpen()) {
-                try {
-                    session.getBasicRemote().sendText(msg);
-                } catch (IOException e) {
-                    logger.warn("Erreur WebSocket pushHistoriqueProfil: {}", e.getMessage());
-                }
-            }
-        }
-    }
 
-private static final Logger logger = LoggerFactory.getLogger(AgentMissionEndpoint.class);
+    private static final Logger logger = LoggerFactory.getLogger(AgentMissionEndpoint.class);
     private static final Set<Session> sessions = ConcurrentHashMap.newKeySet();
 
     @OnOpen
@@ -50,26 +36,25 @@ private static final Logger logger = LoggerFactory.getLogger(AgentMissionEndpoin
     public void onMessage(String message, Session session) {
         logger.debug("[WebSocket] Message reçu de {}", session.getId());
         if (message != null && message.contains("gps")) {
-            for (Session s : sessions) {
-                if (s.isOpen()) {
-                    try {
-                        s.getBasicRemote().sendText(message);
-                    } catch (IOException e) {
-                        logger.warn("Erreur WebSocket broadcast GPS: {}", e.getMessage());
-                    }
-                }
-            }
+            broadcast(message);
         }
     }
 
-    // Méthode utilitaire pour push une mission à tous les agents connectés
     public static void pushMission(String missionJson) {
+        broadcast(missionJson);
+    }
+
+    public static void pushHistoriqueProfil(String type) {
+        broadcast(String.format("{\"type\":\"%s\"}", type));
+    }
+
+    private static void broadcast(String message) {
         for (Session session : sessions) {
             if (session.isOpen()) {
                 try {
-                    session.getBasicRemote().sendText(missionJson);
+                    session.getBasicRemote().sendText(message);
                 } catch (IOException e) {
-                    logger.warn("Erreur WebSocket push: {}", e.getMessage());
+                    logger.warn("Erreur WebSocket broadcast: {}", e.getMessage());
                 }
             }
         }

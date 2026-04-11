@@ -146,6 +146,15 @@ public class AgentDashboardController {
         this.mainApp = mainApp;
     }
 
+    public void cleanup() {
+        if (gpsService != null) {
+            gpsService.stopRealTimeTracking();
+        }
+        if (autoRefreshTimeline != null) {
+            autoRefreshTimeline.stop();
+        }
+    }
+
     // colonne GPS distance dans "Mes Missions"
     @FXML
     private TableColumn<Signalement, String> colMissionDistance;
@@ -174,6 +183,8 @@ public class AgentDashboardController {
         }
         if (btnAgentDashboard != null)
             btnAgentDashboard.getStyleClass().add("sidebar-agent-button-active");
+
+        Platform.runLater(this::chargerDonnees);
     }
 
     private void initRealTimeGPS() {
@@ -250,34 +261,35 @@ public class AgentDashboardController {
     @FXML
     public void chargerDonnees() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        if (current == null)
-            return;
+        if (current == null) return;
+        if (agentNameLabel != null) agentNameLabel.setText(current.getNom());
+        int idAgent = current.getIdUser();
 
-        if (agentNameLabel != null)
-            agentNameLabel.setText(current.getNom());
-
-        List<Signalement> missionList = affectationService.getSignalementsByAgent(current.getIdUser());
-        missions.setAll(missionList);
-
-        // Dashboard : toutes les missions actives (En attente + En cours + Affecté)
-        missionsUrgentes.setAll(missionList.stream()
-                .filter(s -> !isTermine(s))
-                .collect(Collectors.toList()));
-
-        refreshCards();
-        refreshTourneeSummary();
-        refreshHistorique();
-        refreshProfil();
-        gpsService.updateMissions(missionList);
-
-        if (!missions.isEmpty() && tableMesMissions.getSelectionModel().getSelectedItem() == null) {
-            tableMesMissions.getSelectionModel().selectFirst();
-        }
-        if (pageCarteZones != null && pageCarteZones.isVisible()) {
-            refreshTourneeMap();
-        } else {
-            refreshMap(tableMesMissions.getSelectionModel().getSelectedItem(), false);
-        }
+        javafx.concurrent.Task<List<Signalement>> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected List<Signalement> call() {
+                return affectationService.getSignalementsByAgent(idAgent);
+            }
+        };
+        task.setOnSucceeded(e -> {
+            List<Signalement> missionList = task.getValue();
+            missions.setAll(missionList);
+            missionsUrgentes.setAll(missionList.stream()
+                    .filter(s -> !isTermine(s)).collect(Collectors.toList()));
+            refreshCards();
+            refreshTourneeSummary();
+            refreshHistorique();
+            refreshProfil();
+            gpsService.updateMissions(missionList);
+            if (!missions.isEmpty() && tableMesMissions.getSelectionModel().getSelectedItem() == null)
+                tableMesMissions.getSelectionModel().selectFirst();
+            if (pageCarteZones != null && pageCarteZones.isVisible())
+                refreshTourneeMap();
+            else
+                refreshMap(tableMesMissions.getSelectionModel().getSelectedItem(), false);
+        });
+        task.setOnFailed(e -> logger.error("Erreur chargement missions agent", task.getException()));
+        Thread t = new Thread(task, "agent-load"); t.setDaemon(true); t.start();
     }
 
     @FXML
@@ -566,7 +578,13 @@ public class AgentDashboardController {
             return;
         profilNomField.setText(current.getNom());
         profilEmailField.setText(current.getEmail());
-        profilZoneField.setText(zoneService.getZoneById(current.getIdZone()).getNomZone());
+        try {
+            com.smartcity.model.Zone zone = zoneService.getZoneById(current.getIdZone());
+            profilZoneField.setText(zone != null ? zone.getNomZone() : "");
+        } catch (Exception e) {
+            logger.warn("Zone introuvable pour l'agent id={}", current.getIdZone());
+            profilZoneField.setText("");
+        }
     }
 
     private void configureDashboardTable() {
@@ -904,7 +922,7 @@ public class AgentDashboardController {
         showPage(pageCarteZones, btnCarteZones);
         showAgentMessage("📍 Cliquez sur la carte pour définir votre position exacte", true);
         // Activer le mode sélection de position dans la carte
-        mapWebView.getEngine().executeScript("activerModePosition && activerModePosition()");
+        mapWebView.getEngine().executeScript("if(typeof activerModePosition==='function')activerModePosition()");
     }
 
     /** Pont JavaScript → Java pour recevoir la position cliquée sur la carte */
@@ -1099,7 +1117,13 @@ public class AgentDashboardController {
 
     private String getAgentZone() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        return current != null ? zoneService.getZoneById(current.getIdZone()).getNomZone() : "Pikine";
+        if (current == null) return "Pikine";
+        try {
+            com.smartcity.model.Zone zone = zoneService.getZoneById(current.getIdZone());
+            return zone != null ? zone.getNomZone() : "Pikine";
+        } catch (Exception e) {
+            return "Pikine";
+        }
     }
 
     private GeolocationService.Coordinates getTourneeStartPoint() {
@@ -1229,5 +1253,10 @@ public class AgentDashboardController {
                 themeToggleButton.setText("Mode Clair");
         } else if (themeToggleButton != null)
             themeToggleButton.setText("Mode Sombre");
+    }
+    @FXML
+    private void handleToggleGps() {
+        // TODO: Implémenter l'activation/désactivation du GPS si besoin
+        showAgentMessage("Fonction GPS à implémenter.", false);
     }
 }

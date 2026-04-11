@@ -52,6 +52,13 @@
  * 3. HEADER
  * ============================================================================ */
 
+.header-citizen {
+    -fx-background-color: #0f766e;
+    -fx-pref-height: 62px;
+    -fx-padding: 0 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 10, 0, 0, 3);
+}
+
 .header {
     -fx-background-color: #14532d;
     -fx-pref-height: 62px;
@@ -114,25 +121,16 @@
 
 /* Label de section sidebar */
 .sidebar-section-label {
-    -fx-font-size: 12px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-text-fill: rgba(255,255,255,0.45);
     -fx-padding: 8 0 4 8;
-    -fx-letter-spacing: 0.5px;
 }
 
 .sidebar-section-label-agent {
-    -fx-font-size: 12px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-text-fill: rgba(255,255,255,0.45);
-    -fx-padding: 8 0 4 8;
-    -fx-letter-spacing: 0.5px;
-}
-
-.sidebar-section-label-agent {
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-text-fill: rgba(255,255,255,0.35);
     -fx-padding: 8 0 4 8;
 }
 
@@ -511,9 +509,35 @@
     -fx-padding: 10px;
 }
 
+/* Force legend text visibility on all platforms */
+.chart-legend-item {
+    -fx-text-fill: #374151;
+    -fx-font-size: 12px;
+}
+
+.chart-legend-item-symbol {
+    -fx-background-radius: 4px;
+    -fx-pref-width: 12px;
+    -fx-pref-height: 12px;
+}
+
 .chart-pie-label {
     -fx-font-size: 12px;
-    -fx-fill: #4B5563;
+    -fx-fill: #374151;
+    -fx-font-weight: 600;
+}
+
+.chart-pie-label-line {
+    -fx-stroke: #94a3b8;
+}
+
+/* Dark mode legend */
+.app-root.dark-mode .chart-legend-item {
+    -fx-text-fill: #D1D5DB;
+}
+
+.app-root.dark-mode .chart-pie-label {
+    -fx-fill: #D1D5DB;
 }
 
 /* ============================================================================
@@ -589,23 +613,39 @@
 
 /* ── Logo double anneau ──────────────────────────────────────────────────── */
 .auth-logo-ring-outer {
-    -fx-background-color: rgba(255,255,255,0.12);
+    -fx-background-color: rgba(255,255,255,0.10);
     -fx-background-radius: 70px;
     -fx-pref-width: 140px;
     -fx-pref-height: 140px;
-    -fx-border-color: rgba(255,255,255,0.20);
+    -fx-border-color: rgba(255,255,255,0.18);
     -fx-border-radius: 70px;
     -fx-border-width: 1.5px;
 }
 .auth-logo-ring-inner {
-    -fx-background-color: rgba(255,255,255,0.18);
+    -fx-background-color: rgba(255,255,255,0.15);
     -fx-background-radius: 56px;
     -fx-pref-width: 112px;
     -fx-pref-height: 112px;
-    -fx-border-color: rgba(255,255,255,0.30);
+    -fx-border-color: rgba(255,255,255,0.28);
     -fx-border-radius: 56px;
     -fx-border-width: 1.5px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.30), 24, 0, 0, 8);
+}
+
+/* ── Monogramme SC (logo CSS pur) ────────────────────────────────────────── */
+.auth-logo-monogram {
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI", system-ui, sans-serif;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 4, 0, 0, 2);
+}
+.auth-logo-wordmark {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,255,255,0.65);
+    -fx-font-family: "Segoe UI", system-ui, sans-serif;
+    -fx-letter-spacing: 3px;
 }
 
 /* ── Textes branding ─────────────────────────────────────────────────────── */
@@ -638,6 +678,11 @@
     -fx-border-color: rgba(255,255,255,0.18);
     -fx-border-radius: 10px;
     -fx-border-width: 1px;
+}
+.auth-feature-icon {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,255,255,0.90);
 }
 .auth-feature-title {
     -fx-font-size: 13px;
@@ -825,6 +870,130 @@
 .auth-footer { -fx-font-size: 12px; -fx-text-fill: #9CA3AF; }
 .auth-subtitle { -fx-font-size: 16px; -fx-text-fill: #4B5563; }
 
+/* ── Logo monogramme dans les headers ───────────────────────────────────── */
+.header-logo-badge {
+    -fx-background-color: rgba(255,255,255,0.18);
+    -fx-background-radius: 8px;
+    -fx-pref-width: 34px;
+    -fx-pref-height: 34px;
+    -fx-min-width: 34px;
+    -fx-border-color: rgba(255,255,255,0.28);
+    -fx-border-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 6, 0, 0, 2);
+}
+.header-logo-badge-agent {
+    -fx-background-color: rgba(255,255,255,0.15);
+}
+.header-logo-badge-citizen {
+    -fx-background-color: rgba(255,255,255,0.15);
+}
+.header-logo-text {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* ── Icones lettres dans stat cards ─────────────────────────────────────── */
+.stat-icon-letter {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748b;
+}
+
+/* ── Zone dangereuse profil citoyen ─────────────────────────────────────── */
+.danger-zone-section {
+    -fx-background-color: #fef2f2;
+    -fx-background-radius: 10px;
+    -fx-border-color: #fecaca;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 16px;
+}
+.danger-zone-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #dc2626;
+}
+.danger-zone-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7f1d1d;
+}
+
+/* ── Panneau GPS signalement citoyen ─────────────────────────────────────── */
+.gps-panel-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 10, 0, 0, 3);
+}
+.gps-panel-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+.gps-panel-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: #64748b;
+}
+.gps-panel-status {
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #1e293b;
+}
+.gps-panel-url {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94a3b8;
+}
+.gps-panel-fallback {
+    -fx-font-size: 11px;
+    -fx-text-fill: #b45309;
+    -fx-background-color: #fffbeb;
+    -fx-background-radius: 6px;
+    -fx-padding: 6px 10px;
+}
+.gps-received-box {
+    -fx-background-color: #f0fdf4;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px 16px;
+}
+.gps-received-icon {
+    -fx-font-size: 16px;
+    -fx-text-fill: #16a34a;
+    -fx-font-weight: bold;
+}
+
+/* ── Toggle password bouton ─────────────────────────────────────────────── */
+.auth-toggle-pwd-btn {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 0 14 0 0;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #94a3b8;
+    -fx-border-color: transparent;
+}
+.auth-toggle-pwd-btn:hover {
+    -fx-text-fill: #16a34a;
+}
+
+/* ── Indicateur sécurité ─────────────────────────────────────────────────── */
+.auth-security-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-style: italic;
+}
+
+/* ── Label erreur champ ──────────────────────────────────────────────────── */
+.auth-field-error-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #dc2626;
+    -fx-padding: 4 0 0 2;
+}
+
 /* Ajout des classes CSS manquantes */
 .auth-field-error {
     -fx-border-color: #dc2626 !important;
@@ -977,6 +1146,62 @@
 
 .app-root.dark-mode .form-label {
     -fx-text-fill: #D1D5DB;
+}
+
+/* Dark mode — stat-card, chart-card, tables agent, profil */
+.app-root.dark-mode .stat-card,
+.app-root.dark-mode .stat-card-agent {
+    -fx-background-color: #252538;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .stat-card-number,
+.app-root.dark-mode .stat-card-number-agent {
+    -fx-text-fill: #e2e8f0;
+}
+.app-root.dark-mode .stat-card-label { -fx-text-fill: #94a3b8; }
+.app-root.dark-mode .chart-card {
+    -fx-background-color: #252538;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .chart-card-title { -fx-text-fill: #e2e8f0; }
+.app-root.dark-mode .page-subtitle { -fx-text-fill: #94a3b8; }
+.app-root.dark-mode .profile-card {
+    -fx-background-color: #252538;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .profile-name-display { -fx-text-fill: #f1f5f9; }
+.app-root.dark-mode .settings-section {
+    -fx-background-color: #252538;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .settings-section-title { -fx-text-fill: #e2e8f0; }
+.app-root.dark-mode .settings-info-value { -fx-text-fill: #d1d5db; }
+.app-root.dark-mode .filter-bar {
+    -fx-background-color: #1e1e2e;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .data-table-agent {
+    -fx-background-color: #1e1e2e;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .data-table-agent .column-header-background { -fx-background-color: #252538; }
+.app-root.dark-mode .data-table-agent .column-header { -fx-text-fill: #93c5fd; }
+.app-root.dark-mode .data-table-agent .table-row-cell { -fx-background-color: #1e1e2e; }
+.app-root.dark-mode .data-table-agent .table-row-cell:odd { -fx-background-color: #252538; }
+.app-root.dark-mode .data-table-agent .table-row-cell:selected { -fx-background-color: #1e3a5f; }
+.app-root.dark-mode .data-table-agent .table-cell { -fx-text-fill: #d1d5db; }
+.app-root.dark-mode .quick-actions-bar-agent {
+    -fx-background-color: #1e2a3a;
+    -fx-border-color: #2d4a6e;
+}
+.app-root.dark-mode .map-detail-panel {
+    -fx-background-color: #1e1e2e;
+    -fx-border-color: #3d3d52;
+}
+.app-root.dark-mode .map-detail-value { -fx-text-fill: #d1d5db; }
+.app-root.dark-mode .cta-card {
+    -fx-background-color: #1a2e1a;
+    -fx-border-color: #2d4a2d;
 }
 
 /* ============================================================================
@@ -1897,6 +2122,19 @@
     -fx-background-color: rgba(0,0,0,0.35);
 }
 
+/* Scrollbar track visible */
+.scroll-pane .scroll-bar:vertical .track,
+.scroll-pane .scroll-bar:horizontal .track {
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 4px;
+}
+.scroll-pane .scroll-bar:vertical {
+    -fx-pref-width: 10px;
+}
+.scroll-pane .scroll-bar:horizontal {
+    -fx-pref-height: 10px;
+}
+
 /* Hide scroll bar arrows */
 .scroll-pane .scroll-bar .increment-button,
 .scroll-pane .scroll-bar .decrement-button {
@@ -2286,4 +2524,96 @@
 .toast-exit {
     -fx-translate-y: -10;
     -fx-opacity: 0;
+}
+
+/* ============================================================================
+ * 19. REPORTS KPI CARDS (v2.1) — ajout sans conflit
+ * ============================================================================ */
+
+.rpt-kpi-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-padding: 12px 16px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 8, 0, 0, 2);
+    -fx-min-width: 140px;
+}
+
+.rpt-kpi-card-alert {
+    -fx-border-color: #fecaca;
+    -fx-background-color: #fff8f8;
+}
+
+.rpt-kpi-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #94a3b8;
+    -fx-letter-spacing: 0.5px;
+}
+
+.rpt-kpi-value {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+
+.rpt-kpi-value-sm {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+
+.rpt-kpi-sub {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* Deltas */
+.rpt-kpi-delta-up {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #16a34a;
+    -fx-background-color: #f0fdf4;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px 7px;
+}
+
+.rpt-kpi-delta-down {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #dc2626;
+    -fx-background-color: #fef2f2;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px 7px;
+}
+
+.rpt-kpi-delta-neutral {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748b;
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px 7px;
+}
+
+.rpt-kpi-delta-warn {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #d97706;
+    -fx-background-color: #fffbeb;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px 7px;
+}
+
+/* Chart cards dans reports */
+.rpt-chart-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-padding: 14px 16px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 8, 0, 0, 2);
 }

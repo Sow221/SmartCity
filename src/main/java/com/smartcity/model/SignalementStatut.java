@@ -9,6 +9,23 @@ public enum SignalementStatut {
     EN_COURS("En cours", "En cours"),
     TERMINE("Termine", "Termin\u00e9");
 
+    /** Cat\u00e9gories de d\u00e9chets centralis\u00e9es. */
+    public static final java.util.List<String> CATEGORIES = java.util.List.of(
+        "Plastique", "Papier", "Verre", "M\u00e9tal", "Organique", "Autre"
+    );
+
+    /** Retourne la couleur CSS associ\u00e9e \u00e0 un statut (pour les TableCell). */
+    public static String couleur(String statut) {
+        SignalementStatut s = fromAny(statut);
+        if (s == null) return "#F57C00";
+        return switch (s) {
+            case EN_COURS  -> "#1565C0";
+            case TERMINE   -> "#2E7D32";
+            case AFFECTE   -> "#7B1FA2";
+            default        -> "#F57C00";
+        };
+    }
+
     private final String dbValue;
     private final String label;
 

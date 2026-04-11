@@ -24,7 +24,7 @@ public class SessionManager {
     
     // Configuration de sécurité
     private static final int SESSION_TIMEOUT_MINUTES = 480;
-    private static final int MAX_INACTIVE_MINUTES = 30; // SEC-08: réduit de 120 à 30 min
+    private static final int MAX_INACTIVE_MINUTES = 120; // Présentation : 2h d'inactivité max
     
     // Service de nettoyage automatique
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, r -> {

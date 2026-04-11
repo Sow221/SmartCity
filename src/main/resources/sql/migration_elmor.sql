@@ -46,6 +46,8 @@ UPDATE Signalement SET idZone = (SELECT idZone FROM Zone WHERE nomZone = Signale
 -- Remove old zone column
 ALTER TABLE Signalement DROP COLUMN zone;
 
+-- ⚠️  ATTENTION : Ce script supprime la table 'dechet' si elle existe.
+-- Sauvegardez vos données avant d'exécuter ce script.
 -- Drop dechet table
 DROP TABLE IF EXISTS dechet;
 

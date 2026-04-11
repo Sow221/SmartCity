@@ -15,9 +15,115 @@ import java.util.List;
 public class SuiviService {
 
     private static final Logger logger = LoggerFactory.getLogger(SuiviService.class);
+    private static volatile boolean schemaReady = false;
 
     private Connection getConn() throws SQLException {
         return DatabaseConnection.getConnection();
+    }
+
+    private void ensureSchema() {
+        if (schemaReady) return;
+        synchronized (SuiviService.class) {
+            if (schemaReady) return;
+            try (Connection conn = getConn();
+                 Statement st = conn.createStatement()) {
+                st.execute("""
+                    CREATE TABLE IF NOT EXISTS HistoriqueStatut (
+                        idHistorique INT AUTO_INCREMENT PRIMARY KEY,
+                        idSignalement INT NOT NULL,
+                        ancienStatut VARCHAR(50),
+                        nouveauStatut VARCHAR(50) NOT NULL,
+                        idAuteur INT NULL,
+                        dateChangement DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        commentaire TEXT NULL,
+                        FOREIGN KEY (idSignalement) REFERENCES Signalement(idSignalement) ON DELETE CASCADE,
+                        FOREIGN KEY (idAuteur) REFERENCES Utilisateur(idUser) ON DELETE SET NULL,
+                        INDEX idx_hist_sig (idSignalement),
+                        INDEX idx_hist_date (dateChangement)
+                    )
+                    """);
+                st.execute("""
+                    CREATE TABLE IF NOT EXISTS EvaluationCollecte (
+                        idEvaluation INT AUTO_INCREMENT PRIMARY KEY,
+                        idSignalement INT NOT NULL UNIQUE,
+                        idCitoyen INT NOT NULL,
+                        note TINYINT NOT NULL CHECK (note BETWEEN 1 AND 5),
+                        commentaire TEXT NULL,
+                        dateEvaluation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (idSignalement) REFERENCES Signalement(idSignalement) ON DELETE CASCADE,
+                        FOREIGN KEY (idCitoyen) REFERENCES Utilisateur(idUser) ON DELETE CASCADE
+                    )
+                    """);
+                // Créer les vues seulement si elles n'existent pas encore
+                if (!viewExists(conn, "vue_suivi_signalement")) {
+                    st.execute("""
+                        CREATE VIEW vue_suivi_signalement AS
+                        SELECT
+                            s.idSignalement,
+                            s.description,
+                            s.categorie,
+                            s.statut,
+                            s.dateSignalement,
+                            z.nomZone,
+                            u_citoyen.nom AS nomCitoyen,
+                            u_citoyen.email AS emailCitoyen,
+                            u_agent.nom AS nomAgent,
+                            a.dateAffectation,
+                            a.dateCollecte,
+                            TIMESTAMPDIFF(HOUR, s.dateSignalement, IFNULL(a.dateCollecte, NOW())) AS heuresEcoules,
+                            CASE
+                                WHEN s.statut = 'Termine' AND a.dateCollecte IS NOT NULL
+                                    THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)
+                                ELSE NULL
+                            END AS heuresResolution,
+                            e.note AS noteEvaluation,
+                            e.commentaire AS commentaireEvaluation
+                        FROM Signalement s
+                        LEFT JOIN Zone z ON s.idZone = z.idZone
+                        LEFT JOIN Utilisateur u_citoyen ON s.idUser = u_citoyen.idUser
+                        LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
+                        LEFT JOIN Utilisateur u_agent ON a.idAgent = u_agent.idUser
+                        LEFT JOIN EvaluationCollecte e ON s.idSignalement = e.idSignalement
+                        """);
+                }
+                if (!viewExists(conn, "vue_kpi_zone")) {
+                    st.execute("""
+                        CREATE VIEW vue_kpi_zone AS
+                        SELECT
+                            z.nomZone,
+                            COUNT(s.idSignalement) AS total,
+                            SUM(s.statut = 'En attente') AS enAttente,
+                            SUM(s.statut IN ('En cours','Affecte')) AS enCours,
+                            SUM(s.statut = 'Termine') AS termines,
+                            ROUND(SUM(s.statut = 'Termine') * 100.0 / NULLIF(COUNT(*), 0), 1) AS tauxResolution,
+                            ROUND(AVG(CASE WHEN s.statut = 'Termine' AND a.dateCollecte IS NOT NULL
+                                      THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte) END), 1) AS tempsResolutionMoyenH,
+                            SUM(s.statut = 'En attente' AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS urgents
+                        FROM Signalement s
+                        LEFT JOIN Zone z ON s.idZone = z.idZone
+                        LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
+                        GROUP BY z.idZone, z.nomZone
+                        """);
+                }
+                schemaReady = true;
+            } catch (SQLException e) {
+                logger.warn("Schéma Suivi incomplet: {}", e.getMessage());
+                // Ne pas marquer schemaReady=true : on retentera au prochain appel
+            }
+        }
+    }
+
+    private boolean viewExists(Connection conn, String viewName) {
+        String sql = "SELECT COUNT(*) FROM information_schema.VIEWS "
+            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, viewName);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     // ============================================================
@@ -25,6 +131,7 @@ public class SuiviService {
     // ============================================================
 
     public List<HistoriqueEntry> getHistoriqueBySignalement(int idSignalement) {
+        ensureSchema();
         List<HistoriqueEntry> list = new ArrayList<>();
         String query = "SELECT h.*, u.nom AS nomAuteur FROM HistoriqueStatut h "
             + "LEFT JOIN Utilisateur u ON h.idAuteur = u.idUser "
@@ -55,6 +162,7 @@ public class SuiviService {
     /** Enregistre manuellement un changement (pour les cas hors trigger). */
     public void enregistrerChangement(int idSignalement, String ancienStatut,
                                       String nouveauStatut, Integer idAuteur, String commentaire) {
+        ensureSchema();
         String query = "INSERT INTO HistoriqueStatut "
             + "(idSignalement, ancienStatut, nouveauStatut, idAuteur, commentaire) "
             + "VALUES (?, ?, ?, ?, ?)";
@@ -76,6 +184,7 @@ public class SuiviService {
     // ============================================================
 
     public boolean ajouterEvaluation(int idSignalement, int idCitoyen, int note, String commentaire) {
+        ensureSchema();
         if (note < 1 || note > 5) return false;
         String query = "INSERT INTO EvaluationCollecte (idSignalement, idCitoyen, note, commentaire) "
             + "VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE note=VALUES(note), commentaire=VALUES(commentaire)";
@@ -93,6 +202,7 @@ public class SuiviService {
     }
 
     public EvaluationEntry getEvaluationBySignalement(int idSignalement) {
+        ensureSchema();
         String query = "SELECT * FROM EvaluationCollecte WHERE idSignalement = ?";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(query)) {
@@ -115,6 +225,7 @@ public class SuiviService {
     }
 
     public double getNoteMoyenneGlobale() {
+        ensureSchema();
         String query = "SELECT AVG(note) FROM EvaluationCollecte";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(query);
@@ -127,6 +238,7 @@ public class SuiviService {
     }
 
     public double getNoteMoyenneParZone(String nomZone) {
+        ensureSchema();
         String query = "SELECT AVG(e.note) FROM EvaluationCollecte e "
             + "JOIN Signalement s ON e.idSignalement = s.idSignalement "
             + "JOIN Zone z ON s.idZone = z.idZone WHERE z.nomZone = ?";
@@ -147,6 +259,7 @@ public class SuiviService {
     // ============================================================
 
     public List<KpiZone> getKpiParZone() {
+        ensureSchema();
         List<KpiZone> list = new ArrayList<>();
         String query = "SELECT * FROM vue_kpi_zone ORDER BY total DESC";
         try (Connection conn = getConn();
@@ -172,6 +285,7 @@ public class SuiviService {
 
     /** Suivi complet d'un signalement pour la vue citoyen. */
     public SuiviSignalement getSuiviComplet(int idSignalement) {
+        ensureSchema();
         String query = "SELECT * FROM vue_suivi_signalement WHERE idSignalement = ?";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(query)) {

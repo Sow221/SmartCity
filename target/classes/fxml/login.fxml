@@ -6,8 +6,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
@@ -29,7 +28,7 @@
         <!-- Fond dégradé -->
         <VBox styleClass="auth-brand-panel" alignment="CENTER" spacing="0"/>
 
-        <!-- Cercles décoratifs flous -->
+        <!-- Cercles décoratifs -->
         <StackPane styleClass="auth-deco-circle-1" alignment="CENTER"/>
         <StackPane styleClass="auth-deco-circle-2" alignment="CENTER"/>
         <StackPane styleClass="auth-deco-circle-3" alignment="CENTER"/>
@@ -40,32 +39,34 @@
             <VBox alignment="CENTER" spacing="20" VBox.vgrow="ALWAYS">
                 <padding><Insets top="64" right="44" bottom="0" left="44"/></padding>
 
-                <!-- Logo double cercle -->
-                <StackPane alignment="CENTER">
+                <!-- ── Logo monogramme SC (CSS pur, sans image) ── -->
+                <StackPane fx:id="logoPane" alignment="CENTER">
                     <StackPane styleClass="auth-logo-ring-outer" alignment="CENTER">
                         <StackPane styleClass="auth-logo-ring-inner" alignment="CENTER">
-                            <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
-                                <image><Image url="@../images/EcoTrack.png"/></image>
-                            </ImageView>
+                            <!-- Monogramme SC -->
+                            <VBox alignment="CENTER" spacing="-4">
+                                <Label text="SC" styleClass="auth-logo-monogram"/>
+                                <Label text="SMART" styleClass="auth-logo-wordmark"/>
+                            </VBox>
                         </StackPane>
                     </StackPane>
                 </StackPane>
 
                 <!-- Nom + tagline -->
-                <VBox alignment="CENTER" spacing="6">
+                <VBox fx:id="brandTitleBox" alignment="CENTER" spacing="6">
                     <Label text="SmartCity" styleClass="auth-brand-title"/>
                     <Label text="Gestion intelligente des déchets" styleClass="auth-brand-subtitle"/>
                 </VBox>
 
                 <!-- Divider -->
-                <StackPane prefHeight="1" maxWidth="48" styleClass="auth-brand-divider"/>
+                <StackPane fx:id="brandDivider" prefHeight="1" maxWidth="48" styleClass="auth-brand-divider"/>
 
-                <!-- Features -->
+                <!-- Features — icônes Unicode universelles -->
                 <VBox spacing="16" alignment="CENTER_LEFT" maxWidth="270">
 
-                    <HBox spacing="14" alignment="CENTER_LEFT">
+                    <HBox fx:id="feature1" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="🗺" style="-fx-font-size:15px;"/>
+                            <Label text="+" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Carte interactive" styleClass="auth-feature-title"/>
@@ -73,9 +74,9 @@
                         </VBox>
                     </HBox>
 
-                    <HBox spacing="14" alignment="CENTER_LEFT">
+                    <HBox fx:id="feature2" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="📊" style="-fx-font-size:15px;"/>
+                            <Label text="#" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Statistiques &amp; rapports" styleClass="auth-feature-title"/>
@@ -83,9 +84,9 @@
                         </VBox>
                     </HBox>
 
-                    <HBox spacing="14" alignment="CENTER_LEFT">
+                    <HBox fx:id="feature3" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="🔒" style="-fx-font-size:15px;"/>
+                            <Label text="*" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Accès sécurisé par rôle" styleClass="auth-feature-title"/>
@@ -97,7 +98,7 @@
             </VBox>
 
             <!-- Footer -->
-            <VBox alignment="CENTER">
+            <VBox fx:id="brandFooter" alignment="CENTER">
                 <padding><Insets top="0" bottom="28"/></padding>
                 <Label text="© 2026 SmartCity — Pikine &amp; Guédiawaye, Sénégal" styleClass="auth-brand-footer"/>
             </VBox>
@@ -114,61 +115,68 @@
             <padding><Insets left="40" right="40"/></padding>
 
             <!-- En-tête formulaire -->
-            <Label text="Bon retour 👋" styleClass="auth-form-title"/>
+            <Label fx:id="formTitle" text="Connexion à votre espace" styleClass="auth-form-title"/>
             <Region prefHeight="8"/>
-            <Label text="Connectez-vous à votre espace SmartCity" styleClass="auth-form-subtitle"/>
+            <Label fx:id="formSubtitle" text="Entrez vos identifiants pour accéder à SmartCity" styleClass="auth-form-subtitle"/>
             <Region prefHeight="32"/>
 
             <!-- Champ Email -->
-            <Label text="Adresse email" styleClass="auth-field-label"/>
-            <Region prefHeight="8"/>
-            <TextField fx:id="emailField"
-                       promptText="exemple@email.com"
-                       maxWidth="Infinity" prefHeight="50"
-                       styleClass="auth-field"/>
-            <Label fx:id="emailErrorLabel" text="" styleClass="auth-field-error"
-                   visible="false" managed="false"/>
-            <Region prefHeight="8"/>
-
-            <!-- Champ Mot de passe -->
-            <HBox alignment="CENTER_LEFT">
-                <Label text="Mot de passe" styleClass="auth-field-label" HBox.hgrow="ALWAYS"/>
-                <Hyperlink fx:id="forgotPasswordLink" text="Oublié ?" styleClass="auth-link-forgot"/>
-            </HBox>
-            <Region prefHeight="8"/>
-            <PasswordField fx:id="motPasseField"
-                           promptText="••••••••"
+            <VBox fx:id="emailGroup" spacing="0">
+                <Label text="Adresse email" styleClass="auth-field-label"/>
+                <Region prefHeight="8"/>
+                <TextField fx:id="emailField"
+                           promptText="exemple@email.com"
                            maxWidth="Infinity" prefHeight="50"
                            styleClass="auth-field"/>
-            <Label fx:id="passwordErrorLabel" text="" styleClass="auth-field-error"
-                   visible="false" managed="false"/>
+                <Label fx:id="emailErrorLabel" text="" styleClass="auth-field-error-label"
+                       visible="false" managed="false"/>
+            </VBox>
             <Region prefHeight="16"/>
+
+            <!-- Champ Mot de passe -->
+            <VBox fx:id="passwordGroup" spacing="0">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="Mot de passe" styleClass="auth-field-label" HBox.hgrow="ALWAYS"/>
+                    <Hyperlink fx:id="forgotPasswordLink" text="Mot de passe oublié ?" styleClass="auth-link-forgot"/>
+                </HBox>
+                <Region prefHeight="8"/>
+                <StackPane>
+                    <PasswordField fx:id="motPasseField"
+                                   promptText="••••••••"
+                                   maxWidth="Infinity" prefHeight="50"
+                                   styleClass="auth-field"/>
+                    <TextField fx:id="motPasseVisible"
+                               promptText="••••••••"
+                               maxWidth="Infinity" prefHeight="50"
+                               styleClass="auth-field"
+                               visible="false" managed="false"/>
+                    <Button fx:id="togglePasswordBtn" text="o"
+                            StackPane.alignment="CENTER_RIGHT"
+                            styleClass="auth-toggle-pwd-btn"
+                            onAction="#handleTogglePassword">
+                        <tooltip><Tooltip text="Afficher / masquer le mot de passe"/></tooltip>
+                    </Button>
+                </StackPane>
+                <Label fx:id="passwordErrorLabel" text="" styleClass="auth-field-error-label"
+                       visible="false" managed="false"/>
+            </VBox>
+            <Region prefHeight="24"/>
 
             <!-- Bouton principal -->
             <Button fx:id="connexionButton"
-                    text="SE CONNECTER"
+                    text="Se connecter"
                     maxWidth="Infinity" prefHeight="50"
                     onAction="#handleConnexion"
                     styleClass="auth-submit-btn"/>
 
-            <Region prefHeight="24"/>
-
-            <!-- Séparateur -->
-            <HBox alignment="CENTER" spacing="12">
-                <Region HBox.hgrow="ALWAYS" styleClass="auth-sep-line" prefHeight="1"/>
-                <Label text="ou" styleClass="auth-sep-label"/>
-                <Region HBox.hgrow="ALWAYS" styleClass="auth-sep-line" prefHeight="1"/>
-            </HBox>
-
             <Region prefHeight="20"/>
 
-            <!-- Lien inscription -->
-            <HBox alignment="CENTER" spacing="5">
-                <Label text="Pas encore de compte ?" styleClass="auth-hint-label"/>
-                <Hyperlink fx:id="createAccountLink" text="Créer un compte →" styleClass="auth-link-accent"/>
+            <!-- Indicateur sécurité -->
+            <HBox alignment="CENTER" spacing="6">
+                <Label text="Connexion chiffree et securisee" styleClass="auth-security-hint"/>
             </HBox>
 
-            <Region prefHeight="20"/>
+            <Region prefHeight="16"/>
 
             <!-- Message statut -->
             <Label fx:id="statusMessageLabel" text="" wrapText="true"

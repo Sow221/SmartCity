@@ -312,6 +312,36 @@ public class SignalementService {
         return countSimple(query);
     }
 
+    /** Signalements crees aujourd'hui */
+    public int countAujourdhui() {
+        return countSimple("SELECT COUNT(*) FROM Signalement WHERE DATE(dateSignalement) = CURDATE()");
+    }
+
+    /** Delta : signalements cette semaine vs semaine precedente */
+    public int countDeltaSemaine() {
+        int semaineCourante = countSimple(
+            "SELECT COUNT(*) FROM Signalement WHERE dateSignalement >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)");
+        int semainePrecedente = countSimple(
+            "SELECT COUNT(*) FROM Signalement WHERE dateSignalement >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) "
+            + "AND dateSignalement < DATE_SUB(CURDATE(), INTERVAL 7 DAY)");
+        return semaineCourante - semainePrecedente;
+    }
+
+    /** Temps moyen de resolution en heures (signalements termines uniquement) */
+    public double getTempsResolutionMoyenH() {
+        String query = "SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)) "
+            + "FROM Signalement s JOIN Affectation a ON s.idSignalement = a.idSignalement "
+            + "WHERE s.statut = 'Termine' AND a.dateCollecte IS NOT NULL";
+        try (Connection conn = getConn();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getDouble(1) : 0.0;
+        } catch (SQLException e) {
+            logger.error("Erreur getTempsResolutionMoyenH", e);
+            return 0.0;
+        }
+    }
+
     public int countByUtilisateur(int idUser) {
         return countSimple("SELECT COUNT(*) FROM Signalement WHERE idUser = ?", idUser);
     }
@@ -326,16 +356,16 @@ public class SignalementService {
         return countSimple(
             "SELECT COUNT(*) FROM Affectation a "
             + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-            + "WHERE a.idAgent = ? AND s.statut NOT IN ('Termine', 'Termin\u00e9')",
-            idAgent);
+            + "WHERE a.idAgent = ? AND s.statut != ?",
+            idAgent, SignalementStatut.TERMINE.dbValue());
     }
 
     public int countTraitesByAgent(int idAgent) {
         return countSimple(
-                "SELECT COUNT(*) FROM Affectation a "
-                + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-                + "WHERE a.idAgent = ? AND s.statut IN ('Termine', 'Termin\u00e9')",
-                idAgent);
+            "SELECT COUNT(*) FROM Affectation a "
+            + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
+            + "WHERE a.idAgent = ? AND s.statut = ?",
+            idAgent, SignalementStatut.TERMINE.dbValue());
     }
 
     // Méthode utilitaire pour compter

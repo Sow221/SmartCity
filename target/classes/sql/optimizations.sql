@@ -66,13 +66,12 @@ SELECT
     z.nomZone,
     COUNT(s.idSignalement) as totalSignalements,
     SUM(CASE WHEN s.statut = 'En attente' THEN 1 ELSE 0 END) as enAttente,
-    SUM(CASE WHEN s.statut = 'En cours' THEN 1 ELSE 0 END) as enCours,
-    SUM(CASE WHEN s.statut = 'Termine' THEN 1 ELSE 0 END) as termines,
+    SUM(CASE WHEN s.statut IN ('En cours','Affecte','Affect\u00e9') THEN 1 ELSE 0 END) as enCours,
+    SUM(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN 1 ELSE 0 END) as termines,
     COUNT(DISTINCT s.idUser) as utilisateursActifs,
-    -- Pourcentage de résolution
     CASE 
         WHEN COUNT(s.idSignalement) > 0 
-        THEN ROUND((SUM(CASE WHEN s.statut = 'Termine' THEN 1 ELSE 0 END) * 100.0 / COUNT(s.idSignalement)), 2)
+        THEN ROUND((SUM(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN 1 ELSE 0 END) * 100.0 / COUNT(s.idSignalement)), 2)
         ELSE 0 
     END as tauxResolution
 FROM Zone z
@@ -87,17 +86,16 @@ SELECT
     u.email,
     z.nomZone as zoneAssignee,
     COUNT(a.idAffectation) as missionsTotal,
-    SUM(CASE WHEN s.statut = 'Termine' THEN 1 ELSE 0 END) as missionsTerminees,
+    SUM(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN 1 ELSE 0 END) as missionsTerminees,
     SUM(CASE WHEN s.statut = 'En cours' THEN 1 ELSE 0 END) as missionsEnCours,
     CASE 
         WHEN COUNT(a.idAffectation) > 0 
-        THEN ROUND((SUM(CASE WHEN s.statut = 'Termine' THEN 1 ELSE 0 END) * 100.0 / COUNT(a.idAffectation)), 2)
+        THEN ROUND((SUM(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN 1 ELSE 0 END) * 100.0 / COUNT(a.idAffectation)), 2)
         ELSE 0 
     END as tauxReussite,
-    -- Temps moyen de traitement en heures
     CASE 
-        WHEN SUM(CASE WHEN s.statut = 'Termine' THEN 1 ELSE 0 END) > 0
-        THEN ROUND(AVG(CASE WHEN s.statut = 'Termine' THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateAffectation) END), 1)
+        WHEN SUM(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN 1 ELSE 0 END) > 0
+        THEN ROUND(AVG(CASE WHEN s.statut IN ('Termine','Termin\u00e9') THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte) END), 1)
         ELSE NULL
     END as tempsTraitementMoyen
 FROM Utilisateur u
@@ -129,7 +127,7 @@ SELECT
 
 DELIMITER //
 
--- Procédure pour nettoyer les anciennes données
+DROP PROCEDURE IF EXISTS CleanOldData//
 CREATE PROCEDURE CleanOldData()
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION 
@@ -149,7 +147,7 @@ BEGIN
     COMMIT;
 END//
 
--- Procédure pour mettre à jour les statistiques
+DROP PROCEDURE IF EXISTS UpdateStatistics//
 CREATE PROCEDURE UpdateStatistics()
 BEGIN
     -- Cette procédure peut être appelée périodiquement pour pré-calculer des stats
@@ -168,7 +166,7 @@ BEGIN
     SELECT 'Statistiques mises à jour' as message;
 END//
 
--- Procédure pour optimiser l'affectation automatique
+DROP PROCEDURE IF EXISTS AutoAssignSignalements//
 CREATE PROCEDURE AutoAssignSignalements()
 BEGIN
     DECLARE done INT DEFAULT FALSE;

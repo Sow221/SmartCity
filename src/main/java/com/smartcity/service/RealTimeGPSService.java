@@ -17,6 +17,8 @@ public class RealTimeGPSService {
     private Timer locationTracker;
     private final List<LocationUpdateListener> listeners = new java.util.concurrent.CopyOnWriteArrayList<>();
     private List<Signalement> allMissions = new ArrayList<>();
+    // Instance unique réutilisée pour éviter la création à chaque poll
+    private final PositionAgentService positionAgentService = new PositionAgentService();
 
     public interface LocationUpdateListener {
         void onLocationUpdate(Coordinates newPosition);
@@ -78,10 +80,8 @@ public class RealTimeGPSService {
     }
 
     private void pollPositionFromServer() {
-        // Lire la position depuis GpsApiServer (port 8081) pour l'agent connecté
         com.smartcity.utils.SessionManager.getAgentId().ifPresent(agentId -> {
-            com.smartcity.service.PositionAgentService svc = new com.smartcity.service.PositionAgentService();
-            com.smartcity.service.PositionAgentService.Position pos = svc.getPosition(agentId);
+            PositionAgentService.Position pos = positionAgentService.getPosition(agentId);
             if (pos != null) {
                 setCurrentPosition(new Coordinates(pos.lat, pos.lon));
             }
@@ -93,6 +93,8 @@ public class RealTimeGPSService {
             locationTracker.cancel();
             locationTracker = null;
         }
+        listeners.clear();
+        currentAgentPosition = null;
     }
 
     public void setCurrentPosition(Coordinates position) {
@@ -118,6 +120,8 @@ public class RealTimeGPSService {
         double closestDistance = Double.MAX_VALUE;
 
         for (Signalement mission : allMissions) {
+            // Ignorer les missions sans coordonnées GPS valides
+            if (mission.getLatitude() == 0.0 && mission.getLongitude() == 0.0) continue;
             double distance = GeolocationService.distanceBetween(currentAgentPosition.lat, currentAgentPosition.lon,
                     mission.getLatitude(), mission.getLongitude());
             if (distance < closestDistance)
@@ -125,6 +129,7 @@ public class RealTimeGPSService {
             result.add(new MissionWithDistance(mission, distance, false));
         }
 
+        if (result.isEmpty()) return Collections.emptyList();
         final double closest = closestDistance;
         return result.stream()
                 .map(mwd -> new MissionWithDistance(mwd.mission, mwd.distanceKm, Math.abs(mwd.distanceKm - closest) < 0.001))

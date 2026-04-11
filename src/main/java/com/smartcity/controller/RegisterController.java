@@ -125,8 +125,8 @@ public class RegisterController {
             return;
         }
 
-        // nom complet dans le champ nom (NOT NULL en DB), prenom laissé vide
-        Utilisateur utilisateur = new Utilisateur("", nom, email, motPasse, role, idZone);
+        // nom complet dans le champ nom, prenom vide (champ non présent dans le formulaire)
+        Utilisateur utilisateur = new Utilisateur(nom, nom, email, motPasse, role, idZone);
 
         if (utilisateurService.inscription(utilisateur)) {
             showSuccessMessage("Inscription réussie ! Redirection vers la connexion...");

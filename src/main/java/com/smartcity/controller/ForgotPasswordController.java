@@ -78,9 +78,45 @@ public class ForgotPasswordController {
             return;
         }
 
-        // Pas de serveur mail — afficher les instructions directement
-        showSuccess("Pour réinitialiser votre mot de passe, contactez un administrateur en indiquant votre adresse email. Il procédera à la réinitialisation depuis l'espace admin.");
         submitButton.setDisable(true);
+        submitButton.setText("Traitement...");
+
+        javafx.concurrent.Task<String> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected String call() {
+                com.smartcity.service.UtilisateurService svc = new com.smartcity.service.UtilisateurService();
+                // Vérifier verrouillage
+                String blockMsg = svc.getLoginBlockMessage(email);
+                if (blockMsg != null) return "BLOCK:" + blockMsg;
+                // Message neutre : ne pas exposer l'existence du compte ni générer
+                // de mot de passe temporaire côté client.
+                return "REQUEST_ACCEPTED";
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            String result = task.getValue();
+            submitButton.setText("ENVOYER LES INSTRUCTIONS");
+            if (result.startsWith("BLOCK:")) {
+                showFieldError(result.substring(6));
+                submitButton.setDisable(false);
+            } else if ("REQUEST_ACCEPTED".equals(result) || "NOTFOUND".equals(result)) {
+                showSuccess("Demande prise en compte. Si un compte existe, un administrateur traitera la réinitialisation.");
+            } else {
+                showFieldError("Erreur lors de la réinitialisation. Contactez un administrateur.");
+                submitButton.setDisable(false);
+            }
+        });
+
+        task.setOnFailed(e -> {
+            submitButton.setText("ENVOYER LES INSTRUCTIONS");
+            submitButton.setDisable(false);
+            showFieldError("Erreur réseau. Réessayez.");
+        });
+
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        t.start();
     }
 
     private void showFieldError(String msg) {

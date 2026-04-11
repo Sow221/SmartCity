@@ -18,6 +18,7 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -30,8 +31,9 @@ public class LoginController {
 
     @FXML private TextField emailField;
     @FXML private PasswordField motPasseField;
+    @FXML private TextField motPasseVisible;
+    @FXML private Button togglePasswordBtn;
     @FXML private Hyperlink forgotPasswordLink;
-    @FXML private Hyperlink createAccountLink;
     @FXML private Button connexionButton;
     @FXML private Label statusMessageLabel;
     @FXML private Label emailErrorLabel;
@@ -49,8 +51,7 @@ public class LoginController {
     @FXML private Label formSubtitle;
     @FXML private VBox emailGroup;
     @FXML private VBox passwordGroup;
-    @FXML private HBox separatorBox;
-    @FXML private HBox registerLinkBox;
+
 
     private final UtilisateurService utilisateurService = new UtilisateurService();
     private MainApp mainApp;
@@ -65,11 +66,6 @@ public class LoginController {
         forgotPasswordLink.setOnAction(evt -> {
             if (mainApp != null) {
                 mainApp.showForgotPassword();
-            }
-        });
-        createAccountLink.setOnAction(evt -> {
-            if (mainApp != null) {
-                mainApp.showRegisterScreen();
             }
         });
 
@@ -89,7 +85,14 @@ public class LoginController {
         });
 
         applyLinkHover(forgotPasswordLink);
-        applyLinkHover(createAccountLink);
+
+        // Enter sur email → focus mot de passe ; Enter sur mot de passe → connexion
+        emailField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) motPasseField.requestFocus();
+        });
+        motPasseField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) handleConnexion();
+        });
 
         Platform.runLater(() -> {
             playStaggerAnimation();
@@ -101,7 +104,7 @@ public class LoginController {
         Interpolator spring = Interpolator.SPLINE(0.25, 0.46, 0.45, 0.94);
         Node[] allNodes = {
             logoPane, brandTitleBox, brandDivider, feature1, feature2, feature3, brandFooter,
-            formTitle, formSubtitle, emailGroup, passwordGroup, connexionButton, separatorBox, registerLinkBox
+            formTitle, formSubtitle, emailGroup, passwordGroup, connexionButton
         };
         for (Node n : allNodes) {
             if (n != null) {
@@ -115,7 +118,7 @@ public class LoginController {
             logoPane.setTranslateY(0);
         }
 
-        int[] delays = {0, 80, 140, 200, 260, 320, 380, 120, 180, 260, 330, 400, 460, 510};
+        int[] delays = {0, 80, 140, 200, 260, 320, 380, 120, 180, 260, 330, 400};
         staggerScaleIn(logoPane, delays[0], spring);
         staggerSlideIn(brandTitleBox, delays[1], spring);
         staggerSlideIn(brandDivider, delays[2], spring);
@@ -128,8 +131,6 @@ public class LoginController {
         staggerSlideIn(emailGroup, delays[9], spring);
         staggerSlideIn(passwordGroup, delays[10], spring);
         staggerSlideIn(connexionButton, delays[11], spring);
-        staggerSlideIn(separatorBox, delays[12], spring);
-        staggerSlideIn(registerLinkBox, delays[13], spring);
     }
 
     private void applyLinkHover(Hyperlink link) {
@@ -194,7 +195,7 @@ public class LoginController {
             scale.setFromY(0.6);
             scale.setToX(1.0);
             scale.setToY(1.0);
-            scale.setInterpolator(Interpolator.SPLINE(0.34, 1.56, 0.64, 1.0));
+            scale.setInterpolator(Interpolator.SPLINE(0.34, 0.56, 0.64, 1.0));
 
             ParallelTransition anim = new ParallelTransition(fade, scale);
             anim.setOnFinished(ev -> {
@@ -208,9 +209,33 @@ public class LoginController {
     }
 
     @FXML
+    private void handleTogglePassword() {
+        boolean showing = motPasseVisible != null && motPasseVisible.isVisible();
+        if (showing) {
+            motPasseField.setText(motPasseVisible.getText());
+            motPasseField.setVisible(true);
+            motPasseField.setManaged(true);
+            motPasseVisible.setVisible(false);
+            motPasseVisible.setManaged(false);
+            if (togglePasswordBtn != null) togglePasswordBtn.setText("o");
+        } else {
+            if (motPasseVisible != null) motPasseVisible.setText(motPasseField.getText());
+            motPasseField.setVisible(false);
+            motPasseField.setManaged(false);
+            if (motPasseVisible != null) {
+                motPasseVisible.setVisible(true);
+                motPasseVisible.setManaged(true);
+            }
+            if (togglePasswordBtn != null) togglePasswordBtn.setText("-");
+        }
+    }
+
+    @FXML
     private void handleConnexion() {
         String email = emailField.getText().trim();
-        String motPasse = motPasseField.getText();
+        String motPasse = (motPasseVisible != null && motPasseVisible.isVisible())
+            ? motPasseVisible.getText()
+            : motPasseField.getText();
 
         clearAllErrors();
         boolean valid = true;
@@ -248,7 +273,7 @@ public class LoginController {
                 connexionButton.setText("Connexion reussie");
                 connexionButton.setStyle("-fx-background-color: #16a34a; -fx-opacity: 1;");
                 showGlobalSuccess("Connexion reussie. Redirection en cours...");
-                Platform.runLater(() -> redirectToDashboard(utilisateur));
+                redirectToDashboard(utilisateur);
             } else {
                 connexionButton.setText("SE CONNECTER");
                 connexionButton.setDisable(false);
@@ -262,6 +287,8 @@ public class LoginController {
                     showFieldError(motPasseField, passwordErrorLabel, "Verifiez vos identifiants");
                 }
                 com.smartcity.utils.AnimationUtils.shake(connexionButton).play();
+                // Refocus email après erreur
+                Platform.runLater(() -> emailField.requestFocus());
             }
         });
 

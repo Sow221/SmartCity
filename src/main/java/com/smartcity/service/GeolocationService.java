@@ -40,7 +40,10 @@ public class GeolocationService {
     public List<Signalement> optimizeCollectionRoute(List<Signalement> signalements, Coordinates startPoint) {
         if (signalements.isEmpty()) return signalements;
         List<Signalement> optimized = new java.util.ArrayList<>();
-        List<Signalement> remaining = new java.util.ArrayList<>(signalements);
+        // Exclure les signalements sans coordonnées GPS valides
+        List<Signalement> remaining = signalements.stream()
+            .filter(s -> s.getLatitude() != 0.0 || s.getLongitude() != 0.0)
+            .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
         Coordinates current = startPoint;
         while (!remaining.isEmpty()) {
             Signalement closest = null;

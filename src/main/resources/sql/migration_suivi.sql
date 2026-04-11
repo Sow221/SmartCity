@@ -90,11 +90,11 @@ CREATE OR REPLACE VIEW vue_kpi_zone AS
 SELECT
     z.nomZone,
     COUNT(s.idSignalement)                                          AS total,
-    SUM(s.statut = 'En attente')                                    AS enAttente,
-    SUM(s.statut = 'En cours')                                      AS enCours,
-    SUM(s.statut = 'Termine')                                       AS termines,
-    ROUND(SUM(s.statut = 'Termine') * 100.0 / NULLIF(COUNT(*), 0), 1) AS tauxResolution,
-    ROUND(AVG(CASE WHEN s.statut = 'Termine' AND a.dateCollecte IS NOT NULL
+    SUM(s.statut IN ('En attente'))                                 AS enAttente,
+    SUM(s.statut IN ('En cours','Affecte','Affecté'))               AS enCours,
+    SUM(s.statut IN ('Termine','Terminé'))                          AS termines,
+    ROUND(SUM(s.statut IN ('Termine','Terminé')) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tauxResolution,
+    ROUND(AVG(CASE WHEN s.statut IN ('Termine','Terminé') AND a.dateCollecte IS NOT NULL
                    THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)
               END), 1)                                              AS tempsResolutionMoyenH,
     SUM(s.statut = 'En attente'

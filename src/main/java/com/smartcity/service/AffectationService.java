@@ -127,7 +127,7 @@ public class AffectationService {
     public boolean affecterAgentParZone(int idSignalement, int idZone) {
         String queryAgent = "SELECT u.idUser FROM Utilisateur u "
                 + "LEFT JOIN Affectation a ON a.idAgent = u.idUser "
-                + "AND a.idSignalement IN (SELECT idSignalement FROM Signalement WHERE statut NOT IN ('Termin\u00e9','Termine')) "
+                + "AND a.idSignalement IN (SELECT idSignalement FROM Signalement WHERE statut != ?) "
                 + "WHERE u.idZone = ? AND u.role = 'Agent' AND u.actif = 1 "
                 + "GROUP BY u.idUser ORDER BY COUNT(a.idAffectation) ASC LIMIT 1 FOR UPDATE";
         try (Connection conn = getConn()) {
@@ -147,7 +147,8 @@ public class AffectationService {
                 }
                 int idAgent;
                 try (PreparedStatement pstmt = conn.prepareStatement(queryAgent)) {
-                    pstmt.setInt(1, idZone);
+                    pstmt.setString(1, SignalementStatut.TERMINE.dbValue());
+                    pstmt.setInt(2, idZone);
                     try (ResultSet rs = pstmt.executeQuery()) {
                         if (!rs.next()) {
                             conn.rollback();
@@ -292,7 +293,15 @@ public class AffectationService {
         }
     }
 
+    private static volatile boolean positionAgentTableMissing = false;
+
+    /** Réinitialise le flag après création de la table (appelé par GpsApiServer). */
+    public static void resetPositionTableFlag() {
+        positionAgentTableMissing = false;
+    }
+
     public List<AgentLiveStatus> getAgentLiveStatuses() {
+        if (positionAgentTableMissing) return new ArrayList<>();
         List<AgentLiveStatus> list = new ArrayList<>();
         String query = "SELECT u.idUser, u.nom, z.nomZone, pa.latitude, pa.longitude, pa.updatedAt, "
             + "SUM(CASE WHEN s.statut IN ('En attente', 'Affecte', 'En cours') THEN 1 ELSE 0 END) AS missionsActives, "
@@ -328,6 +337,9 @@ public class AffectationService {
                 }
                 list.add(status);
             }
+        } catch (java.sql.SQLSyntaxErrorException e) {
+            positionAgentTableMissing = true;
+            logger.warn("Table position_agent absente — live tracking désactivé. Exécuter scripts/migrations/2026-04-create_gps_tables.sql");
         } catch (SQLException e) {
             logger.error("Erreur getAgentLiveStatuses", e);
         }

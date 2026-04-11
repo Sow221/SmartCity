@@ -1,4 +1,4 @@
-ou-- Script SQL pour la base de données SmartCity Déchets
+-- Script SQL pour la base de données SmartCity Déchets
 -- Création de la base de données
 
 CREATE DATABASE IF NOT EXISTS db_smartcity CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -86,4 +86,26 @@ CREATE TABLE IF NOT EXISTS position_agent (
     longitude DECIMAL(11,8) NOT NULL,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser)
+);
+
+-- Table position GPS temps réel des citoyens
+CREATE TABLE IF NOT EXISTS position_citoyen (
+    idCitoyen INT PRIMARY KEY,
+    latitude DECIMAL(10,8) NOT NULL,
+    longitude DECIMAL(11,8) NOT NULL,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (idCitoyen) REFERENCES Utilisateur(idUser)
+);
+
+-- Table événements mission (pour calcul temps réel de traitement par agent)
+CREATE TABLE IF NOT EXISTS MissionEvent (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idSignalement INT NOT NULL,
+    idAgent INT NOT NULL,
+    evenement ENUM('demarre','termine') NOT NULL,
+    dateEvenement DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_event_agent (idAgent),
+    INDEX idx_event_sig (idSignalement),
+    FOREIGN KEY (idSignalement) REFERENCES Signalement(idSignalement) ON DELETE CASCADE,
+    FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser) ON DELETE CASCADE
 );

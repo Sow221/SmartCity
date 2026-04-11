@@ -26,6 +26,8 @@ public class UtilisateurService {
     private static final ConcurrentHashMap<String, Long> lockoutUntil = new ConcurrentHashMap<>();
     private static final int MAX_ATTEMPTS = 5;
     private static final long LOCKOUT_MS = 15 * 60 * 1000L; // 15 minutes
+    private static final java.util.prefs.Preferences prefs =
+        java.util.prefs.Preferences.userNodeForPackage(UtilisateurService.class);
 
     private Connection getConn() throws SQLException {
         Connection conn = DatabaseConnection.getConnection();
@@ -106,6 +108,13 @@ public class UtilisateurService {
 
         // Vérifier verrouillage
         Long until = lockoutUntil.get(key);
+        if (until == null) {
+            long persistedUntil = prefs.getLong(lockKey(key), 0L);
+            if (persistedUntil > 0L) {
+                until = persistedUntil;
+                lockoutUntil.put(key, persistedUntil);
+            }
+        }
         if (until != null && System.currentTimeMillis() < until) {
             long remaining = (until - System.currentTimeMillis()) / 1000 / 60;
             logger.warn("🔒 Compte verrouillé pour: {} — encore {}min", key, remaining + 1);
@@ -127,6 +136,7 @@ public class UtilisateurService {
                     if (BCrypt.checkpw(motPasse, storedPassword)) {
                         loginAttempts.remove(key);
                         lockoutUntil.remove(key);
+                        prefs.remove(lockKey(key));
                         logger.info("✅ Connexion réussie pour: {}", key);
                         return mapResultSetToUtilisateur(rs);
                     } else {
@@ -147,7 +157,9 @@ public class UtilisateurService {
         AtomicInteger attempts = loginAttempts.computeIfAbsent(key, k -> new AtomicInteger(0));
         int count = attempts.incrementAndGet();
         if (count >= MAX_ATTEMPTS) {
-            lockoutUntil.put(key, System.currentTimeMillis() + LOCKOUT_MS);
+            long until = System.currentTimeMillis() + LOCKOUT_MS;
+            lockoutUntil.put(key, until);
+            prefs.putLong(lockKey(key), until);
             loginAttempts.remove(key);
             logger.warn("🔒 Compte verrouillé 15min après {} tentatives: {}", MAX_ATTEMPTS, key);
         }
@@ -156,12 +168,28 @@ public class UtilisateurService {
     /** Retourne le message d'erreur de verrouillage si applicable, null sinon. */
     public String getLoginBlockMessage(String email) {
         if (email == null) return null;
-        Long until = lockoutUntil.get(email.toLowerCase().trim());
+        String key = email.toLowerCase().trim();
+        Long until = lockoutUntil.get(key);
+        if (until == null) {
+            long persistedUntil = prefs.getLong(lockKey(key), 0L);
+            if (persistedUntil > 0L) {
+                until = persistedUntil;
+                lockoutUntil.put(key, persistedUntil);
+            }
+        }
         if (until != null && System.currentTimeMillis() < until) {
             long remaining = (until - System.currentTimeMillis()) / 1000 / 60;
             return "Compte temporairement bloqué. Réessayez dans " + (remaining + 1) + " minute(s).";
         }
+        if (until != null && System.currentTimeMillis() >= until) {
+            lockoutUntil.remove(key);
+            prefs.remove(lockKey(key));
+        }
         return null;
+    }
+
+    private static String lockKey(String emailKey) {
+        return "lockout_" + emailKey.replaceAll("[^a-zA-Z0-9]", "_");
     }
 
     public boolean emailExiste(String email) {
@@ -300,10 +328,11 @@ public class UtilisateurService {
     public boolean deleteUtilisateur(int idUser) {
         // Libérer les affectations actives du citoyen avant désactivation
         String queryAffectations = "SELECT s.idSignalement FROM Signalement s "
-            + "WHERE s.idUser = ? AND s.statut NOT IN ('Termine', 'Terminé')";
+            + "WHERE s.idUser = ? AND s.statut != ?";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(queryAffectations)) {
             ps.setInt(1, idUser);
+            ps.setString(2, com.smartcity.model.SignalementStatut.TERMINE.dbValue());
             try (ResultSet rs = ps.executeQuery()) {
                 AffectationService affService = new AffectationService();
                 while (rs.next()) {
@@ -331,7 +360,7 @@ public class UtilisateurService {
         List<AgentStats> result = new ArrayList<>();
         String query =
             "SELECT u.idUser, u.nom, z.nomZone, " +
-            "COUNT(CASE WHEN s.statut IN ('Termine','Terminé','Collecte') THEN 1 END) AS traites " +
+            "COUNT(CASE WHEN s.statut = ? THEN 1 END) AS traites " +
             "FROM Utilisateur u " +
             "LEFT JOIN Zone z ON u.idZone = z.idZone " +
             "LEFT JOIN Affectation a ON a.idAgent = u.idUser " +
@@ -339,15 +368,17 @@ public class UtilisateurService {
             "WHERE u.role = 'Agent' AND u.actif = 1 " +
             "GROUP BY u.idUser, u.nom, z.nomZone ORDER BY u.nom";
         try (Connection conn = getConn();
-             java.sql.PreparedStatement pstmt = conn.prepareStatement(query);
-             java.sql.ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                result.add(new AgentStats(
-                    rs.getInt("idUser"),
-                    rs.getString("nom"),
-                    rs.getString("nomZone") != null ? rs.getString("nomZone") : "Zone inconnue",
-                    rs.getInt("traites")
-                ));
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, com.smartcity.model.SignalementStatut.TERMINE.dbValue());
+            try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new AgentStats(
+                        rs.getInt("idUser"),
+                        rs.getString("nom"),
+                        rs.getString("nomZone") != null ? rs.getString("nomZone") : "Zone inconnue",
+                        rs.getInt("traites")
+                    ));
+                }
             }
         } catch (SQLException e) {
             logger.error("Erreur getAgentsWithStats: {}", e.getMessage());

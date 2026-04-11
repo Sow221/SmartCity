@@ -66,7 +66,7 @@
 
                     <HBox fx:id="feature1" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="+" styleClass="auth-feature-icon"/>
+                            <Label text="📍" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Carte interactive" styleClass="auth-feature-title"/>
@@ -76,7 +76,7 @@
 
                     <HBox fx:id="feature2" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="#" styleClass="auth-feature-icon"/>
+                            <Label text="📊" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Statistiques &amp; rapports" styleClass="auth-feature-title"/>
@@ -86,7 +86,7 @@
 
                     <HBox fx:id="feature3" spacing="14" alignment="CENTER_LEFT">
                         <StackPane styleClass="auth-feature-badge" alignment="CENTER">
-                            <Label text="*" styleClass="auth-feature-icon"/>
+                            <Label text="🔒" styleClass="auth-feature-icon"/>
                         </StackPane>
                         <VBox spacing="3">
                             <Label text="Accès sécurisé par rôle" styleClass="auth-feature-title"/>
@@ -150,7 +150,7 @@
                                maxWidth="Infinity" prefHeight="50"
                                styleClass="auth-field"
                                visible="false" managed="false"/>
-                    <Button fx:id="togglePasswordBtn" text="o"
+                    <Button fx:id="togglePasswordBtn" text="👁"
                             StackPane.alignment="CENTER_RIGHT"
                             styleClass="auth-toggle-pwd-btn"
                             onAction="#handleTogglePassword">
@@ -173,10 +173,18 @@
 
             <!-- Indicateur sécurité -->
             <HBox alignment="CENTER" spacing="6">
-                <Label text="Connexion chiffree et securisee" styleClass="auth-security-hint"/>
+                <Label text="Connexion chiffrée et sécurisée" styleClass="auth-security-hint"/>
             </HBox>
 
-            <Region prefHeight="16"/>
+            <Region prefHeight="12"/>
+
+            <!-- Lien inscription -->
+            <HBox alignment="CENTER" spacing="5">
+                <Label text="Pas encore de compte ?" styleClass="auth-hint-label"/>
+                <Hyperlink text="S'inscrire →" styleClass="auth-link-accent" onAction="#handleGoToRegister"/>
+            </HBox>
+
+            <Region prefHeight="12"/>
 
             <!-- Message statut -->
             <Label fx:id="statusMessageLabel" text="" wrapText="true"

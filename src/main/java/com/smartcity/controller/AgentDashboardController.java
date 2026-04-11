@@ -1284,8 +1284,15 @@ public class AgentDashboardController {
     }
     @FXML
     private void handleToggleGps() {
-        // TODO: Implémenter l'activation/désactivation du GPS si besoin
-        showAgentMessage("Fonction GPS à implémenter.", false);
+        RealTimeGPSService.Coordinates pos = gpsService.getCurrentPosition();
+        if (pos != null) {
+            showAgentMessage(String.format("\ud83d\udccd GPS actif — position : %.4f, %.4f", pos.lat, pos.lon), true);
+        } else {
+            showAgentMessage("\ud83d\udccd GPS actif — en attente de position...", true);
+        }
+        if (lblPositionActuelle != null && pos != null) {
+            lblPositionActuelle.setText(String.format("\ud83d\udccd %.4f, %.4f (Live)", pos.lat, pos.lon));
+        }
     }
 
     @FXML

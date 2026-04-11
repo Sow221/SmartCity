@@ -232,17 +232,17 @@ public class ReportsController {
         javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<>() {
             @Override
             protected Void call() {
-                // Toutes les requetes SQL sur thread background
+                // Toutes les requetes SQL s'executent ici, sur le thread background
                 if ("Dashboard Temps R\u00e9el".equals(reportType)) {
-                    javafx.application.Platform.runLater(() -> generateRealTimeDashboard());
+                    generateRealTimeDashboard();
                 } else if ("Rapport Hebdomadaire".equals(reportType)) {
-                    javafx.application.Platform.runLater(() -> generateWeeklyReport());
+                    generateWeeklyReport();
                 } else if ("Rapport Mensuel".equals(reportType)) {
-                    javafx.application.Platform.runLater(() -> generateMonthlyReport());
+                    generateMonthlyReport();
                 } else if ("Performance Agents".equals(reportType)) {
-                    javafx.application.Platform.runLater(() -> generateAgentPerformanceReport());
+                    generateAgentPerformanceReport();
                 } else if ("Analyse G\u00e9ographique".equals(reportType)) {
-                    javafx.application.Platform.runLater(() -> generateGeographicAnalysis());
+                    generateGeographicAnalysis();
                 }
                 return null;
             }
@@ -262,17 +262,30 @@ public class ReportsController {
     }
 
     private void generateRealTimeDashboard() {
-        ReportService.RealTimeDashboard dashboard = reportService.getRealTimeDashboard();
+        // Toutes les requetes SQL ici (thread background)
+        final ReportService.RealTimeDashboard dashboard = reportService.getRealTimeDashboard();
+        final int nbAttente = signalementService.countByStatut("En attente");
+        final int nbCours   = signalementService.countByStatut("En cours");
+        final int nbTermine = signalementService.countByStatut("Termin\u00e9");
+        final int nbAffecte = signalementService.countByStatut("Affect\u00e9");
+        final int total0    = dashboard.totalSignalements;
+        final int tauxRes0  = total0 > 0 ? (int) Math.round(nbTermine * 100.0 / total0) : 0;
+        final double delaiH0 = signalementService.getTempsResolutionMoyenH();
+        final String tendHebdo0 = dashboard.tendances.containsKey("hebdomadaire")
+            ? String.format("%+.1f%% vs sem. pr\u00e9c.", dashboard.tendances.get("hebdomadaire")) : "";
+
+        // Mise a jour UI sur le thread JavaFX
+        javafx.application.Platform.runLater(() -> {
+        final int nbAttente_ = nbAttente, nbCours_ = nbCours, nbTermine_ = nbTermine, nbAffecte_ = nbAffecte;
+        final int total = total0, tauxRes = tauxRes0;
+        final double delaiH = delaiH0;
+        final String tendHebdo = tendHebdo0;
 
         ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
-        int nbAttente = signalementService.countByStatut("En attente");
-        int nbCours   = signalementService.countByStatut("En cours");
-        int nbTermine = signalementService.countByStatut("Termin\u00e9");
-        int nbAffecte = signalementService.countByStatut("Affect\u00e9");
-        if (nbAttente > 0) pieData.add(new PieChart.Data("En attente (" + nbAttente + ")", nbAttente));
-        if (nbCours   > 0) pieData.add(new PieChart.Data("En cours ("   + nbCours   + ")", nbCours));
-        if (nbTermine > 0) pieData.add(new PieChart.Data("Termin\u00e9 ("  + nbTermine + ")", nbTermine));
-        if (nbAffecte > 0) pieData.add(new PieChart.Data("Affect\u00e9 ("  + nbAffecte + ")", nbAffecte));
+        if (nbAttente_ > 0) pieData.add(new PieChart.Data("En attente (" + nbAttente_ + ")", nbAttente_));
+        if (nbCours_   > 0) pieData.add(new PieChart.Data("En cours ("   + nbCours_   + ")", nbCours_));
+        if (nbTermine_ > 0) pieData.add(new PieChart.Data("Termin\u00e9 ("  + nbTermine_ + ")", nbTermine_));
+        if (nbAffecte_ > 0) pieData.add(new PieChart.Data("Affect\u00e9 ("  + nbAffecte_ + ")", nbAffecte_));
         statusPieChart.setData(pieData);
 
         XYChart.Series<String, Number> zoneSeries = new XYChart.Series<>();
@@ -283,12 +296,7 @@ public class ReportsController {
         zoneBarChart.getData().clear();
         zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
 
-        int total = dashboard.totalSignalements;
-        int tauxRes = total > 0 ? (int) Math.round(nbTermine * 100.0 / total) : 0;
-        double delaiH = signalementService.getTempsResolutionMoyenH();
         int nbUrgents = dashboard.signalementsUrgents.size();
-        String tendHebdo = dashboard.tendances.containsKey("hebdomadaire")
-            ? String.format("%+.1f%% vs sem. pr\u00e9c.", dashboard.tendances.get("hebdomadaire")) : "";
 
         // ── KPI cards ──────────────────────────────────────────────
         if (kpiTotal != null) kpiTotal.setText(String.valueOf(total));
@@ -352,11 +360,11 @@ public class ReportsController {
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
         stats.add(new StatisticRow("Total signalements",    String.valueOf(total)));
         stats.add(new StatisticRow("Aujourd'hui",           String.valueOf(dashboard.signalementsAujourdhui)));
-        stats.add(new StatisticRow("En attente",            String.valueOf(nbAttente)));
-        stats.add(new StatisticRow("En cours",              String.valueOf(nbCours)));
-        stats.add(new StatisticRow("Termin\u00e9s",          String.valueOf(nbTermine)));
+        stats.add(new StatisticRow("En attente",            String.valueOf(nbAttente_)));
+        stats.add(new StatisticRow("En cours",              String.valueOf(nbCours_)));
+        stats.add(new StatisticRow("Termin\u00e9s",          String.valueOf(nbTermine_)));
         stats.add(new StatisticRow("Taux de r\u00e9solution", tauxRes + "%"));
-        stats.add(new StatisticRow("Urgents (>24h)",        String.valueOf(dashboard.signalementsUrgents.size())));
+        stats.add(new StatisticRow("Urgents (>24h)",        String.valueOf(nbUrgents)));
         stats.add(new StatisticRow("Utilisateurs actifs",   String.valueOf(dashboard.utilisateursActifs)));
         if (!tendHebdo.isBlank()) stats.add(new StatisticRow("Tendance hebdo", tendHebdo));
         statsTable.setItems(stats);
@@ -376,10 +384,10 @@ public class ReportsController {
         r.append("\n");
 
         r.append("2. R\u00c9PARTITION DES STATUTS\n").append(SEPARATEUR2).append("\n");
-        r.append(String.format("  En attente  %s%n", barre(nbAttente, total, 30)));
-        r.append(String.format("  En cours    %s%n", barre(nbCours,   total, 30)));
-        r.append(String.format("  Affect\u00e9    %s%n", barre(nbAffecte, total, 30)));
-        r.append(String.format("  Termin\u00e9    %s%n", barre(nbTermine, total, 30)));
+        r.append(String.format("  En attente  %s%n", barre(nbAttente_, total, 30)));
+        r.append(String.format("  En cours    %s%n", barre(nbCours_,   total, 30)));
+        r.append(String.format("  Affect\u00e9    %s%n", barre(nbAffecte_, total, 30)));
+        r.append(String.format("  Termin\u00e9    %s%n", barre(nbTermine_, total, 30)));
         r.append("\n");
 
         r.append("3. ACTIVIT\u00c9 PAR ZONE (7 derniers jours)\n").append(SEPARATEUR2).append("\n");
@@ -412,6 +420,7 @@ public class ReportsController {
         r.append("  Rapport g\u00e9n\u00e9r\u00e9 automatiquement par SmartCity Analytics\n");
         r.append(SEPARATEUR).append("\n");
         reportTextArea.setText(r.toString());
+        }); // fin Platform.runLater
     }
 
     private void generateWeeklyReport() {

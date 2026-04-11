@@ -217,7 +217,7 @@ public class LoginController {
             motPasseField.setManaged(true);
             motPasseVisible.setVisible(false);
             motPasseVisible.setManaged(false);
-            if (togglePasswordBtn != null) togglePasswordBtn.setText("o");
+            if (togglePasswordBtn != null) togglePasswordBtn.setText("👁");
         } else {
             if (motPasseVisible != null) motPasseVisible.setText(motPasseField.getText());
             motPasseField.setVisible(false);
@@ -226,8 +226,13 @@ public class LoginController {
                 motPasseVisible.setVisible(true);
                 motPasseVisible.setManaged(true);
             }
-            if (togglePasswordBtn != null) togglePasswordBtn.setText("-");
+            if (togglePasswordBtn != null) togglePasswordBtn.setText("🙈");
         }
+    }
+
+    @FXML
+    private void handleGoToRegister() {
+        if (mainApp != null) mainApp.showRegisterScreen();
     }
 
     @FXML

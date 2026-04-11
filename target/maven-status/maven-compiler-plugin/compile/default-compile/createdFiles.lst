@@ -29,6 +29,7 @@ com\smartcity\utils\MapResourceUtils.class
 com\smartcity\utils\JsonUtils.class
 com\smartcity\controller\AdminDashboardController$1.class
 com\smartcity\utils\JsonUtils$1.class
+com\smartcity\controller\CitizenDashboardController$MapBridgeCitizen.class
 com\smartcity\model\Zone.class
 com\smartcity\service\UtilisateurService$AgentStats.class
 com\smartcity\service\RealTimeGPSService$MissionWithDistance.class
@@ -52,6 +53,7 @@ com\smartcity\service\ReportService$MonthlyReport.class
 com\smartcity\websocket\AgentMissionEndpoint.class
 com\smartcity\controller\CitizenDashboardController$1.class
 com\smartcity\controller\AgentLiveRow.class
+com\smartcity\controller\ReportsController$1.class
 com\smartcity\controller\AdminDashboardController$5.class
 com\smartcity\controller\LoginController$1.class
 com\smartcity\utils\NavigationUtils.class

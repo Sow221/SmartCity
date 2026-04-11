@@ -177,7 +177,7 @@ public class ForgotPasswordController {
             fade.setFromValue(0.0); fade.setToValue(1.0); fade.setInterpolator(SPRING);
             ScaleTransition scale = new ScaleTransition(Duration.millis(400), node);
             scale.setFromX(0.6); scale.setFromY(0.6); scale.setToX(1.0); scale.setToY(1.0);
-            scale.setInterpolator(Interpolator.SPLINE(0.34, 1.56, 0.64, 1.0));
+            scale.setInterpolator(Interpolator.SPLINE(0.34, 0.94, 0.64, 1.0));
             ParallelTransition anim = new ParallelTransition(fade, scale);
             anim.setOnFinished(ev -> { node.setOpacity(1.0); node.setScaleX(1.0); node.setScaleY(1.0); });
             anim.play();

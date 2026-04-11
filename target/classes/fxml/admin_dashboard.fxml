@@ -54,23 +54,23 @@
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
 
             <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnAdminDashboard" text="Vue générale" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowAdminDashboard"/>
-            <Button fx:id="btnGestionSignalements" text="Signalements" styleClass="sidebar-button" onAction="#handleShowGestionSignalements"/>
+            <Button fx:id="btnAdminDashboard" text="📊 Vue générale" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowAdminDashboard"/>
+            <Button fx:id="btnGestionSignalements" text="📍 Signalements" styleClass="sidebar-button" onAction="#handleShowGestionSignalements"/>
 
             <Region prefHeight="8"/>
             <Label text="GESTION" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnGestionUtilisateurs" text="Utilisateurs" styleClass="sidebar-button" onAction="#handleShowGestionUtilisateurs"/>
-            <Button fx:id="btnGestionAgents" text="Agents" styleClass="sidebar-button" onAction="#handleShowGestionAgents"/>
+            <Button fx:id="btnGestionUtilisateurs" text="👥 Utilisateurs" styleClass="sidebar-button" onAction="#handleShowGestionUtilisateurs"/>
+            <Button fx:id="btnGestionAgents" text="🚗 Agents" styleClass="sidebar-button" onAction="#handleShowGestionAgents"/>
 
             <Region prefHeight="8"/>
             <Label text="ANALYSE" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnStatistiques" text="Statistiques" styleClass="sidebar-button" onAction="#handleShowStatistiques"/>
-            <Button text="Rapports" styleClass="sidebar-button" onAction="#handleShowRapports"/>
+            <Button fx:id="btnStatistiques" text="📈 Statistiques" styleClass="sidebar-button" onAction="#handleShowStatistiques"/>
+            <Button text="📑 Rapports" styleClass="sidebar-button" onAction="#handleShowRapports"/>
 
             <Region VBox.vgrow="ALWAYS"/>
             <Label text="COMPTE" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnAdminProfil" text="Mon profil" styleClass="sidebar-button" onAction="#handleShowAdminProfil"/>
-            <Button fx:id="btnParametres" text="Parametres" styleClass="sidebar-button" onAction="#handleShowParametres"/>
+            <Button fx:id="btnAdminProfil" text="👤 Mon profil" styleClass="sidebar-button" onAction="#handleShowAdminProfil"/>
+            <Button fx:id="btnParametres" text="⚙️ Paramètres" styleClass="sidebar-button" onAction="#handleShowParametres"/>
         </VBox>
     </left>
 

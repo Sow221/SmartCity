@@ -15,6 +15,8 @@ import javafx.fxml.FXML;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
@@ -76,13 +78,20 @@ public class CitizenDashboardController {
     @FXML
     private Label positionLabel;
 
+    @FXML private javafx.scene.web.WebView signalementMapView;
+    @FXML private Button btnRecentrerCarte;
+    @FXML private Label gpsPositionStatusLabel;
+    @FXML private Label gpsReceivedIcon;
+
+    // QR code / GPS téléphone (fallback)
     @FXML private javafx.scene.image.ImageView citizenQrCodeView;
     @FXML private Label citizenGpsUrlLabel;
     @FXML private Label gpsStatusLabel;
-    @FXML private Label gpsReceivedIcon;
+
     private javafx.animation.Timeline gpsPollingTimeline;
-    private double selectedLatitude = 0.0;
+    private double selectedLatitude  = 0.0;
     private double selectedLongitude = 0.0;
+    private boolean mapBridgeInstalled = false;
 
     @FXML
     private TableView<Signalement> tableMesSignalements;
@@ -292,7 +301,7 @@ public class CitizenDashboardController {
                 selectedLongitude = z.getLongitude();
                 showCitizenMessage("\u26a0\ufe0f Position GPS non re\u00e7ue \u2014 centre de zone utilis\u00e9 par d\u00e9faut.", false);
             } else {
-                showCitizenMessage("\u274c Scannez le QR code avec votre t\u00e9l\u00e9phone pour obtenir votre position GPS", false);
+                showCitizenMessage("❌ Cliquez sur la carte ou scannez le QR code pour obtenir votre position", false);
                 return;
             }
         }
@@ -504,82 +513,161 @@ public class CitizenDashboardController {
         }
     }
 
+    // ── Carte interactive + GPS ──────────────────────────────────────────────
+
     private void loadInteractiveMap() {
+        if (signalementMapView == null) return;
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
+
+        selectedLatitude  = 0.0;
+        selectedLongitude = 0.0;
+        updatePositionUI(false, 0, 0);
+
+        // Centrer sur la zone sélectionnée ou zone de l'utilisateur
+        String zoneChoisie = zoneSignalementCombo.getValue();
+        com.smartcity.service.GeolocationService.Coordinates center;
+        com.smartcity.service.ZoneService zs = zoneService;
+        if (zoneChoisie != null) {
+            center = zs.getCenter(zoneChoisie);
+        } else {
+            center = zs.getCenterById(current.getIdZone());
+        }
+
+        String html = buildSignalementMapHtml(center.lat, center.lon);
+        signalementMapView.getEngine().loadContent(html);
+
+        // Bridge Java ← JavaScript (clic sur carte)
+        if (!mapBridgeInstalled) {
+            mapBridgeInstalled = true;
+            signalementMapView.getEngine().getLoadWorker().stateProperty().addListener((obs, o, n) -> {
+                if (n == javafx.concurrent.Worker.State.SUCCEEDED) {
+                    try {
+                        netscape.javascript.JSObject win =
+                            (netscape.javascript.JSObject) signalementMapView.getEngine().executeScript("window");
+                        win.setMember("javaCitizen", new MapBridgeCitizen());
+                    } catch (Exception ex) {
+                        logger.warn("Bridge carte citoyen non installe", ex);
+                    }
+                }
+            });
+        }
+
+        // QR code téléphone (fallback — fonctionne sur même WiFi)
         int citizenId = current.getIdUser();
-
-        // Generer l URL GPS mobile avec token securise
-        String url = com.smartcity.service.GpsApiServer.getCitizenGpsPageUrl(citizenId);
-
-        // Afficher le QR code
+        String qrUrl = com.smartcity.service.GpsApiServer.getCitizenGpsPageUrl(citizenId);
         if (citizenQrCodeView != null) {
-            javafx.scene.image.Image qr = com.smartcity.utils.QrCodeUtils.generateQrCode(url, 180);
+            javafx.scene.image.Image qr = com.smartcity.utils.QrCodeUtils.generateQrCode(qrUrl, 180);
             if (qr != null) citizenQrCodeView.setImage(qr);
         }
-        if (citizenGpsUrlLabel != null) citizenGpsUrlLabel.setText(url);
-        if (gpsStatusLabel != null)
-            gpsStatusLabel.setText("\uD83D\uDCF1 Scannez le QR code avec votre telephone");
-        if (gpsReceivedIcon != null) gpsReceivedIcon.setText("\u23F3");
+        if (citizenGpsUrlLabel != null) citizenGpsUrlLabel.setText(qrUrl);
+        if (gpsStatusLabel != null) gpsStatusLabel.setText("📱 Ou scannez le QR code (même WiFi requis)");
+        if (gpsReceivedIcon != null) gpsReceivedIcon.setText("⏳");
 
-        // Reinitialiser la position
-        selectedLatitude = 0.0;
-        selectedLongitude = 0.0;
-        if (positionLabel != null) {
-            positionLabel.setText("En attente de votre position GPS...");
-            positionLabel.setStyle("-fx-text-fill: #E53935; -fx-font-weight: bold;");
-        }
-
-        // Demarrer le polling de position (toutes les 3s)
+        // Polling position téléphone (toutes les 3s, silencieux)
         startGpsPolling(citizenId);
     }
 
+    /** HTML Leaflet : clic sur carte → javaCitizen.setPosition(lat, lon) */
+    private String buildSignalementMapHtml(double centerLat, double centerLon) {
+        return "<!DOCTYPE html><html><head>"
+            + "<meta charset='UTF-8'>"
+            + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
+            + "<style>html,body,#map{height:100%;margin:0;}</style></head><body>"
+            + "<div id='map'></div>"
+            + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
+            + "<script>"
+            + "var map=L.map('map').setView([" + String.format(java.util.Locale.US, "%.6f,%.6f", centerLat, centerLon) + "],14);"
+            + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);"
+            + "var marker=null;"
+            + "map.on('click',function(e){"
+            + "  var lat=e.latlng.lat,lon=e.latlng.lng;"
+            + "  if(marker)map.removeLayer(marker);"
+            + "  marker=L.marker([lat,lon]).addTo(map).bindPopup('\uD83D\uDCCD D\u00e9chet signal\u00e9').openPopup();"
+            + "  if(window.javaCitizen)window.javaCitizen.setPosition(lat,lon);"
+            + "});"
+            + "</script></body></html>";
+    }
+
+    /** Pont JavaScript → Java pour le clic sur la carte */
+    public class MapBridgeCitizen {
+        public void setPosition(double lat, double lon) {
+            javafx.application.Platform.runLater(() -> onPositionSelected(lat, lon, false));
+        }
+    }
+
+    @FXML
+    private void handleRecentrerCarte() {
+        loadInteractiveMap();
+    }
+
+    private void onPositionSelected(double lat, double lon, boolean fromPhone) {
+        selectedLatitude  = lat;
+        selectedLongitude = lon;
+        updatePositionUI(true, lat, lon);
+        if (fromPhone) stopGpsPolling();
+        showCitizenMessage(String.format("📍 Position %s: %.5f, %.5f",
+            fromPhone ? "GPS t\u00e9l\u00e9phone" : "s\u00e9lectionn\u00e9e", lat, lon), true);
+    }
+
+    private void updatePositionUI(boolean received, double lat, double lon) {
+        if (positionLabel != null) {
+            if (received) {
+                positionLabel.setText(String.format("✅ %.5f, %.5f", lat, lon));
+                positionLabel.setStyle("-fx-text-fill:#2E7D32;-fx-font-weight:bold;");
+            } else {
+                positionLabel.setText("Cliquez sur la carte pour placer le marqueur");
+                positionLabel.setStyle("");
+            }
+        }
+        if (gpsReceivedIcon != null) gpsReceivedIcon.setText(received ? "📍" : "⏳");
+        if (gpsPositionStatusLabel != null)
+            gpsPositionStatusLabel.setText(received
+                ? String.format("Position re\u00e7ue : %.5f, %.5f", lat, lon)
+                : "Cliquez sur la carte pour placer le marqueur");
+    }
+
+    // Polling position téléphone (QR code fallback)
     private void startGpsPolling(int citizenId) {
         stopGpsPolling();
+        String token = com.smartcity.service.GpsApiServer.getOrCreateCitizenToken(citizenId);
+        String pollUrl = "http://localhost:" + com.smartcity.service.GpsApiServer.PORT
+            + "/api/citizen-position?citizenId=" + citizenId + "&token=" + token;
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(1)).build();
         gpsPollingTimeline = new javafx.animation.Timeline(
             new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), e -> {
-                // Lire la position depuis le serveur GPS local
-                com.smartcity.service.PositionAgentService svc = new com.smartcity.service.PositionAgentService();
-                // Utiliser l endpoint citoyen via HTTP
+                // Ne pas poller si position déjà obtenue
+                if (selectedLatitude != 0.0 || selectedLongitude != 0.0) return;
                 try {
-                    java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
-                        .connectTimeout(java.time.Duration.ofSeconds(2)).build();
                     java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
-                        .uri(java.net.URI.create("http://localhost:" + com.smartcity.service.GpsApiServer.PORT
-                            + "/api/citizen-position?citizenId=" + citizenId
-                            + "&token=" + com.smartcity.service.GpsApiServer.getOrCreateCitizenToken(citizenId)))
-                        .timeout(java.time.Duration.ofSeconds(2)).GET().build();
-                    java.net.http.HttpResponse<String> resp = client.send(req,
-                        java.net.http.HttpResponse.BodyHandlers.ofString());
+                        .uri(java.net.URI.create(pollUrl))
+                        .timeout(java.time.Duration.ofSeconds(1)).GET().build();
+                    java.net.http.HttpResponse<String> resp =
+                        httpClient.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
                     if (resp.statusCode() == 200) {
                         com.google.gson.JsonObject json =
                             com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
                         double lat = json.get("lat").getAsDouble();
                         double lon = json.get("lon").getAsDouble();
-                        javafx.application.Platform.runLater(() -> onGpsReceived(lat, lon));
+                        javafx.application.Platform.runLater(() -> {
+                            onPositionSelected(lat, lon, true);
+                            // Placer le marqueur sur la carte aussi
+                            if (signalementMapView != null) {
+                                signalementMapView.getEngine().executeScript(
+                                    String.format(java.util.Locale.US,
+                                        "if(marker)map.removeLayer(marker);"
+                                        + "marker=L.marker([%.6f,%.6f]).addTo(map).bindPopup('\uD83D� GPS t\u00e9l\u00e9phone').openPopup();"
+                                        + "map.setView([%.6f,%.6f],16);",
+                                        lat, lon, lat, lon));
+                            }
+                        });
                     }
-                } catch (Exception ex) {
-                    // Serveur GPS pas encore pret ou pas de position - silencieux
-                }
+                } catch (Exception ex) { /* silencieux */ }
             })
         );
         gpsPollingTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
         gpsPollingTimeline.play();
-    }
-
-    private void onGpsReceived(double lat, double lon) {
-        selectedLatitude = lat;
-        selectedLongitude = lon;
-        stopGpsPolling();
-        if (positionLabel != null) {
-            positionLabel.setText(String.format("\u2705 Position GPS: %.5f, %.5f", lat, lon));
-            positionLabel.setStyle("-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
-        }
-        if (gpsStatusLabel != null)
-            gpsStatusLabel.setText("\u2705 Position GPS recue !");
-        if (gpsReceivedIcon != null)
-            gpsReceivedIcon.setText("\uD83D\uDCCD");
-        showCitizenMessage(String.format("\uD83D\uDCCD Position GPS recue: %.5f, %.5f", lat, lon), true);
     }
 
     private void stopGpsPolling() {
@@ -588,6 +676,9 @@ public class CitizenDashboardController {
             gpsPollingTimeline = null;
         }
     }
+
+    private static final org.slf4j.Logger logger =
+        org.slf4j.LoggerFactory.getLogger(CitizenDashboardController.class);
 
 
     private void refreshCards() {
@@ -834,6 +925,7 @@ public class CitizenDashboardController {
     public void cleanup() {
         stopPolling();
         stopGpsPolling();
+        mapBridgeInstalled = false;
     }
 
     private void startPolling() {
@@ -963,6 +1055,21 @@ public class CitizenDashboardController {
             }
         } else if (themeToggleButton != null) {
             themeToggleButton.setText("Mode Sombre");
+        }
+    }
+
+    /**
+     * Copie le lien GPS dans le presse-papiers (uitility button near QR code)
+     */
+    @FXML
+    private void handleCopyGpsLink() {
+        if (citizenGpsUrlLabel != null && citizenGpsUrlLabel.getText() != null) {
+            String url = citizenGpsUrlLabel.getText();
+            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+            content.putString(url);
+            clipboard.setContent(content);
+            showCitizenMessage("✅ Lien GPS copié : " + url, true);
         }
     }
 }

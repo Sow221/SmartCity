@@ -9,6 +9,7 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -48,15 +49,15 @@
         <VBox styleClass="sidebar-agent" prefWidth="220" spacing="4" minHeight="600">
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
             <Label text="NAVIGATION" styleClass="sidebar-section-label-agent"/>
-            <Button fx:id="btnAgentDashboard" text="Vue d'ensemble" styleClass="sidebar-agent-button, sidebar-agent-button-active" onAction="#handleShowAgentDashboard"/>
-            <Button fx:id="btnMesMissions" text="Mes missions" styleClass="sidebar-agent-button" onAction="#handleShowMesMissions"/>
-            <Button fx:id="btnCarteZones" text="Carte zones" styleClass="sidebar-agent-button" onAction="#handleShowCarteZones"/>
+            <Button fx:id="btnAgentDashboard" text="📊 Vue d'ensemble" styleClass="sidebar-agent-button, sidebar-agent-button-active" onAction="#handleShowAgentDashboard"/>
+            <Button fx:id="btnMesMissions" text="📋 Mes missions" styleClass="sidebar-agent-button" onAction="#handleShowMesMissions"/>
+            <Button fx:id="btnCarteZones" text="🗺️ Carte zones" styleClass="sidebar-agent-button" onAction="#handleShowCarteZones"/>
             <Region prefHeight="8"/>
             <Label text="HISTORIQUE" styleClass="sidebar-section-label-agent"/>
-            <Button fx:id="btnHistorique" text="Historique" styleClass="sidebar-agent-button" onAction="#handleShowHistorique"/>
+            <Button fx:id="btnHistorique" text="📜 Historique" styleClass="sidebar-agent-button" onAction="#handleShowHistorique"/>
             <Region VBox.vgrow="ALWAYS"/>
             <Label text="COMPTE" styleClass="sidebar-section-label-agent"/>
-            <Button fx:id="btnMonProfil" text="Mon profil" styleClass="sidebar-agent-button" onAction="#handleShowMonProfil"/>
+            <Button fx:id="btnMonProfil" text="👤 Mon profil" styleClass="sidebar-agent-button" onAction="#handleShowMonProfil"/>
         </VBox>
     </left>
 

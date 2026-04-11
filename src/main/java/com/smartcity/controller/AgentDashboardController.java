@@ -52,6 +52,8 @@ public class AgentDashboardController {
     @FXML
     private Button btnActionActualiser;
     @FXML
+    private Button btnGpsActiver;
+    @FXML
     private Label lblPositionActuelle;
 
     @FXML
@@ -99,11 +101,11 @@ public class AgentDashboardController {
     private Label mapDistanceLabel, mapTempsLabel, mapCommentaireLabel, agentCardTotal, agentCardEnAttente, agentCardEnCours,
             agentCardTerminees, agentMessageLabel, lblMissionsCount, mapMissionIdLabel, mapMissionZoneLabel,
             mapMissionAdresseLabel, mapMissionStatutLabel, agentNameLabel,
-            tourneeDistanceLabel, tourneeProchaineLabel, tourneeTempsLabel;
+            tourneeDistanceLabel, tourneeProchaineLabel, tourneeTempsLabel, qrUrlLabel;
     @FXML
     private TextField profilNomField, profilEmailField, profilZoneField;
     @FXML
-    private DatePicker historiqueDatePicker;
+    private DatePicker dashboardDatePicker, historiqueDatePicker;
     @FXML
     private ScrollPane pageAgentDashboard, pageMesMissions, pageHistorique;
     
@@ -117,6 +119,8 @@ public class AgentDashboardController {
     private BorderPane rootPane;
     @FXML
     private WebView mapWebView;
+    @FXML
+    private javafx.scene.image.ImageView qrCodeImageView;
 
     // ========================= SERVICES =========================
     private GeolocationService geolocationService = new GeolocationService();
@@ -332,6 +336,21 @@ public class AgentDashboardController {
     }
 
     @FXML
+    private void handleFiltrerDashboard() {
+        chargerDonnees();
+        showAgentMessage("Dashboard actualisé avec la date sélectionnée.", true);
+    }
+
+    @FXML
+    private void handleResetDashboard() {
+        if (dashboardDatePicker != null) {
+            dashboardDatePicker.setValue(java.time.LocalDate.now());
+        }
+        chargerDonnees();
+        showAgentMessage("Retour au jour actuel.", true);
+    }
+
+    @FXML
     private void handleToggleTheme() {
         SessionManager.toggleDarkMode();
         applyTheme();
@@ -390,6 +409,15 @@ public class AgentDashboardController {
     private void handleFiltrerHistorique() {
         refreshHistorique();
         showAgentMessage("Historique filtré appliqué.", true);
+    }
+
+    @FXML
+    private void handleResetHistorique() {
+        if (historiqueDatePicker != null) {
+            historiqueDatePicker.setValue(null);
+        }
+        refreshHistorique();
+        showAgentMessage("Historique réinitialisé.", true);
     }
 
     @FXML
@@ -1258,5 +1286,21 @@ public class AgentDashboardController {
     private void handleToggleGps() {
         // TODO: Implémenter l'activation/désactivation du GPS si besoin
         showAgentMessage("Fonction GPS à implémenter.", false);
+    }
+
+    @FXML
+    private void handleCopierUrlGps() {
+        if (qrUrlLabel == null || qrUrlLabel.getText() == null || qrUrlLabel.getText().isEmpty()) {
+            showAgentMessage("❌ URL GPS non disponible", false);
+            return;
+        }
+        
+        String urlGps = qrUrlLabel.getText();
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(urlGps);
+        clipboard.setContent(content);
+        
+        showAgentMessage("✅ URL GPS copiée dans le presse-papiers: " + urlGps, true);
     }
 }

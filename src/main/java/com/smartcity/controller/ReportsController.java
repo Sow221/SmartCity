@@ -141,21 +141,41 @@ public class ReportsController {
         return new DateRange(prevStart, prevEnd, current.days);
     }
 
+    private static final DateTimeFormatter FMT_CHART_DAY = DateTimeFormatter.ofPattern("dd/MM");
+
+    private String formatChartDay(String isoDate) {
+        try {
+            return LocalDate.parse(isoDate).format(FMT_CHART_DAY);
+        } catch (Exception e) {
+            return isoDate;
+        }
+    }
+
     private void renderTrendChart(Map<String, Integer> current, String currentLabel,
                                   Map<String, Integer> previous, String previousLabel) {
         XYChart.Series<String, Number> currentSeries = new XYChart.Series<>();
         currentSeries.setName(currentLabel);
-        current.forEach((jour, cnt) -> {
-            String label = jour.length() >= 10 ? jour.substring(8) : jour;
-            currentSeries.getData().add(new XYChart.Data<>(label, cnt));
-        });
+        current.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(e -> currentSeries.getData().add(
+                new XYChart.Data<>(formatChartDay(e.getKey()), e.getValue())));
+
         XYChart.Series<String, Number> prevSeries = new XYChart.Series<>();
         prevSeries.setName(previousLabel);
-        previous.forEach((jour, cnt) -> {
-            String label = jour.length() >= 10 ? jour.substring(8) : jour;
-            prevSeries.getData().add(new XYChart.Data<>(label, cnt));
-        });
+        previous.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(e -> prevSeries.getData().add(
+                new XYChart.Data<>(formatChartDay(e.getKey()), e.getValue())));
+
+        trendLineChart.getData().clear();
         trendLineChart.setData(FXCollections.observableArrayList(currentSeries, prevSeries));
+        // Couleurs fixes : serie courante = vert, precedente = gris
+        javafx.application.Platform.runLater(() -> {
+            if (currentSeries.getNode() != null)
+                currentSeries.getNode().setStyle("-fx-stroke: #16a34a; -fx-stroke-width: 2.5px;");
+            if (prevSeries.getNode() != null)
+                prevSeries.getNode().setStyle("-fx-stroke: #94a3b8; -fx-stroke-width: 1.5px;");
+        });
     }
 
     private void finalizeReportText(StringBuilder report) {
@@ -208,30 +228,37 @@ public class ReportsController {
         clearCharts();
         generateReportButton.setDisable(true);
         generateReportButton.setText("Chargement...");
-        // Éviter la "fausse async": on laisse d'abord JavaFX afficher l'état chargement,
-        // puis on exécute la génération sur le thread UI de façon explicite.
-        javafx.animation.PauseTransition defer = new javafx.animation.PauseTransition(javafx.util.Duration.millis(50));
-        defer.setOnFinished(evt -> {
-            try {
+
+        javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected Void call() {
+                // Toutes les requetes SQL sur thread background
                 if ("Dashboard Temps R\u00e9el".equals(reportType)) {
-                    generateRealTimeDashboard();
+                    javafx.application.Platform.runLater(() -> generateRealTimeDashboard());
                 } else if ("Rapport Hebdomadaire".equals(reportType)) {
-                    generateWeeklyReport();
+                    javafx.application.Platform.runLater(() -> generateWeeklyReport());
                 } else if ("Rapport Mensuel".equals(reportType)) {
-                    generateMonthlyReport();
+                    javafx.application.Platform.runLater(() -> generateMonthlyReport());
                 } else if ("Performance Agents".equals(reportType)) {
-                    generateAgentPerformanceReport();
+                    javafx.application.Platform.runLater(() -> generateAgentPerformanceReport());
                 } else if ("Analyse G\u00e9ographique".equals(reportType)) {
-                    generateGeographicAnalysis();
+                    javafx.application.Platform.runLater(() -> generateGeographicAnalysis());
                 }
-            } catch (Exception ex) {
-                showAlert("Erreur", "Erreur lors de la génération du rapport.");
-            } finally {
-                generateReportButton.setDisable(false);
-                generateReportButton.setText("\uD83D\uDD04 G\u00e9n\u00e9rer");
+                return null;
             }
+        };
+        task.setOnSucceeded(e -> {
+            generateReportButton.setDisable(false);
+            generateReportButton.setText("Generer");
         });
-        defer.play();
+        task.setOnFailed(e -> {
+            generateReportButton.setDisable(false);
+            generateReportButton.setText("Generer");
+            showAlert("Erreur", "Erreur lors de la generation du rapport.");
+        });
+        Thread t = new Thread(task, "report-gen");
+        t.setDaemon(true);
+        t.start();
     }
 
     private void generateRealTimeDashboard() {
@@ -253,12 +280,74 @@ public class ReportsController {
         dashboard.zonesActives.entrySet().stream()
             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
             .forEach(e -> zoneSeries.getData().add(new XYChart.Data<>(e.getKey(), e.getValue())));
+        zoneBarChart.getData().clear();
         zoneBarChart.setData(FXCollections.<XYChart.Series<String, Number>>observableArrayList(zoneSeries));
 
         int total = dashboard.totalSignalements;
         int tauxRes = total > 0 ? (int) Math.round(nbTermine * 100.0 / total) : 0;
+        double delaiH = signalementService.getTempsResolutionMoyenH();
+        int nbUrgents = dashboard.signalementsUrgents.size();
         String tendHebdo = dashboard.tendances.containsKey("hebdomadaire")
             ? String.format("%+.1f%% vs sem. pr\u00e9c.", dashboard.tendances.get("hebdomadaire")) : "";
+
+        // ── KPI cards ──────────────────────────────────────────────
+        if (kpiTotal != null) kpiTotal.setText(String.valueOf(total));
+        if (kpiTotalDelta != null) {
+            kpiTotalDelta.setText(tendHebdo.isBlank() ? "" : tendHebdo);
+            kpiTotalDelta.getStyleClass().removeAll(
+                "rpt-kpi-delta-up", "rpt-kpi-delta-down", "rpt-kpi-delta-neutral");
+            kpiTotalDelta.getStyleClass().add(
+                tendHebdo.startsWith("+") ? "rpt-kpi-delta-down" :
+                tendHebdo.startsWith("-") ? "rpt-kpi-delta-up" : "rpt-kpi-delta-neutral");
+        }
+        if (kpiTaux != null) kpiTaux.setText(tauxRes + "%");
+        if (kpiTauxDelta != null) {
+            kpiTauxDelta.getStyleClass().removeAll(
+                "rpt-kpi-delta-up", "rpt-kpi-delta-down", "rpt-kpi-delta-neutral", "rpt-kpi-delta-warn");
+            if (tauxRes >= 70) {
+                kpiTauxDelta.setText("Objectif atteint");
+                kpiTauxDelta.getStyleClass().add("rpt-kpi-delta-up");
+            } else if (tauxRes >= 40) {
+                kpiTauxDelta.setText("A ameliorer");
+                kpiTauxDelta.getStyleClass().add("rpt-kpi-delta-warn");
+            } else {
+                kpiTauxDelta.setText("Insuffisant");
+                kpiTauxDelta.getStyleClass().add("rpt-kpi-delta-down");
+            }
+        }
+        if (kpiDelai != null)
+            kpiDelai.setText(delaiH > 0 ? String.format(java.util.Locale.US, "%.1fh", delaiH) : "N/A");
+        if (kpiDelaiDelta != null) {
+            kpiDelaiDelta.getStyleClass().removeAll(
+                "rpt-kpi-delta-up", "rpt-kpi-delta-down", "rpt-kpi-delta-neutral", "rpt-kpi-delta-warn");
+            if (delaiH > 0 && delaiH <= 24) {
+                kpiDelaiDelta.setText("Bon");
+                kpiDelaiDelta.getStyleClass().add("rpt-kpi-delta-up");
+            } else if (delaiH > 48) {
+                kpiDelaiDelta.setText("Critique");
+                kpiDelaiDelta.getStyleClass().add("rpt-kpi-delta-down");
+            } else {
+                kpiDelaiDelta.setText(delaiH > 0 ? "Acceptable" : "");
+                kpiDelaiDelta.getStyleClass().add("rpt-kpi-delta-warn");
+            }
+        }
+        if (kpiUrgents != null) kpiUrgents.setText(String.valueOf(nbUrgents));
+        if (kpiUrgentsStatus != null) {
+            kpiUrgentsStatus.getStyleClass().removeAll(
+                "rpt-kpi-delta-up", "rpt-kpi-delta-down", "rpt-kpi-delta-neutral");
+            kpiUrgentsStatus.setText(nbUrgents == 0 ? "Aucun" : "Action requise");
+            kpiUrgentsStatus.getStyleClass().add(
+                nbUrgents == 0 ? "rpt-kpi-delta-up" : "rpt-kpi-delta-down");
+        }
+        if (kpiZone != null && !dashboard.zonesActives.isEmpty()) {
+            String topZone = dashboard.zonesActives.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("-");
+            kpiZone.setText(topZone);
+            int topCount = dashboard.zonesActives.getOrDefault(topZone, 0);
+            if (kpiZoneSub != null)
+                kpiZoneSub.setText(topCount + " signalement" + (topCount > 1 ? "s" : "") + " (7j)");
+        }
 
         ObservableList<StatisticRow> stats = FXCollections.observableArrayList();
         stats.add(new StatisticRow("Total signalements",    String.valueOf(total)));

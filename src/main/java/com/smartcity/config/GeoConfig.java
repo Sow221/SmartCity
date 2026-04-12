@@ -13,7 +13,7 @@ public class GeoConfig {
     private static final Logger logger = LoggerFactory.getLogger(GeoConfig.class);
 
     public static final int DEFAULT_GPS_PORT       = 3001;
-    public static final int DEFAULT_WEBSOCKET_PORT = 3002;
+    public static final int DEFAULT_WEBSOCKET_PORT = 8888;
 
     private static volatile int    actualGpsPort       = -1;
     private static volatile int    actualWebSocketPort = -1;

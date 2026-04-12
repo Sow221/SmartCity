@@ -348,7 +348,7 @@ public class CitizenDashboardController {
 
             filterMesSignalementsStatut.setItems(FXCollections.observableArrayList(
 
-                "Tous", "En attente", "Affecté", "En cours", "Terminé"));
+                "Tous", "En attente", "En cours / Affecté", "Terminé"));
 
 
 
@@ -518,7 +518,7 @@ public class CitizenDashboardController {
 
             if (!fileName.matches("[a-zA-Z0-9_\\-. ]+\\.(png|jpg|jpeg|gif|bmp)")) {
 
-                showCitizenMessage("â Nom de fichier invalide.", false);
+                showCitizenMessage("Nom de fichier invalide.", false);
 
                 return;
 
@@ -526,7 +526,7 @@ public class CitizenDashboardController {
 
             photoSignalementField.setText(fileName);
 
- showCitizenMessage("â Photo sélectionnée: " + fileName, true);
+            showCitizenMessage("Photo sélectionnée : " + fileName, true);
 
         }
 
@@ -552,7 +552,7 @@ public class CitizenDashboardController {
 
         if (descriptionSignalementArea.getText().isBlank()) {
 
-            showCitizenMessage("â Description requise", false);
+            showCitizenMessage("Description requise", false);
 
             descriptionSignalementArea.requestFocus();
 
@@ -564,7 +564,7 @@ public class CitizenDashboardController {
 
         if (categorieSignalementCombo.getValue() == null) {
 
-            showCitizenMessage("â Veuillez choisir une catégorie", false);
+            showCitizenMessage("Veuillez choisir une catégorie", false);
 
             return;
 
@@ -574,7 +574,7 @@ public class CitizenDashboardController {
 
         if (zoneSignalementCombo.getValue() == null) {
 
-            showCitizenMessage("â Veuillez choisir une zone", false);
+            showCitizenMessage("Veuillez choisir une zone", false);
 
             return;
 
@@ -604,7 +604,7 @@ public class CitizenDashboardController {
 
             } else {
 
-                showCitizenMessage("â Cliquez sur la carte ou scannez le QR code pour obtenir votre position", false);
+                showCitizenMessage("Cliquez sur la carte ou scannez le QR code pour obtenir votre position", false);
 
                 return;
 
@@ -628,7 +628,7 @@ public class CitizenDashboardController {
 
         if (!validation.isValid()) {
 
-            showCitizenMessage("â " + validation.getMessage(), false);
+            showCitizenMessage(validation.getMessage(), false);
 
             return;
 
@@ -700,7 +700,7 @@ public class CitizenDashboardController {
 
         if (!SignalementStatut.EN_ATTENTE.matches(selected.getStatut())) {
 
-            showCitizenMessage("â Seuls les signalements en attente peuvent être supprimés.", false);
+            showCitizenMessage("Seuls les signalements en attente peuvent être supprimés.", false);
 
             return;
 
@@ -720,13 +720,13 @@ public class CitizenDashboardController {
 
         if (signalementService.supprimerSignalement(selected.getIdSignalement())) {
 
- showCitizenMessage("â Signalement supprimé.", true);
+            showCitizenMessage("Signalement supprimé.", true);
 
             chargerDonnees();
 
         } else {
 
-            showCitizenMessage("â Echec de la suppression.", false);
+            showCitizenMessage("Echec de la suppression.", false);
 
         }
 
@@ -770,7 +770,13 @@ public class CitizenDashboardController {
 
         mesSignalements.setAll(tous.stream()
 
-            .filter(s -> statut == null || com.smartcity.model.SignalementStatut.fromAny(statut) == com.smartcity.model.SignalementStatut.fromAny(s.getStatut()))
+            .filter(s -> statut == null
+
+                || ("En cours / Affecté".equals(statut)
+
+                    ? (com.smartcity.model.SignalementStatut.EN_COURS.matches(s.getStatut()) || com.smartcity.model.SignalementStatut.AFFECTE.matches(s.getStatut()))
+
+                    : com.smartcity.model.SignalementStatut.fromAny(statut) == com.smartcity.model.SignalementStatut.fromAny(s.getStatut())))
 
             .filter(s -> date == null || (s.getDateSignalement() != null && date.equals(s.getDateSignalement().toLocalDate())))
 
@@ -786,7 +792,7 @@ public class CitizenDashboardController {
 
         clearForm();
 
-        showCitizenMessage("ð Formulaire remis Ã  zéro", true);
+        showCitizenMessage("Formulaire remis à zéro", true);
 
     }
 
@@ -844,7 +850,7 @@ public class CitizenDashboardController {
 
         if (!newEmail.equals(current.getEmail()) && utilisateurService.emailExiste(newEmail)) {
 
-            showCitizenMessage("Cet email est déjÃ  utilisé par un autre compte.", false);
+            showCitizenMessage("Cet email est déjà utilisé par un autre compte.", false);
 
             return;
 
@@ -960,11 +966,11 @@ public class CitizenDashboardController {
 
         if (utilisateurService.updateMotDePasse(current.getIdUser(), result.get())) {
 
-            showCitizenMessage("Mot de passe mis Ã  jour.", true);
+            showCitizenMessage("Mot de passe mis à jour.", true);
 
         } else {
 
-            showCitizenMessage("Echec de la mise Ã  jour du mot de passe.", false);
+            showCitizenMessage("Echec de la mise à jour du mot de passe.", false);
 
         }
 
@@ -1226,7 +1232,7 @@ public class CitizenDashboardController {
 
             if (received) {
 
- positionLabel.setText(String.format("â %.5f, %.5f", lat, lon));
+                positionLabel.setText(String.format("✓ %.5f, %.5f", lat, lon));
 
                 positionLabel.setStyle("-fx-text-fill:#2E7D32;-fx-font-weight:bold;");
 
@@ -1632,7 +1638,7 @@ public class CitizenDashboardController {
 
         // Colonne Ãvaluation (bouton pour les terminés)
 
- TableColumn<Signalement, Void> colEval = new TableColumn<>("â Ãvaluer");
+ TableColumn<Signalement, Void> colEval = new TableColumn<>("Évaluer");
 
         colEval.setStyle("-fx-alignment: CENTER;");
 
@@ -1640,7 +1646,7 @@ public class CitizenDashboardController {
 
         colEval.setCellFactory(col -> new TableCell<>() {
 
- private final Button btn = new Button("â Ãvaluer");
+            private final Button btn = new Button("Évaluer");
 
             { btn.setStyle("-fx-background-color:#FF9800;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:3 8;");
 
@@ -1764,7 +1770,7 @@ public class CitizenDashboardController {
 
         Dialog<int[]> dialog = new Dialog<>();
 
- dialog.setTitle("â Ãvaluer la collecte");
+        dialog.setTitle("Évaluer la collecte");
 
         dialog.setHeaderText("Signalement #" + signalement.getIdSignalement()
 
@@ -1788,12 +1794,10 @@ public class CitizenDashboardController {
 
         slider.setSnapToTicks(true); slider.setShowTickLabels(true); slider.setShowTickMarks(true);
 
- Label lblValeur = new Label("â â â ");
+        Label lblValeur = new Label("★ ★ ★");
 
         slider.valueProperty().addListener((obs, o, n) ->
-
- lblValeur.setText("â ".repeat(n.intValue()) + "â".repeat(5 - n.intValue())));
-
+            lblValeur.setText("★".repeat(n.intValue()) + "☆".repeat(5 - n.intValue())));
         TextArea taComment = new TextArea();
 
         taComment.setPromptText("Commentaire optionnel...");
@@ -1818,13 +1822,13 @@ public class CitizenDashboardController {
 
                     current.getIdUser(), res[0], taComment.getText().trim())) {
 
- showCitizenMessage("â Merci pour votre évaluation !", true);
+                showCitizenMessage("Merci pour votre évaluation !", true);
 
                 refreshMesSignalements();
 
             } else {
 
-                showCitizenMessage("â Erreur lors de l'envoi.", false);
+                showCitizenMessage("Erreur lors de l'envoi.", false);
 
             }
 

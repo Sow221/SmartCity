@@ -136,7 +136,7 @@
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardEnCours" text="0" styleClass="stat-card-number"/>
-                                    <Label text="En cours" styleClass="stat-card-label"/>
+                                    <Label text="En cours / Affecté" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>

@@ -76,7 +76,7 @@
                 <Label fx:id="lblMissionsCount" text="0 missions" styleClass="missions-count-badge"/>
             </HBox>
 
-            <Label fx:id="agentMessageLabel" text="" styleClass="floating-message" visible="false" managed="false"/>
+            <Label fx:id="agentMessageLabel" text="" styleClass="floating-message"/>
 
             <StackPane VBox.vgrow="ALWAYS">
 
@@ -237,7 +237,8 @@
                 </ScrollPane>
 
                 <!-- PAGE CARTE ZONES -->
-                <VBox fx:id="pageCarteZones" spacing="16" styleClass="page-box" VBox.vgrow="ALWAYS" visible="false" managed="false">
+                <ScrollPane fx:id="pageCarteZonesScroll" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
+                <VBox fx:id="pageCarteZones" spacing="16" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Tournée du jour" styleClass="page-title-agent"/>
@@ -296,7 +297,7 @@
                             <VBox spacing="6" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
                                 <Label text="Page GPS" styleClass="map-detail-label"/>
                                 <Label fx:id="mapQrUrlLabel" text="" wrapText="true" styleClass="map-detail-url"/>
-                                <Button text="Copier l'URL" onAction="#handleCopierUrlGpsFromMap" styleClass="btn-outline-sm" prefWidth="110"/>
+                                <Button text="Copier l'URL" onAction="#handleCopierUrlGps" styleClass="btn-outline-sm" prefWidth="110"/>
                             </VBox>
                             <VBox spacing="6" alignment="CENTER">
                                 <Label text="QR Code" styleClass="map-detail-label"/>
@@ -305,6 +306,7 @@
                         </HBox>
                     </VBox>
                 </VBox>
+                </ScrollPane>
 
                 <!-- PAGE HISTORIQUE -->
                 <ScrollPane fx:id="pageHistorique" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">

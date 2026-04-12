@@ -231,7 +231,7 @@ public class AdminDashboardController {
             protected Void call() {
                 int total      = signalementService.countAll();
                 int attente    = signalementService.countByStatut("En attente");
-                int encours    = signalementService.countByStatut("En cours");
+                int encours    = signalementService.countByStatut("En cours") + signalementService.countByStatut("Affect\u00e9");
                 int collectes  = signalementService.countByStatut("Termin\u00e9");
                 int urgents    = signalementService.countUrgents();
                 int totalUsers = utilisateurService.countAllActifs();
@@ -864,7 +864,7 @@ public class AdminDashboardController {
         }
         if (statBarZone != null) {
             statBarZone.getData().clear();
-            for (String statut : new String[]{"En attente", "En cours", "Termin\u00e9"}) {
+            for (String statut : new String[]{"En attente", "Affect\u00e9", "En cours", "Termin\u00e9"}) {
                 XYChart.Series<String, Number> s = new XYChart.Series<>();
                 s.setName(statut);
                 zoneService.getAllZones().forEach(z ->

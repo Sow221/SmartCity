@@ -4,8 +4,6 @@ package com.smartcity.controller;
 
 
 
-import java.nio.charset.StandardCharsets;
-import java.io.InputStream;
 import com.smartcity.app.MainApp;
 
 
@@ -336,6 +334,12 @@ public class AgentDashboardController {
     @FXML
 
 
+    private ScrollPane pageCarteZonesScroll;
+
+
+    @FXML
+
+
     private VBox pageCarteZones;
 
 
@@ -545,7 +549,7 @@ public class AgentDashboardController {
         // Initialisation visibilité pages
 
 
-        javafx.scene.Node[] pages = { pageAgentDashboard, pageMesMissions, pageCarteZones, pageHistorique, pageMonProfil };
+        javafx.scene.Node[] pages = { pageAgentDashboard, pageMesMissions, pageCarteZonesScroll, pageHistorique, pageMonProfil };
 
 
         for (javafx.scene.Node page : pages) {
@@ -749,7 +753,7 @@ public class AgentDashboardController {
                 }
 
 
-                if (pageCarteZones != null && pageCarteZones.isVisible()) {
+                if (pageCarteZonesScroll != null && pageCarteZonesScroll.isVisible()) {
 
 
                     refreshTourneeMap();
@@ -869,7 +873,7 @@ public class AgentDashboardController {
                 tableMesMissions.getSelectionModel().selectFirst();
 
 
-            if (pageCarteZones != null && pageCarteZones.isVisible())
+            if (pageCarteZonesScroll != null && pageCarteZonesScroll.isVisible())
 
 
                 refreshTourneeMap();
@@ -971,7 +975,7 @@ public class AgentDashboardController {
     private void handleShowCarteZones() {
 
 
-        showPage(pageCarteZones, btnCarteZones);
+        showPage(pageCarteZonesScroll, btnCarteZones);
 
 
         refreshTourneeMap();
@@ -1535,7 +1539,7 @@ public class AgentDashboardController {
     private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
 
 
-        javafx.scene.Node[] pages = { pageAgentDashboard, pageMesMissions, pageCarteZones, pageHistorique, pageMonProfil };
+        javafx.scene.Node[] pages = { pageAgentDashboard, pageMesMissions, pageCarteZonesScroll, pageHistorique, pageMonProfil };
 
 
         for (javafx.scene.Node page : pages) {
@@ -1613,7 +1617,7 @@ public class AgentDashboardController {
             refreshProfil();
 
 
-        } else if (pageToShow == pageCarteZones) {
+        } else if (pageToShow == pageCarteZonesScroll) {
 
 
             refreshTourneeMap();
@@ -1977,6 +1981,11 @@ public class AgentDashboardController {
 
 
         applyStatutColorCell(colMissionStatut);
+
+        tableMesMissions.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            updateMapDetails(newVal);
+            updateDistanceAndTime();
+        });
 
 
 
@@ -2808,7 +2817,7 @@ public class AgentDashboardController {
             return;
 
 
-        showPage(pageCarteZones, btnCarteZones);
+        showPage(pageCarteZonesScroll, btnCarteZones);
 
 
         showAgentMessage("📍 Cliquez sur la carte pour définir votre position exacte", true);
@@ -2871,7 +2880,7 @@ public class AgentDashboardController {
     private void refreshMapWithOptimizedRoute(List<Signalement> optimizedRoute) {
 
 
-        if (mapWebView == null || optimizedRoute.isEmpty())
+        if (mapWebView == null)
 
 
             return;
@@ -2880,7 +2889,49 @@ public class AgentDashboardController {
         installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
 
 
-        mapWebView.getEngine().loadContent(buildOptimizedRouteHtml(optimizedRoute, getTourneeStartPoint()));
+        // Afficher toutes les missions + la route optimisée par-dessus
+
+
+        String html = buildLeafletHtml(null, false);
+
+
+        if (!optimizedRoute.isEmpty()) {
+
+
+            GeolocationService.Coordinates startPoint = getTourneeStartPoint();
+
+
+            // Injecter la polyline de route dans le HTML existant
+
+
+            StringBuilder routePoints = new StringBuilder();
+
+
+            routePoints.append(String.format("[%.6f,%.6f]", startPoint.lat, startPoint.lon));
+
+
+            for (Signalement m : optimizedRoute) {
+
+
+                Point p = missionPoint(m, indexOfMission(m));
+
+
+                routePoints.append(String.format(",[%.6f,%.6f]", p.lat, p.lon));
+
+
+            }
+
+
+            String routeLine = "L.polyline([" + routePoints + "],{color:'#FF5722',weight:4,dashArray:'10 5',opacity:0.8}).addTo(map);";
+
+
+            html = html.replace("</body></html>", "<script>" + routeLine + "</script></body></html>");
+
+
+        }
+
+
+        mapWebView.getEngine().loadContent(html);
 
 
     }
@@ -3056,20 +3107,14 @@ public class AgentDashboardController {
 
     }
 
-    /** ✅ CHARGER LE JAVASCRIPT DE LA CARTE DEPUIS LES RESSOURCES */
-    private static String getSmartGpsMapJs() {
-        try {
-            InputStream stream = AgentDashboardController.class
-                    .getResourceAsStream("/js/smart-gps-map.js");
-            if (stream == null) {
-                logger.warn("⚠️ smart-gps-map.js not found in resources");
-                return ""; // Fallback silencieux
-            }
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            logger.warn("⚠️ Error loading smart-gps-map.js: {}", e.getMessage());
-            return "";
+    /** ✅ URL du JS de la carte depuis les ressources */
+    private static String getSmartGpsMapJsUrl() {
+        java.net.URL url = AgentDashboardController.class.getResource("/js/smart-gps-map.js");
+        if (url == null) {
+            logger.warn("⚠️ smart-gps-map.js not found in resources");
+            return null;
         }
+        return url.toExternalForm();
     }
 
     /** ✅ CRÉER LE CLIENT WEBSOCKET POUR MISES À JOUR TEMPS RÉEL */
@@ -3082,7 +3127,7 @@ public class AgentDashboardController {
             function connectWebSocket() {
                 try {
                     let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                    let wsUrl = protocol + '//' + location.hostname + ':3002/ws/agent-missions';
+                    let wsUrl = protocol + '//' + location.hostname + ':' + (window._wsPort || 8888) + '/ws/agent-missions';
                     ws = new WebSocket(wsUrl);
                     
                     ws.onopen = function() {
@@ -3413,8 +3458,8 @@ public class AgentDashboardController {
 
                 "</script>" +
 
-                "<script>" + getSmartGpsMapJs() + "</script>" +
-
+                "<script>window._wsPort=" + com.smartcity.config.GeoConfig.getWebSocketPort() + ";</script>" +
+                (getSmartGpsMapJsUrl() != null ? "<script src='" + getSmartGpsMapJsUrl() + "'></script>" : "") +
                 "<script>" + getWebSocketClientJs() + "</script>" +
 
                 "</body></html>";

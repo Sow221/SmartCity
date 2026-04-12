@@ -4,6 +4,8 @@
 
 
 
+import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import com.smartcity.app.MainApp;
 
 
@@ -3054,6 +3056,96 @@ public class AgentDashboardController {
 
     }
 
+    /** ✅ CHARGER LE JAVASCRIPT DE LA CARTE DEPUIS LES RESSOURCES */
+    private static String getSmartGpsMapJs() {
+        try {
+            InputStream stream = AgentDashboardController.class
+                    .getResourceAsStream("/js/smart-gps-map.js");
+            if (stream == null) {
+                logger.warn("⚠️ smart-gps-map.js not found in resources");
+                return ""; // Fallback silencieux
+            }
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            logger.warn("⚠️ Error loading smart-gps-map.js: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /** ✅ CRÉER LE CLIENT WEBSOCKET POUR MISES À JOUR TEMPS RÉEL */
+    private static String getWebSocketClientJs() {
+        return """
+            // 🔌 WebSocket Client - Mises à jour temps réel des missions et positions
+            let ws = null;
+            let wsConnectAttempts = 0;
+            
+            function connectWebSocket() {
+                try {
+                    let protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    let wsUrl = protocol + '//' + location.hostname + ':3002/ws/agent-missions';
+                    ws = new WebSocket(wsUrl);
+                    
+                    ws.onopen = function() {
+                        console.log('✅ WebSocket connecté pour mises à jour temps réel');
+                        wsConnectAttempts = 0; // Reset counter on success
+                    };
+                    
+                    ws.onmessage = function(event) {
+                        try {
+                            let data = JSON.parse(event.data);
+                            
+                            // Position d'agent en temps réel
+                            if (data.type === 'position' && data.lat && data.lon) {
+                                console.log('📍 Position agent reçue:', data.lat, data.lon);
+                                if (typeof updateAgentPosition === 'function') {
+                                    updateAgentPosition(data.lat, data.lon);
+                                }
+                                if (window.parent.refreshAgentMissions) {
+                                    window.parent.refreshAgentMissions();
+                                }
+                            }
+                            
+                            // Nouvelle mission
+                            if (data.type === 'mission') {
+                                console.log('🎯 Nouvelle mission reçue');
+                                if (window.parent.refreshAgentMissions) {
+                                    window.parent.refreshAgentMissions();
+                                }
+                            }
+                        } catch(parseErr) {
+                            console.debug('WebSocket message parse error (non-JSON):', event.data);
+                        }
+                    };
+                    
+                    ws.onerror = function(err) {
+                        console.error('❌ WebSocket error:', err);
+                    };
+                    
+                    ws.onclose = function() {
+                        console.warn('⚠️ WebSocket fermé');
+                        // Reconnexion après délai
+                        wsConnectAttempts++;
+                        let delay = Math.min(300000, 5000 * Math.pow(1.5, wsConnectAttempts));
+                        console.log('🔄 Reconnexion dans', Math.round(delay/1000), 's');
+                        setTimeout(connectWebSocket, delay);
+                    };
+                } catch(err) {
+                    console.error('WebSocket setup error:', err);
+                    setTimeout(connectWebSocket, 5000);
+                }
+            }
+            
+            // Connecter au chargement de la page
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', connectWebSocket);
+            } else {
+                connectWebSocket();
+            }
+            """;
+    }
+
+
+
 
 
 
@@ -3322,7 +3414,13 @@ public class AgentDashboardController {
                 "</script>" +
 
 
-                "</body></html>";
+                "
+                + getSmartGpsMapJs()  // ✅ Charger smart-gps-map.js
+                + "<script>"
+                + getWebSocketClientJs()  // ✅ Ajouter client WebSocket
+                + "</script>"
+                + "</body></html>";
+
 
 
     }

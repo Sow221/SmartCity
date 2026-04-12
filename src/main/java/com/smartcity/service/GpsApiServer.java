@@ -59,6 +59,25 @@ import sun.security.x509.X509CertInfo;
  */
 public class GpsApiServer {
 
+
+    /**
+     * ℹ️ NOTES SUR LES PROTOCOLES:
+     * 
+     * HTTP (PORT 3001):
+     *   - ✅ Fonctionne parfaitement sur WiFi local (192.168.x.x, 10.x.x.x)
+     *   - ✅ Pas d'avertissement certificat
+     *   - ✅ Idéal pour développement et tests
+     *   - ✅ Utilisé par défaut si HTTPS bloqué
+     * 
+     * HTTPS (PORT 3002):
+     *   - ✅ Sécurisé pour production
+     *   - ⚠️ Certificat auto-signé → avertissements navigateur mobile
+     *   - 💡 Solution: utiliser HTTP sur WiFi local, HTTPS en production
+     * 
+     * RECOMMANDATION: Pour développement/tests, préférer HTTP avec WiFi local
+     */
+
+
     private static final Logger logger = LoggerFactory.getLogger(GpsApiServer.class);
 
     /** Port résolu une seule fois au démarrage — utilisé par PositionAgentService et MainApp. */
@@ -120,7 +139,7 @@ public class GpsApiServer {
 
         server.start();
         httpsServer.start();
-        logger.info("✅ GPS API Server démarré sur http://{}:{} et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
+        logger.info("✅ GPS API Server démarré sur http://{}:{} (recommandé en test) et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
     }
 
     public void stop() {

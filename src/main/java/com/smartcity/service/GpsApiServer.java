@@ -211,24 +211,8 @@ public class GpsApiServer {
     // ── URLs publiques ───────────────────────────────────────────────────────
 
     public static String getLocalIp() {
-        try {
-            java.util.List<String> candidates = Collections.list(NetworkInterface.getNetworkInterfaces())
-                    .stream()
-                    .filter(ni -> {
-                        try { return ni.isUp() && !ni.isLoopback() && !ni.isVirtual(); }
-                        catch (Exception e) { return false; }
-                    })
-                    .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
-                    .filter(addr -> !addr.isLoopbackAddress() && addr.getHostAddress().contains("."))
-                    .map(java.net.InetAddress::getHostAddress)
-                    .collect(java.util.stream.Collectors.toList());
-            return candidates.stream()
-                    .filter(ip -> ip.startsWith("192.168.") || ip.startsWith("10."))
-                    .findFirst()
-                    .orElse(candidates.isEmpty() ? "localhost" : candidates.get(0));
-        } catch (Exception e) {
-            return "localhost";
-        }
+        // ✅ UTILISER LA SOURCE CENTRALISÉE (NetworkUtils) - UNIQUE SOURCE DE VÉRITÉ
+        return com.smartcity.utils.NetworkUtils.detectLocalIp();
     }
 
     public static String getGpsPageUrl(int agentId) {

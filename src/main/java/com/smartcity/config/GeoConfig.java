@@ -64,16 +64,7 @@ public class GeoConfig {
         localIp             = NetworkUtils.detectLocalIp();
         actualGpsPort       = NetworkUtils.findFreePort(DEFAULT_GPS_PORT);
         actualWebSocketPort = NetworkUtils.findFreePort(DEFAULT_WEBSOCKET_PORT);
-        logger.info("🌐 GeoConfig OK - GPS port: {}, WS port: {}, IP: {}",
+        logger.info("GeoConfig OK - GPS port: {}, WS port: {}, IP: {}",
                 actualGpsPort, actualWebSocketPort, localIp);
-    }
-}
-        }
-        try (ServerSocket s = new ServerSocket(0)) {
-            return s.getLocalPort();
-        } catch (IOException e) {
-            logger.error("Impossible de trouver un port libre", e);
-            return preferred;
-        }
     }
 }

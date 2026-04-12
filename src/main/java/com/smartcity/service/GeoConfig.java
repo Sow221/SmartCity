@@ -15,6 +15,6 @@ public class GeoConfig {
     public static String getGpsBaseUrl() { return com.smartcity.config.GeoConfig.getGpsBaseUrl(); }
 
     public static int findFreePort(int preferred) {
-        return com.smartcity.config.GeoConfig.findFreePort(preferred);
+        return com.smartcity.utils.NetworkUtils.findFreePort(preferred);
     }
 }

@@ -1,4 +1,4 @@
-package com.smartcity.controller;
+﻿package com.smartcity.controller;
 
 
 
@@ -3413,16 +3413,20 @@ public class AgentDashboardController {
 
                 "</script>" +
 
-                "<script>" + getSmartGpsMapJs() + "</script>" +
 
-                "<script>" + getWebSocketClientJs() + "</script>" +
-
-                "</body></html>";
-
+                "
+                + getSmartGpsMapJs()  // ✅ Charger smart-gps-map.js
+                + "<script>"
+                + getWebSocketClientJs()  // ✅ Ajouter client WebSocket
+                + "</script>"
+                + "</body></html>";
 
 
 
     }
+
+
+
 
 
     private int indexOfMission(Signalement mission) {

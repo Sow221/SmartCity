@@ -13,20 +13,15 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.KeyStore;
+import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -164,32 +159,38 @@ public class GpsApiServer {
         }
     }
 
+    @SuppressWarnings("restriction")
     private KeyStore createSelfSignedKeyStore() throws Exception {
         char[] password = "changeit".toCharArray();
-        java.io.File ksFile = java.io.File.createTempFile("smartcity-gps", ".p12");
-        ksFile.deleteOnExit();
-        ProcessBuilder pb = new ProcessBuilder(
-            "keytool", "-genkeypair",
-            "-alias", "gps",
-            "-keyalg", "RSA", "-keysize", "2048",
-            "-validity", "365",
-            "-dname", "CN=SmartCity GPS API, OU=SmartCity, O=SmartCity, L=Local, ST=None, C=FR",
-            "-storetype", "PKCS12",
-            "-keystore", ksFile.getAbsolutePath(),
-            "-storepass", "changeit",
-            "-keypass", "changeit",
-            "-noprompt"
-        );
-        pb.redirectErrorStream(true);
-        Process proc = pb.start();
-        proc.waitFor();
-        KeyStore ks = KeyStore.getInstance("PKCS12");
-        try (java.io.FileInputStream fis = new java.io.FileInputStream(ksFile)) {
-            ks.load(fis, password);
-        }
+        // Generate RSA key pair
+        java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048, new java.security.SecureRandom());
+        java.security.KeyPair keyPair = keyGen.generateKeyPair();
+
+        // Use Reflection to call sun.security.tools.keytool.CertAndKeyGen at runtime only
+        // This avoids any compile-time dependency on internal JDK APIs
+        Class<?> certAndKeyGenClass = Class.forName("sun.security.tools.keytool.CertAndKeyGen");
+        Object certGen = certAndKeyGenClass
+                .getConstructor(String.class, String.class)
+                .newInstance("RSA", "SHA256withRSA");
+        certAndKeyGenClass.getMethod("generate", int.class).invoke(certGen, 2048);
+
+        java.security.PrivateKey privateKey = (java.security.PrivateKey)
+                certAndKeyGenClass.getMethod("getPrivateKey").invoke(certGen);
+
+        Class<?> x500NameClass = Class.forName("sun.security.x509.X500Name");
+        Object owner = x500NameClass.getConstructor(String.class)
+                .newInstance("CN=SmartCity GPS API, OU=SmartCity, O=SmartCity, L=Local, ST=None, C=FR");
+
+        java.security.cert.X509Certificate cert = (java.security.cert.X509Certificate)
+                certAndKeyGenClass.getMethod("getSelfCertificate", x500NameClass, long.class)
+                        .invoke(certGen, owner, 365L * 24 * 3600);
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        ks.setKeyEntry("gps", privateKey, password, new java.security.cert.Certificate[]{cert});
         return ks;
     }
-
     // ── URLs publiques ───────────────────────────────────────────────────────
 
     public static String getLocalIp() {

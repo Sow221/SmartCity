@@ -161,6 +161,10 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.smartcity.app.MainApp</mainClass>
+                    <options>
+                        <option>--add-exports=java.base/sun.security.x509=ALL-UNNAMED</option>
+                        <option>--add-exports=java.base/sun.security.tools.keytool=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
             <plugin>

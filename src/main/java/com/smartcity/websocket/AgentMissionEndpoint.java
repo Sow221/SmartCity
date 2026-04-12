@@ -48,6 +48,18 @@ public class AgentMissionEndpoint {
         broadcast(String.format("{\"type\":\"%s\"}", type));
     }
 
+    /**
+     * Broadcast position realtime update pour tous les agents connectés.
+     * Appelé depuis GpsApiServer lors de chaque mise à jour GPS.
+     */
+    public static void broadcastPosition(int agentId, double lat, double lon) {
+        String positionJson = String.format(
+            "{\"type\":\"position\",\"agentId\":%d,\"lat\":%f,\"lon\":%f,\"timestamp\":%d}",
+            agentId, lat, lon, System.currentTimeMillis()
+        );
+        broadcast(positionJson);
+    }
+
     private static void broadcast(String message) {
         for (Session session : sessions) {
             if (session.isOpen()) {

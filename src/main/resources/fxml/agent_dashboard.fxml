@@ -286,6 +286,24 @@
                             </VBox>
                         </right>
                     </BorderPane>
+                    
+                    <!-- GPS QR Code Section en bas -->
+                    <VBox spacing="12" styleClass="map-detail-panel" alignment="CENTER">
+                        <padding><Insets top="12" left="12" right="12" bottom="12"/></padding>
+                        <Label text="GPS Mobile — Scannez le QR code" styleClass="map-detail-title"/>
+                        <Region styleClass="profile-divider" prefHeight="1"/>
+                        <HBox spacing="12" alignment="CENTER">
+                            <VBox spacing="6" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                <Label text="Page GPS" styleClass="map-detail-label"/>
+                                <Label fx:id="mapQrUrlLabel" text="" wrapText="true" styleClass="map-detail-url"/>
+                                <Button text="Copier l'URL" onAction="#handleCopierUrlGpsFromMap" styleClass="btn-outline-sm" prefWidth="110"/>
+                            </VBox>
+                            <VBox spacing="6" alignment="CENTER">
+                                <Label text="QR Code" styleClass="map-detail-label"/>
+                                <ImageView fx:id="mapQrCodeImageView" fitWidth="140" fitHeight="140" preserveRatio="true"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
                 </VBox>
 
                 <!-- PAGE HISTORIQUE -->

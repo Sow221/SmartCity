@@ -1,529 +1,560 @@
-package com.smartcity.service;
+﻿package com.smartcity.service;
 
+import com.smartcity.config.GeoConfig;
 import com.smartcity.utils.DatabaseConnection;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsParameters;
+import com.sun.net.httpserver.HttpsServer;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sun.security.x509.AlgorithmId;
+import sun.security.x509.BasicConstraintsExtension;
+import sun.security.x509.CertificateAlgorithmId;
+import sun.security.x509.CertificateExtensions;
+import sun.security.x509.CertificateIssuerName;
+import sun.security.x509.CertificateSerialNumber;
+import sun.security.x509.CertificateSubjectName;
+import sun.security.x509.CertificateValidity;
+import sun.security.x509.CertificateVersion;
+import sun.security.x509.CertificateX509Key;
+import sun.security.x509.DNSName;
+import sun.security.x509.GeneralName;
+import sun.security.x509.GeneralNames;
+import sun.security.x509.IPAddressName;
+import sun.security.x509.SubjectAlternativeNameExtension;
+import sun.security.x509.X500Name;
+import sun.security.x509.X509CertImpl;
+import sun.security.x509.X509CertInfo;
+
 /**
- * Serveur HTTP embarqué (JDK pur) pour recevoir la position GPS des agents ET citoyens
- * depuis leur téléphone via navigateur.
- *
- * Endpoints :
- *   POST /api/position  → body: agentId=X&lat=Y&lon=Z (agents)
- *   POST /api/citizen-position → body: citizenId=X&lat=Y&lon=Z (citoyens)
- *   GET  /api/position?agentId=X → lecture position agent
- *   GET  /api/citizen-position?citizenId=X → lecture position citoyen
- *   GET  /gps?agentId=X → page HTML agent
- *   GET  /citizen-gps?citizenId=X → page HTML citoyen
+ * Serveur HTTP embarqué pour la géolocalisation GPS temps réel.
+ * Agents et citoyens envoient leur position depuis un navigateur mobile.
+ * Port : résolu dynamiquement via GeoConfig (3001 par défaut).
  */
 public class GpsApiServer {
 
     private static final Logger logger = LoggerFactory.getLogger(GpsApiServer.class);
-    public static final int PORT = 8081;
 
-    // Token par agent : agentId -> token UUID
-    private static final ConcurrentHashMap<Integer, String> agentTokens = new ConcurrentHashMap<>();
-    // Token par citoyen : citizenId -> token UUID
+    /** Port résolu une seule fois au démarrage — utilisé par PositionAgentService et MainApp. */
+    public static final int PORT = GeoConfig.getGpsPort();
+    public static final int HTTPS_PORT = PORT + 1;
+
+    private static final ConcurrentHashMap<Integer, String> agentTokens   = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Integer, String> citizenTokens = new ConcurrentHashMap<>();
 
-    /** Vérifie qu'un token correspond à un agent connu (utilisé par le WebSocket). */
-    public static boolean isValidAgentToken(String token) {
-        if (token == null || token.isBlank()) return false;
-        return agentTokens.values().stream().anyMatch(t -> t.equals(token));
-    }
-
-    /** Génère (ou récupère) un token pour un agent. */
-    public static String getOrCreateToken(int agentId) {
-        return agentTokens.computeIfAbsent(agentId, id -> UUID.randomUUID().toString().replace("-", ""));
-    }
-
-    /** Génère (ou récupère) un token pour un citoyen. */
-    public static String getOrCreateCitizenToken(int citizenId) {
-        return citizenTokens.computeIfAbsent(citizenId, id -> UUID.randomUUID().toString().replace("-", ""));
-    }
-
     private HttpServer server;
+    private HttpsServer httpsServer;
+
+    // ── Tokens ──────────────────────────────────────────────────────────────
+
+    public static String getOrCreateToken(int agentId) {
+        String token = agentTokens.computeIfAbsent(agentId,
+                id -> UUID.randomUUID().toString().replace("-", ""));
+        saveTokenToDatabase(agentId, "agent", token);
+        return token;
+    }
+
+    public static String getOrCreateCitizenToken(int citizenId) {
+        String token = citizenTokens.computeIfAbsent(citizenId,
+                id -> UUID.randomUUID().toString().replace("-", ""));
+        saveTokenToDatabase(citizenId, "citizen", token);
+        return token;
+    }
+
+    public static boolean isValidAgentToken(String token) {
+        return token != null && agentTokens.values().stream().anyMatch(t -> t.equals(token));
+    }
+
+    // ── Démarrage ────────────────────────────────────────────────────────────
 
     public void start(int defaultAgentId) throws IOException {
         ensureGpsSchema();
-        com.smartcity.service.AffectationService.resetPositionTableFlag();
-        server = HttpServer.create(new InetSocketAddress(PORT), 0);
-        server.createContext("/api/position", exchange -> handlePosition(exchange));
-        server.createContext("/api/citizen-position", exchange -> handleCitizenPosition(exchange));
-        server.createContext("/gps", exchange -> {
-            int id = parseParam(exchange.getRequestURI().getQuery(), "agentId");
-            handleGpsPage(exchange, id < 0 ? defaultAgentId : id, "agent");
-        });
-        server.createContext("/citizen-gps", exchange -> {
-            int id = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
-            handleGpsPage(exchange, id, "citizen");
-        });
-        server.setExecutor(Executors.newFixedThreadPool(4));
-        server.start();
-        logger.info("GPS API Server démarré sur le port {} (Agents + Citoyens)", PORT);
-    }
+        AffectationService.resetPositionTableFlag();
 
-    /**
-     * Auto-répare le schéma minimal GPS si la base est incomplète.
-     * Cela évite les erreurs en boucle sur position_agent/position_citoyen.
-     */
-    private void ensureGpsSchema() {
-        try (Connection conn = DatabaseConnection.getConnection();
-             java.sql.Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS position_agent (
-                    idAgent INT PRIMARY KEY,
-                    latitude DECIMAL(10,8) NOT NULL,
-                    longitude DECIMAL(11,8) NOT NULL,
-                    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser) ON DELETE CASCADE
-                )
-                """);
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS position_citoyen (
-                    idCitoyen INT PRIMARY KEY,
-                    latitude DECIMAL(10,8) NOT NULL,
-                    longitude DECIMAL(11,8) NOT NULL,
-                    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (idCitoyen) REFERENCES Utilisateur(idUser) ON DELETE CASCADE
-                )
-                """);
+        int resolvedPort = GeoConfig.getGpsPort();
+        server = HttpServer.create(new InetSocketAddress("0.0.0.0", resolvedPort), 0);
+        httpsServer = HttpsServer.create(new InetSocketAddress("0.0.0.0", HTTPS_PORT), 0);
 
-            if (!hasZoneGpsColumns(conn)) {
-                stmt.execute("ALTER TABLE Zone ADD COLUMN latitude DECIMAL(10,8) DEFAULT 0.0");
-                stmt.execute("ALTER TABLE Zone ADD COLUMN longitude DECIMAL(11,8) DEFAULT 0.0");
-                stmt.execute("UPDATE Zone SET latitude = 14.7646, longitude = -17.3920 WHERE nomZone = 'Pikine'");
-                stmt.execute("UPDATE Zone SET latitude = 14.7765, longitude = -17.4047 WHERE nomZone IN ('Guédiawaye', 'Guediawaye')");
-                logger.info("Colonnes GPS ajoutées à Zone (migration automatique).");
+        createContexts(server);
+        createContexts(httpsServer);
+
+        httpsServer.setHttpsConfigurator(new HttpsConfigurator(createSslContext()) {
+            @Override
+            public void configure(HttpsParameters params) {
+                SSLContext c = getSSLContext();
+                SSLParameters sslParams = c.getDefaultSSLParameters();
+                sslParams.setNeedClientAuth(false);
+                params.setSSLParameters(sslParams);
             }
-        } catch (SQLException e) {
-            logger.warn("Initialisation automatique du schéma GPS incomplète: {}", e.getMessage());
-        }
-    }
+        });
 
-    private boolean hasZoneGpsColumns(Connection conn) {
-        String sql = "SELECT COUNT(*) FROM information_schema.COLUMNS "
-            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Zone' "
-            + "AND COLUMN_NAME IN ('latitude', 'longitude')";
-        try (PreparedStatement ps = conn.prepareStatement(sql);
-             java.sql.ResultSet rs = ps.executeQuery()) {
-            return rs.next() && rs.getInt(1) == 2;
-        } catch (SQLException e) {
-            return false;
-        }
+        var executor = Executors.newFixedThreadPool(8);
+        server.setExecutor(executor);
+        httpsServer.setExecutor(executor);
+
+        server.start();
+        httpsServer.start();
+        logger.info("✅ GPS API Server démarré sur http://{}:{} et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
     }
 
     public void stop() {
         if (server != null) {
             server.stop(0);
-            logger.info("GPS API Server arrêté");
+        }
+        if (httpsServer != null) {
+            httpsServer.stop(0);
+        }
+        logger.info("GPS API Server arrêté");
+    }
+
+    private void createContexts(HttpServer server) {
+        server.createContext("/api/position",        this::handlePosition);
+        server.createContext("/api/citizen-position", this::handleCitizenPosition);
+        server.createContext("/gps", exchange -> {
+            int id = parseParam(exchange.getRequestURI().getQuery(), "agentId");
+            if (id <= 0) { exchange.sendResponseHeaders(400, -1); return; }
+            handleGpsPage(exchange, id, "agent");
+        });
+        server.createContext("/citizen-gps", exchange -> {
+            int id = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
+            if (id <= 0) { exchange.sendResponseHeaders(400, -1); return; }
+            handleGpsPage(exchange, id, "citizen");
+        });
+    }
+
+    private SSLContext createSslContext() {
+        try {
+            KeyStore keyStore = createSelfSignedKeyStore();
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            char[] password = "changeit".toCharArray();
+            kmf.init(keyStore, password);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
+            return sslContext;
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible de créer le SSLContext pour le serveur HTTPS", e);
         }
     }
 
-    /** Retourne l'IP locale du PC pour construire l'URL à afficher/QR coder */
+    private KeyStore createSelfSignedKeyStore() throws Exception {
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyPair keyPair = keyGen.generateKeyPair();
+
+        X500Name owner = new X500Name("CN=SmartCity GPS API, OU=SmartCity, O=SmartCity, L=Local, ST=None, C=FR");
+        Date from = new Date(System.currentTimeMillis() - 3600_000L);
+        Date to = new Date(System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000);
+        CertificateValidity interval = new CertificateValidity(from, to);
+        BigInteger serial = new BigInteger(64, new SecureRandom());
+
+        X509CertInfo info = new X509CertInfo();
+        info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
+        info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(serial));
+        info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
+        info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+        info.set(X509CertInfo.VALIDITY, interval);
+        info.set(X509CertInfo.KEY, new CertificateX509Key(keyPair.getPublic()));
+        info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(AlgorithmId.get("SHA256withRSA")));
+
+        CertificateExtensions extensions = new CertificateExtensions();
+        GeneralNames gns = new GeneralNames();
+        gns.add(new GeneralName(new DNSName("localhost")));
+        gns.add(new GeneralName(new IPAddressName("127.0.0.1")));
+        String localIp = getLocalIp();
+        if (!"localhost".equals(localIp) && !"127.0.0.1".equals(localIp)) {
+            gns.add(new GeneralName(new IPAddressName(localIp)));
+        }
+        extensions.set(SubjectAlternativeNameExtension.NAME, new SubjectAlternativeNameExtension(gns));
+        extensions.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(false, -1));
+        info.set(X509CertInfo.EXTENSIONS, extensions);
+
+        X509CertImpl cert = new X509CertImpl(info);
+        cert.sign(keyPair.getPrivate(), "SHA256withRSA");
+        info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM,
+                cert.get(X509CertImpl.SIG_ALG));
+        cert = new X509CertImpl(info);
+        cert.sign(keyPair.getPrivate(), "SHA256withRSA");
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, null);
+        ks.setKeyEntry("gps", keyPair.getPrivate(), password, new java.security.cert.Certificate[]{cert});
+        return ks;
+    }
+
+    // ── URLs publiques ───────────────────────────────────────────────────────
+
     public static String getLocalIp() {
         try {
-            // Priorité : IP LAN (192.168.x.x ou 10.x.x.x) avant les autres
-            java.util.List<String> candidates = Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
-                .filter(ni -> {
-                    try { return ni.isUp() && !ni.isLoopback() && !ni.isVirtual(); }
-                    catch (Exception e) { return false; }
-                })
-                .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
-                .filter(addr -> !addr.isLoopbackAddress() && addr.getHostAddress().contains("."))
-                .map(addr -> addr.getHostAddress())
-                .collect(java.util.stream.Collectors.toList());
-            // Préférer 192.168.x.x ou 10.x.x.x
+            java.util.List<String> candidates = Collections.list(NetworkInterface.getNetworkInterfaces())
+                    .stream()
+                    .filter(ni -> {
+                        try { return ni.isUp() && !ni.isLoopback() && !ni.isVirtual(); }
+                        catch (Exception e) { return false; }
+                    })
+                    .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
+                    .filter(addr -> !addr.isLoopbackAddress() && addr.getHostAddress().contains("."))
+                    .map(java.net.InetAddress::getHostAddress)
+                    .collect(java.util.stream.Collectors.toList());
             return candidates.stream()
-                .filter(ip -> ip.startsWith("192.168.") || ip.startsWith("10."))
-                .findFirst()
-                .orElse(candidates.isEmpty() ? "localhost" : candidates.get(0));
+                    .filter(ip -> ip.startsWith("192.168.") || ip.startsWith("10."))
+                    .findFirst()
+                    .orElse(candidates.isEmpty() ? "localhost" : candidates.get(0));
         } catch (Exception e) {
             return "localhost";
         }
-    }
-
-    public static String getGpsPageUrl(int agentId, String ip) {
-        String token = getOrCreateToken(agentId);
-        return "http://" + ip + ":" + PORT + "/gps?agentId=" + agentId + "&token=" + token;
     }
 
     public static String getGpsPageUrl(int agentId) {
         return getGpsPageUrl(agentId, getLocalIp());
     }
 
-    public static String getCitizenGpsPageUrl(int citizenId, String ip) {
-        String token = getOrCreateCitizenToken(citizenId);
-        return "http://" + ip + ":" + PORT + "/citizen-gps?citizenId=" + citizenId + "&token=" + token;
+    public static String getGpsPageUrl(int agentId, String ip) {
+        String token = getOrCreateToken(agentId);
+        return "https://" + ip + ":" + HTTPS_PORT + "/gps?agentId=" + agentId + "&token=" + token;
     }
 
     public static String getCitizenGpsPageUrl(int citizenId) {
         return getCitizenGpsPageUrl(citizenId, getLocalIp());
     }
 
-    // ── Handlers ────────────────────────────────────────────────────────────
+    public static String getCitizenGpsPageUrl(int citizenId, String ip) {
+        String token = getOrCreateCitizenToken(citizenId);
+        return "https://" + ip + ":" + HTTPS_PORT + "/citizen-gps?citizenId=" + citizenId + "&token=" + token;
+    }
 
-    private void handleCitizenPosition(HttpExchange exchange) throws IOException {
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    // ── Schéma DB ────────────────────────────────────────────────────────────
 
-        if ("OPTIONS".equals(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+    private void ensureGpsSchema() {
+        try (Connection conn = DatabaseConnection.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
 
-        // GET /api/citizen-position?citizenId=X — lecture position (token requis)
-        if ("GET".equals(exchange.getRequestMethod())) {
-            int citizenId = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
-            String token = parseParamStr(exchange.getRequestURI().getQuery(), "token");
-            String expected = citizenTokens.get(citizenId);
-            if (citizenId <= 0 || expected == null || !expected.equals(token)) {
-                sendResponse(exchange, 403, "{\"status\":\"forbidden\"}");
-                return;
-            }
-            double[] pos = readCitizenPosition(citizenId);
-            if (pos != null) {
-                sendResponse(exchange, 200,
-                    String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1]));
-            } else {
-                sendResponse(exchange, 404, "{\"status\":\"not_found\"}");
-            }
-            return;
-        }
+            stmt.execute("CREATE TABLE IF NOT EXISTS position_agent ("
+                    + "idAgent INT PRIMARY KEY, latitude DECIMAL(10,8) NOT NULL, "
+                    + "longitude DECIMAL(11,8) NOT NULL, "
+                    + "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser) ON DELETE CASCADE)");
 
-        if (!"POST".equals(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(405, -1);
-            return;
-        }
+            stmt.execute("CREATE TABLE IF NOT EXISTS position_citoyen ("
+                    + "idCitoyen INT PRIMARY KEY, latitude DECIMAL(10,8) NOT NULL, "
+                    + "longitude DECIMAL(11,8) NOT NULL, "
+                    + "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (idCitoyen) REFERENCES Utilisateur(idUser) ON DELETE CASCADE)");
 
-        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        try {
-            String[] params = body.split("&");
-            int citizenId = 0;
-            double lat = 0, lon = 0;
-            String token = null;
-            for (String param : params) {
-                String[] kv = param.split("=");
-                if (kv.length == 2) {
-                    switch (kv[0]) {
-                        case "citizenId" -> citizenId = Integer.parseInt(kv[1]);
-                        case "lat"       -> lat = Double.parseDouble(kv[1]);
-                        case "lon"       -> lon = Double.parseDouble(kv[1]);
-                        case "token"     -> token = kv[1];
-                    }
-                }
+            stmt.execute("CREATE TABLE IF NOT EXISTS gps_token ("
+                    + "id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, "
+                    + "userType ENUM('agent','citizen') NOT NULL, "
+                    + "token VARCHAR(255) UNIQUE NOT NULL, "
+                    + "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (userId) REFERENCES Utilisateur(idUser) ON DELETE CASCADE, "
+                    + "UNIQUE KEY uq_user_type (userId, userType))");
+
+            if (!hasColumn(conn, "Zone", "latitude")) {
+                stmt.execute("ALTER TABLE Zone ADD COLUMN latitude DECIMAL(10,8) DEFAULT 0.0");
+                stmt.execute("ALTER TABLE Zone ADD COLUMN longitude DECIMAL(11,8) DEFAULT 0.0");
+                stmt.execute("UPDATE Zone SET latitude=14.7646, longitude=-17.3920 WHERE nomZone='Pikine'");
+                stmt.execute("UPDATE Zone SET latitude=14.7765, longitude=-17.4047 "
+                        + "WHERE nomZone IN ('Guédiawaye','Guediawaye')");
+                logger.info("✅ Colonnes GPS Zone initialisées");
             }
 
-            // Valider le token
-            String expected = citizenTokens.get(citizenId);
-            if (expected == null || !expected.equals(token)) {
-                logger.warn("🚫 Token GPS invalide pour citizenId={}", citizenId);
-                sendResponse(exchange, 403, "{\"status\":\"forbidden\"}");
-                return;
-            }
+            loadTokensFromDatabase(conn);
 
-            if (citizenId > 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
-                    && (lat != 0 || lon != 0)) {
-                // Vérifier que la position est dans le rayon d'une zone connue (10 km)
-                boolean inAnyZone = isPositionInAnyZone(lat, lon);
-                if (!inAnyZone) {
-                    logger.warn("🚫 Position GPS hors zone autorisée pour citoyen {}: ({}, {})", citizenId, lat, lon);
-                    sendResponse(exchange, 400, "{\"status\":\"out_of_bounds\"}");
-                    return;
-                }
-                
-                saveCitizenPosition(citizenId, lat, lon);
-                sendResponse(exchange, 200, "{\"status\":\"ok\"}");
-            } else {
-                sendResponse(exchange, 400, "{\"status\":\"invalid\"}");
-            }
-        } catch (Exception e) {
-            logger.error("Erreur parsing position GPS citoyen", e);
-            sendResponse(exchange, 500, "{\"status\":\"error\"}");
+        } catch (SQLException e) {
+            logger.warn("⚠️ Initialisation schéma GPS incomplète: {}", e.getMessage());
         }
     }
 
-    private void handlePosition(HttpExchange exchange) throws IOException {
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    private boolean hasColumn(Connection conn, String table, String col) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                + "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?")) {
+            ps.setString(1, table);
+            ps.setString(2, col);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
 
-        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+    private void loadTokensFromDatabase(Connection conn) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT userId, userType, token FROM gps_token "
+                + "WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)");
+             java.sql.ResultSet rs = ps.executeQuery()) {
+            int count = 0;
+            while (rs.next()) {
+                int uid = rs.getInt("userId");
+                String type = rs.getString("userType");
+                String token = rs.getString("token");
+                if ("agent".equals(type))   agentTokens.put(uid, token);
+                else                        citizenTokens.put(uid, token);
+                count++;
+            }
+            if (count > 0) logger.info("✅ {} tokens GPS rechargés depuis la base", count);
+        } catch (SQLException e) {
+            logger.warn("⚠️ Erreur chargement tokens GPS: {}", e.getMessage());
+        }
+    }
+
+    public static void saveTokenToDatabase(int userId, String type, String token) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO gps_token (userId, userType, token) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE token=?, createdAt=NOW()")) {
+            ps.setInt(1, userId);
+            ps.setString(2, type);
+            ps.setString(3, token);
+            ps.setString(4, token);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warn("⚠️ Erreur sauvegarde token GPS: {}", e.getMessage());
+        }
+    }
+
+    // ── Handlers HTTP ────────────────────────────────────────────────────────
+
+    private void handlePosition(HttpExchange exchange) throws IOException {
+        addCorsHeaders(exchange);
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
             return;
         }
 
-        // GET /api/position?agentId=X — lecture position (token requis)
-        if ("GET".equals(exchange.getRequestMethod())) {
+        if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
             int agentId = parseParam(exchange.getRequestURI().getQuery(), "agentId");
             String token = parseParamStr(exchange.getRequestURI().getQuery(), "token");
-            String expected = agentTokens.get(agentId);
-            if (agentId <= 0 || expected == null || !expected.equals(token)) {
-                sendResponse(exchange, 403, "{\"status\":\"forbidden\"}");
-                return;
-            }
-                    double[] pos = readPosition(agentId);
-                    if (pos != null) {
-                        sendResponse(exchange, 200,
-                            String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1]));
+            if (agentId > 0 && agentTokens.getOrDefault(agentId, "").equals(token)) {
+                double[] pos = readPosition(agentId);
+                sendJson(exchange, 200, pos != null
+                        ? String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1])
+                        : "{\"status\":\"not_found\"}");
             } else {
-                    sendResponse(exchange, 404, "{\"status\":\"not_found\"}");
-                }
+                sendJson(exchange, 403, "{\"status\":\"forbidden\"}");
+            }
             return;
         }
 
-        if (!"POST".equals(exchange.getRequestMethod())) {
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
 
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         try {
-            String[] params = body.split("&");
-            int agentId = 0;
-            double lat = 0, lon = 0;
-            String token = null;
-            for (String param : params) {
-                String[] kv = param.split("=");
-                if (kv.length == 2) {
-                    switch (kv[0]) {
-                        case "agentId" -> agentId = Integer.parseInt(kv[1]);
-                        case "lat"     -> lat = Double.parseDouble(kv[1]);
-                        case "lon"     -> lon = Double.parseDouble(kv[1]);
-                        case "token"   -> token = kv[1];
-                    }
-                }
-            }
+            int agentId    = parseBodyInt(body, "agentId");
+            double lat     = parseBodyDouble(body, "lat");
+            double lon     = parseBodyDouble(body, "lon");
+            String token   = parseBodyStr(body, "token");
 
-            // Valider le token
-            String expected = agentTokens.get(agentId);
-            if (expected == null || !expected.equals(token)) {
-                logger.warn("🚫 Token GPS invalide pour agentId={}", agentId);
-                sendResponse(exchange, 403, "{\"status\":\"forbidden\"}");
-                return;
-            }
-
-            if (agentId > 0 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
-                    && (lat != 0 || lon != 0)) {
-                // Vérifier que la position est dans le rayon d'une zone connue (5 km)
-                boolean inAnyZone = isPositionInAnyZone(lat, lon);
-                if (!inAnyZone) {
-                    logger.warn("🚫 Position GPS hors zone autorisée pour agent {}: ({}, {})", agentId, lat, lon);
-                    sendResponse(exchange, 400, "{\"status\":\"out_of_bounds\"}");
-                    return;
-                }
-                
+            if (agentId > 0 && agentTokens.getOrDefault(agentId, "").equals(token)
+                    && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
                 savePosition(agentId, lat, lon);
-                sendResponse(exchange, 200, "{\"status\":\"ok\"}");
+                sendJson(exchange, 200, "{\"status\":\"ok\"}");
             } else {
-                sendResponse(exchange, 400, "{\"status\":\"invalid\"}");
+                sendJson(exchange, 400, "{\"status\":\"invalid\"}");
             }
         } catch (Exception e) {
-            logger.error("Erreur parsing position GPS", e);
-            sendResponse(exchange, 500, "{\"status\":\"error\"}");
+            logger.error("❌ handlePosition: {}", e.getMessage());
+            sendJson(exchange, 500, "{\"status\":\"error\"}");
+        }
+    }
+
+    private void handleCitizenPosition(HttpExchange exchange) throws IOException {
+        addCorsHeaders(exchange);
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            int citizenId = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
+            String token  = parseParamStr(exchange.getRequestURI().getQuery(), "token");
+            if (citizenId > 0 && citizenTokens.getOrDefault(citizenId, "").equals(token)) {
+                double[] pos = readCitizenPosition(citizenId);
+                sendJson(exchange, 200, pos != null
+                        ? String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1])
+                        : "{\"status\":\"not_found\"}");
+            } else {
+                sendJson(exchange, 403, "{\"status\":\"forbidden\"}");
+            }
+            return;
+        }
+
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            int citizenId = parseBodyInt(body, "citizenId");
+            double lat    = parseBodyDouble(body, "lat");
+            double lon    = parseBodyDouble(body, "lon");
+            String token  = parseBodyStr(body, "token");
+
+            if (citizenId > 0 && citizenTokens.getOrDefault(citizenId, "").equals(token)
+                    && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                saveCitizenPosition(citizenId, lat, lon);
+                sendJson(exchange, 200, "{\"status\":\"ok\"}");
+            } else {
+                sendJson(exchange, 400, "{\"status\":\"invalid\"}");
+            }
+        } catch (Exception e) {
+            logger.error("❌ handleCitizenPosition: {}", e.getMessage());
+            sendJson(exchange, 500, "{\"status\":\"error\"}");
         }
     }
 
     private void handleGpsPage(HttpExchange exchange, int userId, String userType) throws IOException {
         exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
-        String html = buildGpsHtml(userId, userType);
-        byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = buildGpsHtml(userId, userType).getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(200, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
+        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
     }
 
+    // ── DB positions ─────────────────────────────────────────────────────────
+
     private double[] readPosition(int agentId) {
-        String sql = "SELECT latitude, longitude FROM position_agent WHERE idAgent = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT latitude, longitude FROM position_agent WHERE idAgent=?")) {
             ps.setInt(1, agentId);
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return new double[]{rs.getDouble(1), rs.getDouble(2)};
+                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
             }
-        } catch (java.sql.SQLSyntaxErrorException e) {
-            logger.warn("Table position_agent absente — exécuter scripts/migrations/2026-04-create_gps_tables.sql");
-        } catch (SQLException e) {
-            logger.error("Erreur lecture position agent {}", agentId, e);
-        }
-        return null;
+        } catch (SQLException e) { return null; }
     }
 
     private void savePosition(int agentId, double lat, double lon) {
-        String sql = "INSERT INTO position_agent (idAgent, latitude, longitude, updatedAt) "
-                   + "VALUES (?, ?, ?, NOW()) "
-                   + "ON DUPLICATE KEY UPDATE latitude=?, longitude=?, updatedAt=NOW()";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, agentId);
-            ps.setDouble(2, lat);
-            ps.setDouble(3, lon);
-            ps.setDouble(4, lat);
-            ps.setDouble(5, lon);
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO position_agent (idAgent,latitude,longitude) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE latitude=?,longitude=?,updatedAt=NOW()")) {
+            ps.setInt(1, agentId); ps.setDouble(2, lat); ps.setDouble(3, lon);
+            ps.setDouble(4, lat);  ps.setDouble(5, lon);
             ps.executeUpdate();
-        } catch (java.sql.SQLSyntaxErrorException e) {
-            logger.warn("Table position_agent absente — exécuter scripts/migrations/2026-04-create_gps_tables.sql");
         } catch (SQLException e) {
-            logger.error("Erreur sauvegarde position agent {}", agentId, e);
+            logger.error("❌ savePosition agent {}: {}", agentId, e.getMessage());
         }
     }
 
     private double[] readCitizenPosition(int citizenId) {
-        String sql = "SELECT latitude, longitude FROM position_citoyen WHERE idCitoyen = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT latitude, longitude FROM position_citoyen WHERE idCitoyen=?")) {
             ps.setInt(1, citizenId);
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return new double[]{rs.getDouble(1), rs.getDouble(2)};
+                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
             }
-        } catch (java.sql.SQLSyntaxErrorException e) {
-            logger.warn("Table position_citoyen absente — exécuter scripts/migrations/2026-04-create_gps_tables.sql");
-        } catch (SQLException e) {
-            logger.error("Erreur lecture position citoyen {}", citizenId, e);
-        }
-        return null;
+        } catch (SQLException e) { return null; }
     }
 
     private void saveCitizenPosition(int citizenId, double lat, double lon) {
-        String sql = "INSERT INTO position_citoyen (idCitoyen, latitude, longitude, updatedAt) "
-                   + "VALUES (?, ?, ?, NOW()) "
-                   + "ON DUPLICATE KEY UPDATE latitude=?, longitude=?, updatedAt=NOW()";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, citizenId);
-            ps.setDouble(2, lat);
-            ps.setDouble(3, lon);
-            ps.setDouble(4, lat);
-            ps.setDouble(5, lon);
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO position_citoyen (idCitoyen,latitude,longitude) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE latitude=?,longitude=?,updatedAt=NOW()")) {
+            ps.setInt(1, citizenId); ps.setDouble(2, lat); ps.setDouble(3, lon);
+            ps.setDouble(4, lat);    ps.setDouble(5, lon);
             ps.executeUpdate();
-        } catch (java.sql.SQLSyntaxErrorException e) {
-            logger.warn("Table position_citoyen absente — exécuter scripts/migrations/2026-04-create_gps_tables.sql");
         } catch (SQLException e) {
-            logger.error("Erreur sauvegarde position citoyen {}", citizenId, e);
+            logger.error("❌ saveCitizenPosition citoyen {}: {}", citizenId, e.getMessage());
         }
     }
 
-    private boolean isPositionInAnyZone(double lat, double lon) {
-        // Vérifier d'abord que les colonnes GPS existent dans Zone
-        String sql = "SELECT latitude, longitude FROM Zone WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND latitude != 0";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             java.sql.ResultSet rs = ps.executeQuery()) {
-            boolean hasZones = false;
-            while (rs.next()) {
-                hasZones = true;
-                double zoneLat = rs.getDouble(1);
-                double zoneLon = rs.getDouble(2);
-                double distKm = haversineKm(lat, lon, zoneLat, zoneLon);
-                if (distKm <= 10.0) return true;
-            }
-            // Si aucune zone n'a de coordonnées GPS, accepter par défaut
-            if (!hasZones) {
-                logger.warn("Aucune zone avec coordonnées GPS — position acceptée par défaut");
-                return true;
-            }
-        } catch (SQLException e) {
-            logger.warn("Erreur vérification zone GPS, position acceptée par défaut: {}", e.getMessage());
-            return true; // fail-open
-        }
-        return false;
+    // ── Helpers HTTP ─────────────────────────────────────────────────────────
+
+    private void addCorsHeaders(HttpExchange exchange) {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
     }
 
-    private static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat/2)*Math.sin(dLat/2)
-                 + Math.cos(Math.toRadians(lat1))*Math.cos(Math.toRadians(lat2))
-                 * Math.sin(dLon/2)*Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    private void sendJson(HttpExchange exchange, int code, String body) throws IOException {
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(code, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
     }
 
-    private static int parseParam(String query, String key) {
+    private int parseParam(String query, String key) {
         if (query == null) return -1;
-        for (String part : query.split("&")) {
-            String[] kv = part.split("=", 2);
+        for (String p : query.split("&")) {
+            String[] kv = p.split("=", 2);
             if (kv.length == 2 && key.equals(kv[0])) {
-                try { return Integer.parseInt(kv[1]); } catch (NumberFormatException e) { return -1; }
+                try { return Integer.parseInt(kv[1]); } catch (Exception e) { return -1; }
             }
         }
         return -1;
     }
 
-    private static String parseParamStr(String query, String key) {
+    private String parseParamStr(String query, String key) {
         if (query == null) return null;
-        for (String part : query.split("&")) {
-            String[] kv = part.split("=", 2);
+        for (String p : query.split("&")) {
+            String[] kv = p.split("=", 2);
             if (kv.length == 2 && key.equals(kv[0])) return kv[1];
         }
         return null;
     }
 
-    private void sendResponse(HttpExchange exchange, int code, String body) throws IOException {
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(code, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
+    private int parseBodyInt(String body, String key) {
+        try { return Integer.parseInt(parseBodyStr(body, key)); } catch (Exception e) { return -1; }
     }
 
-    public static void main(String[] args) {
-        try {
-            System.out.println("======================================");
-            System.out.println("  SERVEUR GPS API SMARTCITY");
-            System.out.println("======================================");
-            System.out.println("");
-            
-            GpsApiServer server = new GpsApiServer();
-            server.start(0);
-            
-            System.out.println("✅ Serveur demarre sur le port 8081");
-            System.out.println("✅ Accessible sur http://localhost:8081");
-            System.out.println("");
-            System.out.println("Appuyez sur CTRL+C pour arreter");
-            System.out.println("======================================");
-            
-            // Garder le serveur en vie
-            synchronized (GpsApiServer.class) {
-                GpsApiServer.class.wait();
-            }
-            
-        } catch (Exception e) {
-            System.err.println("❌ Erreur demarrage serveur: " + e.getMessage());
-            e.printStackTrace();
-        }
+    private double parseBodyDouble(String body, String key) {
+        try { return Double.parseDouble(parseBodyStr(body, key)); } catch (Exception e) { return 0; }
     }
 
-    /**
-     * Page HTML servie au téléphone de l'agent ou du citoyen.
-     * watchPosition() envoie la position automatiquement.
-     */
+    private String parseBodyStr(String body, String key) {
+        for (String p : body.split("&")) {
+            String[] kv = p.split("=", 2);
+            if (kv.length == 2 && key.equals(kv[0])) return kv[1];
+        }
+        return "";
+    }
+
+    // ── Page HTML mobile ─────────────────────────────────────────────────────
+
     private String buildGpsHtml(int userId, String userType) {
-        String token = userType.equals("agent") ? getOrCreateToken(userId) : getOrCreateCitizenToken(userId);
-        String apiUrl = "http://" + getLocalIp() + ":" + PORT + "/api/" + (userType.equals("agent") ? "position" : "citizen-position");
-        String userParam = userType.equals("agent") ? "agentId" : "citizenId";
-        String title = userType.equals("agent") ? "Agent GPS" : "Citoyen GPS";
-        String bgColor = userType.equals("agent") ? "#1565C0" : "#2E7D32";
+        String token    = "agent".equals(userType) ? getOrCreateToken(userId) : getOrCreateCitizenToken(userId);
+        String apiUrl   = "location.protocol+'//'+location.host+'/api/"
+                        + ("agent".equals(userType) ? "position" : "citizen-position");
+        String userParam = "agent".equals(userType) ? "agentId" : "citizenId";
+        String title    = "agent".equals(userType) ? "Agent GPS" : "Citoyen GPS";
+        String bgColor  = "agent".equals(userType) ? "#1565C0" : "#2E7D32";
+
         return "<!DOCTYPE html><html><head>"
-            + "<meta charset='UTF-8'>"
-            + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            + "<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
             + "<title>SmartCity GPS</title>"
             + "<style>"
             + "*{box-sizing:border-box;margin:0;padding:0;}"
@@ -554,64 +585,51 @@ public class GpsApiServer {
             + "<button class='btn' onclick='tryGps()'>\uD83D\uDCF1 Envoyer ma position GPS</button>"
             + "<button class='btn' onclick='showManual()'>\u270F\uFE0F Saisir manuellement</button>"
             + "<div id='manual'>"
-            + "  <p style='margin-bottom:8px;font-size:13px;'>Entrez vos coordonn\u00e9es :</p>"
+            + "  <p style='margin-bottom:8px;font-size:13px;'>Coordonn\u00e9es :</p>"
             + "  <input id='mlat' type='number' step='0.00001' placeholder='Latitude (ex: 14.76460)'/>"
             + "  <input id='mlon' type='number' step='0.00001' placeholder='Longitude (ex: -17.39200)'/>"
             + "  <button onclick='sendManual()'>\u2705 Confirmer</button>"
             + "</div>"
-            + "<p id='warn'>Si le GPS est bloqu\u00e9, utilisez la saisie manuelle ou cliquez directement sur la carte dans l'application.</p>"
+            + "<p id='warn'>\u26A0\uFE0F Le GPS n\u00e9cessite HTTPS sur mobile. Utilisez la saisie manuelle ou connectez-vous via WiFi local.</p>"
             + "<script>"
-            + "var userId=" + userId + ";"
-            + "var token='" + token + "';"
-            + "var apiUrl='" + apiUrl + "';"
-            + "var userParam='" + userParam + "';"
-            + "var sent=false;"
-            + "function sendPosition(lat,lon,src){"
-            + "  if(sent)return;"
+            + "var userId=" + userId + ",token='" + token + "',apiUrl=" + apiUrl + ",userParam='" + userParam + "';"
+            + "function send(lat,lon,src){"
             + "  fetch(apiUrl,{method:'POST',"
             + "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
             + "    body:userParam+'='+userId+'&lat='+lat+'&lon='+lon+'&token='+token})"
             + "  .then(r=>r.json()).then(d=>{"
             + "    if(d.status==='ok'){"
-            + "      sent=true;"
-            + "      document.getElementById('status').innerHTML='<span class=\'dot\'></span>Position envoy\u00e9e ('+src+')';"
+            + "      document.getElementById('status').innerHTML='<span class=\"dot\"></span>Envoy\u00e9e ('+src+')';"
             + "      document.getElementById('coords').innerHTML=parseFloat(lat).toFixed(5)+', '+parseFloat(lon).toFixed(5);"
             + "    } else {"
-            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F Hors zone autoris\u00e9e';"
+            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F '+d.status;"
             + "    }"
             + "  }).catch(()=>{"
             + "    document.getElementById('status').innerHTML='\u26A0\uFE0F Erreur r\u00e9seau. V\u00e9rifiez le WiFi.';"
             + "  });"
             + "}"
             + "function tryGps(){"
-            + "  document.getElementById('status').innerHTML='Demande GPS en cours...';"
-            + "  if(!navigator.geolocation){"
-            + "    document.getElementById('status').innerHTML='GPS non support\u00e9 — utilisez la saisie manuelle';"
-            + "    showManual(); return;"
-            + "  }"
+            + "  if(location.protocol!=='https:'){showManual();"
+            + "    document.getElementById('status').innerHTML='\u26A0\uFE0F GPS n\u00e9cessite HTTPS \u2014 saisie manuelle';"
+            + "    return;}"
+            + "  document.getElementById('status').innerHTML='Demande GPS...';"
+            + "  if(!navigator.geolocation){showManual();return;}"
             + "  navigator.geolocation.getCurrentPosition("
-            + "    function(p){sendPosition(p.coords.latitude,p.coords.longitude,'GPS');},"
+            + "    function(p){send(p.coords.latitude,p.coords.longitude,'GPS');},"
             + "    function(err){"
-            + "      var msg=err.code===1?'GPS refus\u00e9 (HTTPS requis sur ce navigateur)':err.message;"
-            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F '+msg;"
+            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F GPS refus\u00e9 \u2014 saisie manuelle';"
             + "      showManual();"
-            + "    },"
-            + "    {enableHighAccuracy:true,timeout:8000,maximumAge:0}"
-            + "  );"
+            + "    },{enableHighAccuracy:true,timeout:8000,maximumAge:0});"
             + "}"
-            + "function showManual(){"
-            + "  document.getElementById('manual').style.display='block';"
-            + "}"
+            + "function showManual(){document.getElementById('manual').style.display='block';}"
             + "function sendManual(){"
             + "  var lat=parseFloat(document.getElementById('mlat').value);"
             + "  var lon=parseFloat(document.getElementById('mlon').value);"
-            + "  if(isNaN(lat)||isNaN(lon)||lat<-90||lat>90||lon<-180||lon>180){"
-            + "    alert('Coordonn\u00e9es invalides'); return;"
-            + "  }"
-            + "  sendPosition(lat,lon,'Manuel');"
+            + "  if(isNaN(lat)||isNaN(lon)||lat<-90||lat>90||lon<-180||lon>180){alert('Invalide');return;}"
+            + "  send(lat,lon,'Manuel');"
             + "}"
-            + "// Tentative automatique au chargement"
-            + "tryGps();"
+            + "if(location.protocol==='https:'){tryGps();}else{showManual();"
+            + "  document.getElementById('status').innerHTML='\u26A0\uFE0F Connexion HTTP \u2014 saisie manuelle requise';}"
             + "</script></body></html>";
     }
 }

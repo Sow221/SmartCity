@@ -1,4 +1,4 @@
-﻿package com.smartcity.controller;
+package com.smartcity.controller;
 
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Signalement;
@@ -83,7 +83,7 @@ public class CitizenDashboardController {
     @FXML private Label gpsPositionStatusLabel;
     @FXML private Label gpsReceivedIcon;
 
-    // QR code / GPS tÃ©lÃ©phone (fallback)
+    // QR code / GPS téléphone (fallback)
     @FXML private javafx.scene.image.ImageView citizenQrCodeView;
     @FXML private Label citizenGpsUrlLabel;
     @FXML private Label gpsStatusLabel;
@@ -119,7 +119,7 @@ public class CitizenDashboardController {
     @FXML private ComboBox<String> filterMesSignalementsStatut;
     @FXML private javafx.scene.control.DatePicker filterMesSignalementsDate;
 
-    // Snapshot des statuts pour dÃ©tecter les changements
+    // Snapshot des statuts pour détecter les changements
     private final java.util.Map<Integer, String> statutsSnapshot = new java.util.HashMap<>();
     private javafx.animation.Timeline pollingTimeline;
 
@@ -173,17 +173,17 @@ public class CitizenDashboardController {
 
         if (filterMesSignalementsStatut != null)
             filterMesSignalementsStatut.setItems(FXCollections.observableArrayList(
-                "Tous", "En attente", "AffectÃ©", "En cours", "TerminÃ©"));
+                "Tous", "En attente", "Affecté", "En cours", "Terminé"));
 
-        // Charger la carte dÃ¨s l'init + recentrer sur changement de zone
+        // Charger la carte dès l'init + recentrer sur changement de zone
         loadInteractiveMap();
         zoneSignalementCombo.valueProperty().addListener((obs, old, newZone) -> {
             if (newZone != null) loadInteractiveMap();
         });
 
         // Tooltips navigation
-        btnCitizenDashboard.setTooltip(new Tooltip("Vue gÃ©nÃ©rale de vos signalements"));
-        btnAjouterSignalement.setTooltip(new Tooltip("Signaler un dÃ©chet dans votre zone"));
+        btnCitizenDashboard.setTooltip(new Tooltip("Vue générale de vos signalements"));
+        btnAjouterSignalement.setTooltip(new Tooltip("Signaler un déchet dans votre zone"));
         btnMesSignalements.setTooltip(new Tooltip("Consulter et suivre vos signalements"));
         btnMonProfil.setTooltip(new Tooltip("Modifier votre profil et mot de passe"));
 
@@ -210,9 +210,9 @@ public class CitizenDashboardController {
     @FXML
     private void handleDeconnexion() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("DÃ©connexion");
+        alert.setTitle("Déconnexion");
         alert.setHeaderText(null);
-        alert.setContentText("Voulez-vous vraiment vous dÃ©connecter ?");
+        alert.setContentText("Voulez-vous vraiment vous déconnecter ?");
         if (alert.showAndWait().filter(b -> b == ButtonType.OK).isEmpty()) return;
         stopPolling();
         SessionManager.logout();
@@ -247,7 +247,7 @@ public class CitizenDashboardController {
         chooser.getExtensionFilters()
                 .add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
 
-        // DÃ©marrer dans le dossier Images par dÃ©faut
+        // Démarrer dans le dossier Images par défaut
         File userHome = new File(System.getProperty("user.home"));
         File picturesDir = new File(userHome, "Pictures");
         if (picturesDir.exists()) {
@@ -258,12 +258,11 @@ public class CitizenDashboardController {
         if (selected != null) {
             String fileName = selected.getName();
             if (!fileName.matches("[a-zA-Z0-9_\\-. ]+\\.(png|jpg|jpeg|gif|bmp)")) {
-                showCitizenMessage("â Nom de fichier invalide.", false);
+                showCitizenMessage("❌ Nom de fichier invalide.", false);
                 return;
             }
             photoSignalementField.setText(fileName);
-            showCitizenMessage("â
- Photo sÃ©lectionnÃ©e: " + fileName, true);
+            showCitizenMessage("✅ Photo sélectionnée: " + fileName, true);
         }
     }
 
@@ -276,24 +275,24 @@ public class CitizenDashboardController {
         }
 
         if (descriptionSignalementArea.getText().isBlank()) {
-            showCitizenMessage("â Description requise", false);
+            showCitizenMessage("❌ Description requise", false);
             descriptionSignalementArea.requestFocus();
             return;
         }
 
         if (categorieSignalementCombo.getValue() == null) {
-            showCitizenMessage("â Veuillez choisir une catÃ©gorie", false);
+            showCitizenMessage("❌ Veuillez choisir une catégorie", false);
             return;
         }
 
         if (zoneSignalementCombo.getValue() == null) {
-            showCitizenMessage("â Veuillez choisir une zone", false);
+            showCitizenMessage("❌ Veuillez choisir une zone", false);
             return;
         }
 
         // Bloquer si position non choisie sur la carte
         if (selectedLatitude == 0.0 && selectedLongitude == 0.0) {
-            // Fallback : utiliser le centre de la zone sÃ©lectionnÃ©e
+            // Fallback : utiliser le centre de la zone sélectionnée
             com.smartcity.model.Zone z = zoneService.getAllZones().stream()
                 .filter(zone -> zone.getNomZone().equals(zoneSignalementCombo.getValue()))
                 .findFirst().orElse(null);
@@ -302,19 +301,19 @@ public class CitizenDashboardController {
                 selectedLongitude = z.getLongitude();
                 showCitizenMessage("\u26a0\ufe0f Position GPS non re\u00e7ue \u2014 centre de zone utilis\u00e9 par d\u00e9faut.", false);
             } else {
-                showCitizenMessage("â Cliquez sur la carte ou scannez le QR code pour obtenir votre position", false);
+                showCitizenMessage("❌ Cliquez sur la carte ou scannez le QR code pour obtenir votre position", false);
                 return;
             }
         }
 
-        // Validation sÃ©curisÃ©e
+        // Validation sécurisée
         com.smartcity.utils.ValidationUtils.ValidationResult validation =
             com.smartcity.utils.ValidationUtils.validateSignalement(
                 descriptionSignalementArea.getText().trim(),
                 categorieSignalementCombo.getValue(),
                 selectedLatitude, selectedLongitude);
         if (!validation.isValid()) {
-            showCitizenMessage("â " + validation.getMessage(), false);
+            showCitizenMessage("❌ " + validation.getMessage(), false);
             return;
         }
 
@@ -332,7 +331,7 @@ public class CitizenDashboardController {
         signalement.setIdUser(current.getIdUser());
 
         if (signalementService.ajouterSignalement(signalement)) {
-            // VÃ©rifier si le signalement a Ã©tÃ© affectÃ© ou reste en attente
+            // Vérifier si le signalement a été affecté ou reste en attente
             String msg = SignalementStatut.AFFECTE.matches(signalement.getStatut())
                 ? "Signalement enregistr\u00e9 et affect\u00e9 \u00e0 un agent !"
                 : "Signalement enregistr\u00e9. Un agent sera assign\u00e9 d\u00e8s que possible.";
@@ -350,7 +349,7 @@ public class CitizenDashboardController {
         Signalement selected = tableMesSignalements.getSelectionModel().getSelectedItem();
         if (selected == null) return;
         if (!SignalementStatut.EN_ATTENTE.matches(selected.getStatut())) {
-            showCitizenMessage("â Seuls les signalements en attente peuvent Ãªtre supprimÃ©s.", false);
+            showCitizenMessage("❌ Seuls les signalements en attente peuvent être supprimés.", false);
             return;
         }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -360,11 +359,10 @@ public class CitizenDashboardController {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) return;
         if (signalementService.supprimerSignalement(selected.getIdSignalement())) {
-            showCitizenMessage("â
- Signalement supprimÃ©.", true);
+            showCitizenMessage("✅ Signalement supprimé.", true);
             chargerDonnees();
         } else {
-            showCitizenMessage("â Echec de la suppression.", false);
+            showCitizenMessage("❌ Echec de la suppression.", false);
         }
     }
 
@@ -394,7 +392,7 @@ public class CitizenDashboardController {
     @FXML
     private void handleAnnulerSignalement() {
         clearForm();
-        showCitizenMessage("ð Formulaire remis Ã  zÃ©ro", true);
+        showCitizenMessage("📝 Formulaire remis à zéro", true);
     }
 
     private void clearForm() {
@@ -423,7 +421,7 @@ public class CitizenDashboardController {
 
         String newEmail = profilEmailField.getText().trim().toLowerCase(java.util.Locale.ROOT);
         if (!newEmail.equals(current.getEmail()) && utilisateurService.emailExiste(newEmail)) {
-            showCitizenMessage("Cet email est dÃ©jÃ  utilisÃ© par un autre compte.", false);
+            showCitizenMessage("Cet email est déjà utilisé par un autre compte.", false);
             return;
         }
 
@@ -433,7 +431,7 @@ public class CitizenDashboardController {
         updated.setNom(profilNomField.getText().trim());
         updated.setEmail(newEmail);
         updated.setAge(current.getAge());
-        // TÃ©lÃ©phone stockÃ© dans localite
+        // Téléphone stocké dans localite
         updated.setLocalite(profilTelephoneField != null ? profilTelephoneField.getText().trim() : current.getLocalite());
         updated.setPhotoProfil(current.getPhotoProfil());
         int idZone = zoneService.getAllZones().stream()
@@ -481,9 +479,9 @@ public class CitizenDashboardController {
             return;
         }
         if (utilisateurService.updateMotDePasse(current.getIdUser(), result.get())) {
-            showCitizenMessage("Mot de passe mis Ã  jour.", true);
+            showCitizenMessage("Mot de passe mis à jour.", true);
         } else {
-            showCitizenMessage("Echec de la mise Ã  jour du mot de passe.", false);
+            showCitizenMessage("Echec de la mise à jour du mot de passe.", false);
         }
     }
 
@@ -515,7 +513,7 @@ public class CitizenDashboardController {
         }
     }
 
-    // ââ Carte interactive + GPS ââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Carte interactive + GPS ──────────────────────────────────────────────
 
     private void loadInteractiveMap() {
         if (signalementMapView == null) return;
@@ -526,7 +524,7 @@ public class CitizenDashboardController {
         selectedLongitude = 0.0;
         updatePositionUI(false, 0, 0);
 
-        // Centrer sur la zone sÃ©lectionnÃ©e ou zone de l'utilisateur
+        // Centrer sur la zone sélectionnée ou zone de l'utilisateur
         String zoneChoisie = zoneSignalementCombo.getValue();
         com.smartcity.service.GeolocationService.Coordinates center;
         com.smartcity.service.ZoneService zs = zoneService;
@@ -539,6 +537,7 @@ public class CitizenDashboardController {
         String html = buildSignalementMapHtml(center.lat, center.lon);
         signalementMapView.getEngine().loadContent(html);
 
+        // Bridge Java ← JavaScript (clic sur carte)
         if (!mapBridgeInstalled) {
             mapBridgeInstalled = true;
             signalementMapView.getEngine().getLoadWorker().stateProperty().addListener((obs, o, n) -> {
@@ -554,7 +553,7 @@ public class CitizenDashboardController {
             });
         }
 
-        // QR code tÃ©lÃ©phone (fallback â fonctionne sur mÃªme WiFi)
+        // QR code téléphone (fallback — fonctionne sur même WiFi)
         int citizenId = current.getIdUser();
         String qrUrl = com.smartcity.service.GpsApiServer.getCitizenGpsPageUrl(citizenId);
         if (citizenQrCodeView != null) {
@@ -562,14 +561,14 @@ public class CitizenDashboardController {
             if (qr != null) citizenQrCodeView.setImage(qr);
         }
         if (citizenGpsUrlLabel != null) citizenGpsUrlLabel.setText(qrUrl);
-        if (gpsStatusLabel != null) gpsStatusLabel.setText("ð± Ou scannez le QR code (mÃªme WiFi requis)");
-        if (gpsReceivedIcon != null) gpsReceivedIcon.setText("â³");
+        if (gpsStatusLabel != null) gpsStatusLabel.setText("📱 Ou scannez le QR code (même WiFi requis)");
+        if (gpsReceivedIcon != null) gpsReceivedIcon.setText("⏳");
 
-        // Polling position tÃ©lÃ©phone (toutes les 3s, silencieux)
+        // Polling position téléphone (toutes les 3s, silencieux)
         startGpsPolling(citizenId);
     }
 
-    /** HTML Leaflet : clic sur carte â javaCitizen.setPosition(lat, lon) */
+    /** HTML Leaflet : clic sur carte → javaCitizen.setPosition(lat, lon) */
     private String buildSignalementMapHtml(double centerLat, double centerLon) {
         return "<!DOCTYPE html><html><head>"
             + "<meta charset='UTF-8'>"
@@ -590,7 +589,7 @@ public class CitizenDashboardController {
             + "</script></body></html>";
     }
 
-    /** Pont JavaScript â Java pour le clic sur la carte */
+    /** Pont JavaScript → Java pour le clic sur la carte */
     public class MapBridgeCitizen {
         public void setPosition(double lat, double lon) {
             javafx.application.Platform.runLater(() -> onPositionSelected(lat, lon, false));
@@ -607,65 +606,68 @@ public class CitizenDashboardController {
         selectedLongitude = lon;
         updatePositionUI(true, lat, lon);
         if (fromPhone) stopGpsPolling();
-        showCitizenMessage(String.format("ð Position %s: %.5f, %.5f",
+        showCitizenMessage(String.format("📍 Position %s: %.5f, %.5f",
             fromPhone ? "GPS t\u00e9l\u00e9phone" : "s\u00e9lectionn\u00e9e", lat, lon), true);
     }
 
     private void updatePositionUI(boolean received, double lat, double lon) {
         if (positionLabel != null) {
             if (received) {
-                positionLabel.setText(String.format("â
- %.5f, %.5f", lat, lon));
+                positionLabel.setText(String.format("✅ %.5f, %.5f", lat, lon));
                 positionLabel.setStyle("-fx-text-fill:#2E7D32;-fx-font-weight:bold;");
             } else {
                 positionLabel.setText("Cliquez sur la carte pour placer le marqueur");
                 positionLabel.setStyle("");
             }
         }
-        if (gpsReceivedIcon != null) gpsReceivedIcon.setText(received ? "ð" : "â³");
+        if (gpsReceivedIcon != null) gpsReceivedIcon.setText(received ? "📍" : "⏳");
         if (gpsPositionStatusLabel != null)
             gpsPositionStatusLabel.setText(received
                 ? String.format("Position re\u00e7ue : %.5f, %.5f", lat, lon)
                 : "Cliquez sur la carte pour placer le marqueur");
     }
 
-    // Polling position tÃ©lÃ©phone (QR code fallback)
+    // Polling position téléphone (QR code fallback)
     private void startGpsPolling(int citizenId) {
         stopGpsPolling();
+        String token = com.smartcity.service.GpsApiServer.getOrCreateCitizenToken(citizenId);
+        String pollUrl = "http://localhost:" + com.smartcity.service.GpsApiServer.PORT
+            + "/api/citizen-position?citizenId=" + citizenId + "&token=" + token;
+        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(1)).build();
         gpsPollingTimeline = new javafx.animation.Timeline(
             new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), e -> {
+                // Ne pas poller si position déjà obtenue
                 if (selectedLatitude != 0.0 || selectedLongitude != 0.0) return;
-                double[] pos = readCitizenPositionFromDb(citizenId);
-                if (pos == null) return;
-                double lat = pos[0], lon = pos[1];
-                javafx.application.Platform.runLater(() -> {
-                    onPositionSelected(lat, lon, true);
-                    if (signalementMapView != null) {
-                        signalementMapView.getEngine().executeScript(
-                            String.format(java.util.Locale.US,
-                                "if(marker)map.removeLayer(marker);"
-                                + "marker=L.marker([%.6f,%.6f]).addTo(map).bindPopup(\u27a4 GPS t\u00e9l\u00e9phone\u27a4).openPopup();"
-                                + "map.setView([%.6f,%.6f],16);",
-                                lat, lon, lat, lon));
+                try {
+                    java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(pollUrl))
+                        .timeout(java.time.Duration.ofSeconds(1)).GET().build();
+                    java.net.http.HttpResponse<String> resp =
+                        httpClient.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+                    if (resp.statusCode() == 200) {
+                        com.google.gson.JsonObject json =
+                            com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
+                        double lat = json.get("lat").getAsDouble();
+                        double lon = json.get("lon").getAsDouble();
+                        javafx.application.Platform.runLater(() -> {
+                            onPositionSelected(lat, lon, true);
+                            // Placer le marqueur sur la carte aussi
+                            if (signalementMapView != null) {
+                                signalementMapView.getEngine().executeScript(
+                                    String.format(java.util.Locale.US,
+                                        "if(marker)map.removeLayer(marker);"
+                                        + "marker=L.marker([%.6f,%.6f]).addTo(map).bindPopup('\uD83D� GPS t\u00e9l\u00e9phone').openPopup();"
+                                        + "map.setView([%.6f,%.6f],16);",
+                                        lat, lon, lat, lon));
+                            }
+                        });
                     }
-                });
+                } catch (Exception ex) { /* silencieux */ }
             })
         );
         gpsPollingTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
         gpsPollingTimeline.play();
-    }
-
-    private double[] readCitizenPositionFromDb(int citizenId) {
-        try (java.sql.Connection conn = com.smartcity.utils.DatabaseConnection.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(
-                     "SELECT latitude, longitude FROM position_citoyen WHERE idCitoyen=?")) {
-            ps.setInt(1, citizenId);
-            try (java.sql.ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
-            }
-        } catch (java.sql.SQLException e) {
-            return null;
-        }
     }
 
     private void stopGpsPolling() {
@@ -677,6 +679,7 @@ public class CitizenDashboardController {
 
     private static final org.slf4j.Logger logger =
         org.slf4j.LoggerFactory.getLogger(CitizenDashboardController.class);
+
 
     private void refreshCards() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
@@ -718,7 +721,7 @@ public class CitizenDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
         mesSignalements.setAll(signalementService.getSignalementsByUtilisateur(current.getIdUser()));
-        // PrÃ©-charger le suivi en une seule passe pour Ã©viter N+1
+        // Pré-charger le suivi en une seule passe pour éviter N+1
         suiviCache.clear();
         for (Signalement s : mesSignalements) {
             com.smartcity.service.SuiviService.SuiviSignalement suivi = suiviService.getSuiviComplet(s.getIdSignalement());
@@ -793,7 +796,7 @@ public class CitizenDashboardController {
             }
         });
 
-        // Colonne Agent affectÃ© (suivi citoyen)
+        // Colonne Agent affecté (suivi citoyen)
         TableColumn<Signalement, String> colAgent = new TableColumn<>("Agent");
         colAgent.setStyle("-fx-alignment: CENTER;");
         colAgent.setPrefWidth(130);
@@ -804,8 +807,8 @@ public class CitizenDashboardController {
             return new SimpleStringProperty(agent);
         });
 
-        // Colonne DÃ©lai (heures Ã©coulÃ©es)
-        TableColumn<Signalement, String> colDelai = new TableColumn<>("DÃ©lai");
+        // Colonne Délai (heures écoulées)
+        TableColumn<Signalement, String> colDelai = new TableColumn<>("Délai");
         colDelai.setStyle("-fx-alignment: CENTER;");
         colDelai.setPrefWidth(90);
         colDelai.setCellValueFactory(cell -> {
@@ -813,19 +816,16 @@ public class CitizenDashboardController {
                 suiviCache.get(cell.getValue().getIdSignalement());
             if (suivi == null) return new SimpleStringProperty("-");
             if (suivi.heuresResolution != null)
-                return new SimpleStringProperty(suivi.heuresResolution + "h â
-");
+                return new SimpleStringProperty(suivi.heuresResolution + "h ✅");
             return new SimpleStringProperty(suivi.heuresEcoules + "h");
         });
 
-        // Colonne Ãvaluation (bouton pour les terminÃ©s)
-        TableColumn<Signalement, Void> colEval = new TableColumn<>("â
- Ãvaluer");
+        // Colonne Évaluation (bouton pour les terminés)
+        TableColumn<Signalement, Void> colEval = new TableColumn<>("★ Évaluer");
         colEval.setStyle("-fx-alignment: CENTER;");
         colEval.setPrefWidth(100);
         colEval.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("â
- Ãvaluer");
+            private final Button btn = new Button("★ Évaluer");
             { btn.setStyle("-fx-background-color:#FF9800;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:3 8;");
               btn.setOnAction(e -> ouvrirEvaluation(getTableView().getItems().get(getIndex()))); }
             @Override protected void updateItem(Void v, boolean empty) {
@@ -855,7 +855,7 @@ public class CitizenDashboardController {
 
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("Historique #" + signalement.getIdSignalement());
-        dialog.setHeaderText(signalement.getCategorie() + " â " + signalement.getZoneNom());
+        dialog.setHeaderText(signalement.getCategorie() + " — " + signalement.getZoneNom());
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
 
         javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(8);
@@ -869,11 +869,11 @@ public class CitizenDashboardController {
             for (com.smartcity.service.SuiviService.HistoriqueEntry e : historique) {
                 String date = e.dateChangement != null ? e.dateChangement.format(fmt) : "";
                 String auteur = e.nomAuteur != null ? " par " + e.nomAuteur : "";
-                Label lbl = new Label(date + " â " + e.ancienStatut + " â " + e.nouveauStatut + auteur);
+                Label lbl = new Label(date + " — " + e.ancienStatut + " → " + e.nouveauStatut + auteur);
                 lbl.setStyle("-fx-font-size:12px;");
                 content.getChildren().add(lbl);
                 if (e.commentaire != null && !e.commentaire.isBlank()) {
-                    Label comment = new Label("   â³ " + e.commentaire);
+                    Label comment = new Label("   ↳ " + e.commentaire);
                     comment.setStyle("-fx-font-size:11px; -fx-text-fill:#555;");
                     content.getChildren().add(comment);
                 }
@@ -887,10 +887,9 @@ public class CitizenDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null) return;
         Dialog<int[]> dialog = new Dialog<>();
-        dialog.setTitle("â
- Ãvaluer la collecte");
+        dialog.setTitle("★ Évaluer la collecte");
         dialog.setHeaderText("Signalement #" + signalement.getIdSignalement()
-            + " â " + signalement.getCategorie());
+            + " — " + signalement.getCategorie());
         ButtonType saveType = new ButtonType("Envoyer", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
 
@@ -900,13 +899,9 @@ public class CitizenDashboardController {
         javafx.scene.control.Slider slider = new javafx.scene.control.Slider(1, 5, 3);
         slider.setMajorTickUnit(1); slider.setMinorTickCount(0);
         slider.setSnapToTicks(true); slider.setShowTickLabels(true); slider.setShowTickMarks(true);
-        Label lblValeur = new Label("â
-â
-â
-");
+        Label lblValeur = new Label("★★★");
         slider.valueProperty().addListener((obs, o, n) ->
-            lblValeur.setText("â
-".repeat(n.intValue()) + "â".repeat(5 - n.intValue())));
+            lblValeur.setText("★".repeat(n.intValue()) + "☆".repeat(5 - n.intValue())));
         TextArea taComment = new TextArea();
         taComment.setPromptText("Commentaire optionnel...");
         taComment.setPrefRowCount(3); taComment.setWrapText(true);
@@ -919,11 +914,10 @@ public class CitizenDashboardController {
         dialog.showAndWait().ifPresent(res -> {
             if (suiviService.ajouterEvaluation(signalement.getIdSignalement(),
                     current.getIdUser(), res[0], taComment.getText().trim())) {
-                showCitizenMessage("â
- Merci pour votre Ã©valuation !", true);
+                showCitizenMessage("✅ Merci pour votre évaluation !", true);
                 refreshMesSignalements();
             } else {
-                showCitizenMessage("â Erreur lors de l'envoi.", false);
+                showCitizenMessage("❌ Erreur lors de l'envoi.", false);
             }
         });
     }
@@ -931,6 +925,7 @@ public class CitizenDashboardController {
     public void cleanup() {
         stopPolling();
         stopGpsPolling();
+        mapBridgeInstalled = false;
     }
 
     private void startPolling() {
@@ -962,7 +957,7 @@ public class CitizenDashboardController {
             });
             return;
         }
-        // RequÃªte lÃ©gÃ¨re : seulement id + statut, pas le signalement complet
+        // Requête légère : seulement id + statut, pas le signalement complet
         java.util.List<com.smartcity.model.Signalement> liste =
             signalementService.getSignalementsByUtilisateur(current.getIdUser());
         int nbChangements = 0;
@@ -973,7 +968,7 @@ public class CitizenDashboardController {
             }
             statutsSnapshot.put(s.getIdSignalement(), s.getStatut());
         }
-        // Stopper le pulse si la page signalements est dÃ©jÃ  visible
+        // Stopper le pulse si la page signalements est déjà visible
         if (nbChangements > 0) {
             final int n = nbChangements;
             javafx.application.Platform.runLater(() -> {
@@ -1007,7 +1002,7 @@ public class CitizenDashboardController {
     }
 
     private void clearBadge() {
-        // Mettre Ã  jour le snapshot avec les statuts actuels
+        // Mettre à jour le snapshot avec les statuts actuels
         mesSignalements.forEach(s -> statutsSnapshot.put(s.getIdSignalement(), s.getStatut()));
         updateBadge(0);
     }
@@ -1074,7 +1069,7 @@ public class CitizenDashboardController {
             javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
             content.putString(url);
             clipboard.setContent(content);
-            showCitizenMessage("Lien GPS copie : " + url, true);
+            showCitizenMessage("✅ Lien GPS copié : " + url, true);
         }
     }
 }

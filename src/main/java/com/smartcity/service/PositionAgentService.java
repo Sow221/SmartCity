@@ -12,17 +12,18 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 /**
- * Lit la position GPS de l'agent depuis GpsApiServer (JDK pur, port 8081).
- * GET http://localhost:8081/api/position?agentId={id}
+ * Lit la position GPS d'un agent depuis GpsApiServer via HTTP.
+ * Utilise localhost car le serveur tourne sur la même machine.
  */
 public class PositionAgentService {
 
     private static final Logger logger = LoggerFactory.getLogger(PositionAgentService.class);
-    private static final String SERVER_URL = "http://localhost:" + GpsApiServer.PORT;
+
+    private static final String BASE_URL = "http://localhost:" + GpsApiServer.PORT;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(1))
-        .build();
+            .connectTimeout(Duration.ofSeconds(1))
+            .build();
 
     public static class Position {
         public final double lat;
@@ -34,30 +35,32 @@ public class PositionAgentService {
         try {
             String token = GpsApiServer.getOrCreateToken(agentId);
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_URL + "/api/position?agentId=" + agentId + "&token=" + token))
-                .timeout(Duration.ofSeconds(1))
-                .GET()
-                .build();
+                    .uri(URI.create(BASE_URL + "/api/position?agentId=" + agentId + "&token=" + token))
+                    .timeout(Duration.ofSeconds(1))
+                    .GET()
+                    .build();
             HttpResponse<String> response = HTTP_CLIENT.send(request,
-                HttpResponse.BodyHandlers.ofString());
+                    HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                return new Position(json.get("lat").getAsDouble(), json.get("lon").getAsDouble());
+                if (json.has("lat") && json.has("lon")) {
+                    return new Position(json.get("lat").getAsDouble(), json.get("lon").getAsDouble());
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.warn("Interruption lors de la requête GPS pour agent {}", agentId);
         } catch (Exception e) {
             logger.debug("Serveur GPS injoignable pour agent {}: {}", agentId, e.getMessage());
         }
         return null;
     }
 
+    /** IP locale du serveur (pour construire les URLs QR code). */
     public static String getLocalIp() {
         return GpsApiServer.getLocalIp();
     }
 
-    /** Utilise GpsApiServer.getGpsPageUrl() qui inclut le token de sécurité. */
+    /** URL de la page GPS mobile pour un agent (avec token de sécurité). */
     public static String getGpsPageUrl(int agentId, String serverIp) {
         return GpsApiServer.getGpsPageUrl(agentId, serverIp);
     }

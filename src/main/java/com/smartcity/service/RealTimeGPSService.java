@@ -1,4 +1,4 @@
-package com.smartcity.service;
+﻿package com.smartcity.service;
 
 import com.smartcity.model.Signalement;
 import javafx.application.Platform;
@@ -17,8 +17,6 @@ public class RealTimeGPSService {
     private Timer locationTracker;
     private final List<LocationUpdateListener> listeners = new java.util.concurrent.CopyOnWriteArrayList<>();
     private List<Signalement> allMissions = new ArrayList<>();
-    // Instance unique réutilisée pour éviter la création à chaque poll
-    private final PositionAgentService positionAgentService = new PositionAgentService();
 
     public interface LocationUpdateListener {
         void onLocationUpdate(Coordinates newPosition);
@@ -81,11 +79,24 @@ public class RealTimeGPSService {
 
     private void pollPositionFromServer() {
         com.smartcity.utils.SessionManager.getAgentId().ifPresent(agentId -> {
-            PositionAgentService.Position pos = positionAgentService.getPosition(agentId);
+            double[] pos = readPositionFromDb(agentId);
             if (pos != null) {
-                setCurrentPosition(new Coordinates(pos.lat, pos.lon));
+                setCurrentPosition(new Coordinates(pos[0], pos[1]));
             }
         });
+    }
+
+    private double[] readPositionFromDb(int agentId) {
+        try (java.sql.Connection conn = com.smartcity.utils.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(
+                     "SELECT latitude, longitude FROM position_agent WHERE idAgent=?")) {
+            ps.setInt(1, agentId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
+            }
+        } catch (java.sql.SQLException e) {
+            return null;
+        }
     }
 
     public void stopRealTimeTracking() {

@@ -43,59 +43,68 @@ Crée des signalements de déchets avec localisation GPS. Il suit l'état de ses
 ## Stack technique
 
 ### Langage & Runtime
-- **Java 17** — langage principal, LTS, modules Java Platform
+- **Java 17** — langage principal de toute l'application (logique métier, services, contrôleurs, utilitaires)
 
 ### Interface utilisateur
 - **JavaFX 17.0.2**
-  - `javafx-controls` — composants UI (Button, TableView, ComboBox, etc.)
-  - `javafx-fxml` — vues déclaratives FXML + binding avec les contrôleurs
-  - `javafx-web` — WebView pour intégrer du contenu HTML/JS dans l'app
-  - `javafx-swing` — interopérabilité Swing si nécessaire
-- **CSS JavaFX** — design system maison (`design-system.css`) avec variables, dark mode, animations
+  - `javafx-controls` — tous les composants visuels : Button, TableView, ComboBox, Label, TextField, PasswordField, BarChart, PieChart, etc.
+  - `javafx-fxml` — chaque écran est décrit dans un fichier `.fxml` (login, register, dashboards admin/agent/citoyen) et lié à son contrôleur Java
+  - `javafx-web` — WebView utilisée dans le dashboard agent pour afficher la carte Leaflet interactive directement dans la fenêtre JavaFX
+  - `javafx-swing` — utilisé pour l'interopérabilité lors de la génération d'images (QR codes via ZXing)
+- **CSS JavaFX** — fichier `design-system.css` unique appliqué à toute l'application : palette de couleurs, dark mode, animations hover, styles des tableaux, cartes, formulaires, toasts
 
 ### Cartographie
-- **Leaflet.js** — bibliothèque JavaScript de cartes interactives (open source)
-- **OpenStreetMap** — fond de carte libre et gratuit
-- **leaflet-heat.js** — plugin heatmap pour visualiser les zones à forte densité de signalements
-- Intégration via **WebView JavaFX** + communication JS ↔ Java
+- **Leaflet.js** — carte interactive chargée dans la WebView de l'espace agent : affichage des zones, marqueurs de signalements, itinéraire
+- **OpenStreetMap** — fond de carte utilisé par Leaflet (tuiles gratuites)
+- **leaflet-heat.js** — plugin heatmap pour visualiser les zones à forte densité de signalements sur la carte agent
+- **smart-gps-map.js** — script maison qui orchestre la carte, les marqueurs et la communication avec le backend Java via `WebEngine.executeScript()`
 
 ### Base de données
-- **MySQL 8** — SGBD relationnel principal
-- **mysql-connector-j 8.2.0** — driver JDBC officiel MySQL
-- **HikariCP 5.0.1** — pool de connexions haute performance
+- **MySQL 8** — stockage de toutes les données : utilisateurs, signalements, affectations, zones, positions GPS, tokens
+- **mysql-connector-j 8.2.0** — driver JDBC pour toutes les requêtes SQL (`PreparedStatement`, `ResultSet`)
+- **HikariCP 5.0.1** — pool de connexions utilisé dans `DatabaseConnection.java` pour éviter d'ouvrir une nouvelle connexion à chaque requête
 
 ### Sécurité
-- **jBCrypt 0.4** — hachage des mots de passe (algorithme BCrypt)
+- **jBCrypt 0.4** — utilisé dans `UtilisateurService` pour hasher les mots de passe à l'inscription et les vérifier à la connexion
+- **TLS / SSL auto-signé** — le serveur GPS embarqué (`GpsApiServer`) génère un certificat auto-signé à la volée (RSA 2048, SHA256) pour exposer une URL HTTPS sur le réseau local, nécessaire pour que le navigateur mobile autorise l'accès au GPS
+- **Tokens UUID** — chaque agent et citoyen reçoit un token unique (UUID) stocké en base (`gps_token`) pour sécuriser les appels à l'API GPS
+
+### Serveur HTTP embarqué
+- **com.sun.net.httpserver (JDK)** — serveur HTTP/HTTPS léger intégré au JDK, utilisé dans `GpsApiServer` pour exposer les endpoints `/api/position`, `/api/citizen-position`, `/gps`, `/citizen-gps` sans dépendance externe
+- Sert aussi la **page HTML mobile** générée dynamiquement (buildGpsHtml) que l'agent ou le citoyen ouvre sur son téléphone pour envoyer sa position GPS
 
 ### Communication temps réel
-- **Jakarta WebSocket API 2.1.0** — API standard WebSocket
-- **Tyrus 2.1.3** — implémentation serveur WebSocket embarqué (GlassFish)
-- **Grizzly** — conteneur réseau pour Tyrus
+- **Jakarta WebSocket API 2.1.0** — API standard pour définir les endpoints WebSocket (`@ServerEndpoint`)
+- **Tyrus 2.1.3** — implémentation du serveur WebSocket embarqué, démarré dans `WebSocketServer.java` sur le port configuré via `GeoConfig`
+- **Grizzly** — conteneur réseau sous-jacent de Tyrus, gère les connexions entrantes
+- Utilisé pour le **push temps réel** des positions agents vers le dashboard (`AgentMissionEndpoint`)
+- **`java.util.Timer`** — utilisé dans `RealTimeGPSService` pour interroger la base toutes les 10 secondes et notifier les listeners JavaFX via `Platform.runLater()`
 
 ### Sérialisation / Échanges de données
-- **Gson 2.10.1** (Google) — sérialisation/désérialisation JSON
+- **Gson 2.10.1** — sérialisation/désérialisation JSON dans `JsonUtils.java`, utilisé pour les échanges entre la WebView JavaScript et le code Java, et pour les réponses de l'API GPS
 
 ### Génération de documents
-- **Apache PDFBox 2.0.27** — génération de rapports PDF
-- **ZXing 3.5.2** (Google) — génération et lecture de QR codes
+- **Apache PDFBox 2.0.27** — génération de rapports PDF exportables depuis le dashboard administrateur (`ReportService`)
+- **ZXing 3.5.2** — génération de QR codes dans `QrCodeUtils.java` : l'URL GPS de l'agent/citoyen est encodée en QR code affiché dans l'interface pour être scanné depuis un mobile
 
 ### Logging
-- **SLF4J 2.0.9** — façade de logging standard
-- **Logback 1.4.11** — implémentation des logs avec rotation de fichiers
+- **SLF4J 2.0.9** — façade de logging utilisée dans tous les services et contrôleurs (`LoggerFactory.getLogger`)
+- **Logback 1.4.11** — implémentation configurée dans `logback.xml` : logs en console + rotation de fichiers dans le dossier `logs/`
 
 ### Build & Gestion de dépendances
-- **Maven** — build, dépendances, cycle de vie du projet
-- **Maven Wrapper (mvnw)** — pas besoin d'installer Maven globalement
-- **javafx-maven-plugin 0.0.8** — lancement JavaFX via `mvn javafx:run`
-- **maven-compiler-plugin 3.11.0** — compilation Java 17
+- **Maven** — gestion de toutes les dépendances, compilation, packaging
+- **Maven Wrapper (`mvnw`)** — permet de lancer le build sans installer Maven globalement
+- **javafx-maven-plugin 0.0.8** — lance l'application JavaFX avec `mvn javafx:run` en configurant automatiquement le module-path
+- **maven-compiler-plugin 3.11.0** — compilation Java 17 avec encodage UTF-8
+- **maven-surefire-plugin 3.2.2** — exécution des tests JUnit
 
 ### Tests
-- **JUnit Jupiter 5.10.0** — framework de tests unitaires
-- **Mockito 5.5.0** — mocking pour les tests de services
+- **JUnit Jupiter 5.10.0** — framework de tests unitaires (scope test)
+- **Mockito 5.5.0** — mocking des dépendances pour tester les services sans base de données réelle
 
 ### Conteneurisation & CI
-- **Docker / Docker Compose** — conteneurisation de l'application et de la base
-- **GitHub Actions** — pipeline CI (`.github/workflows/ci.yml`)
+- **Docker / Docker Compose** — `Dockerfile` et `docker-compose.yml` présents pour conteneuriser l'application et la base MySQL
+- **GitHub Actions** — pipeline CI défini dans `.github/workflows/ci.yml` pour compiler et vérifier le build automatiquement
 
 ---
 

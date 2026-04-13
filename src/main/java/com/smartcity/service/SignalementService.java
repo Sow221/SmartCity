@@ -429,6 +429,12 @@ public class SignalementService {
         if (timestamp != null)
             signalement.setDateSignalement(timestamp.toLocalDateTime());
 
+        try {
+            Timestamp tsCollecte = rs.getTimestamp("dateCollecte");
+            if (tsCollecte != null)
+                signalement.setDateCollecte(tsCollecte.toLocalDateTime());
+        } catch (SQLException ignored) {}
+
         signalement.setIdUser(rs.getInt("idUser"));
         String utilisateurNom = rs.getString("utilisateurNom");
         signalement

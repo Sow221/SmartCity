@@ -539,10 +539,6 @@ public class GpsApiServer {
             + "padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer;"
             + "margin:8px 0;width:100%;max-width:320px;}"
             + ".btn:active{background:rgba(255,255,255,0.4);}"
-            + "#manual{display:none;margin-top:12px;width:100%;max-width:320px;}"
-            + "#manual input{width:100%;padding:10px;border-radius:8px;border:none;"
-            + "font-size:14px;margin:4px 0;color:#333;}"
-            + "#manual button{background:#FF9800;color:white;border:none;padding:12px;"
             + "border-radius:8px;font-size:15px;cursor:pointer;width:100%;margin-top:8px;}"
             + "#warn{font-size:12px;color:rgba(255,255,255,0.7);margin-top:10px;max-width:320px;}"
             + "</style></head><body>"
@@ -550,12 +546,6 @@ public class GpsApiServer {
             + "<div id='status'>Activation GPS...</div>"
             + "<div id='coords'></div>"
             + "<button class='btn' onclick='tryGps()'>\uD83D\uDCF1 Envoyer ma position GPS</button>"
-            + "<button class='btn' onclick='showManual()'>\u270F\uFE0F Saisir manuellement</button>"
-            + "<div id='manual'>"
-            + "  <p style='margin-bottom:8px;font-size:13px;'>Coordonn\u00e9es :</p>"
-            + "  <input id='mlat' type='number' step='0.00001' placeholder='Latitude (ex: 14.76460)'/>"
-            + "  <input id='mlon' type='number' step='0.00001' placeholder='Longitude (ex: -17.39200)'/>"
-            + "  <button onclick='sendManual()'>\u2705 Confirmer</button>"
             + "</div>"
             + "<p id='warn'>\u26A0\uFE0F Le GPS n\u00e9cessite HTTPS sur mobile. Utilisez la saisie manuelle ou connectez-vous via WiFi local.</p>"
             + "<script>"
@@ -576,26 +566,20 @@ public class GpsApiServer {
             + "  });"
             + "}"
             + "function tryGps(){"
-            + "  if(location.protocol!=='https:'){showManual();"
+            + "  if(location.protocol!=='https:'){document.getElementById('status').innerHTML='\u26A0\uFE0F GPS n\u00e9cessite HTTPS';return;}"
             + "    document.getElementById('status').innerHTML='\u26A0\uFE0F GPS n\u00e9cessite HTTPS \u2014 saisie manuelle';"
             + "    return;}"
             + "  document.getElementById('status').innerHTML='Demande GPS...';"
-            + "  if(!navigator.geolocation){showManual();return;}"
+            + "  if(!navigator.geolocation){document.getElementById('status').innerHTML='GPS non disponible';return;}"
             + "  navigator.geolocation.getCurrentPosition("
             + "    function(p){send(p.coords.latitude,p.coords.longitude,'GPS');},"
             + "    function(err){"
             + "      document.getElementById('status').innerHTML='\u26A0\uFE0F GPS refus\u00e9 \u2014 saisie manuelle';"
-            + "      showManual();"
+            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F GPS refus\u00e9';},"
             + "    },{enableHighAccuracy:true,timeout:8000,maximumAge:0});"
             + "}"
-            + "function showManual(){document.getElementById('manual').style.display='block';}"
-            + "function sendManual(){"
-            + "  var lat=parseFloat(document.getElementById('mlat').value);"
-            + "  var lon=parseFloat(document.getElementById('mlon').value);"
-            + "  if(isNaN(lat)||isNaN(lon)||lat<-90||lat>90||lon<-180||lon>180){alert('Invalide');return;}"
-            + "  send(lat,lon,'Manuel');"
             + "}"
-            + "if(location.protocol==='https:'){tryGps();}else{showManual();"
+            + "if(location.protocol==='https:'){tryGps();}else{document.getElementById('status').innerHTML='\u26A0\uFE0F Connexion HTTP \u2014 GPS indisponible';}"
             + "  document.getElementById('status').innerHTML='\u26A0\uFE0F Connexion HTTP \u2014 saisie manuelle requise';}"
             + "</script></body></html>";
     }

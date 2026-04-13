@@ -50,8 +50,8 @@
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
             <Label text="NAVIGATION" styleClass="sidebar-section-label-agent"/>
             <Button fx:id="btnAgentDashboard" text="📊 Vue d'ensemble" styleClass="sidebar-agent-button, sidebar-agent-button-active" onAction="#handleShowAgentDashboard"/>
-            <Button fx:id="btnMesMissions" text="📋 Mes missions" styleClass="sidebar-agent-button" onAction="#handleShowMesMissions"/>
             <Button fx:id="btnCarteZones" text="🗺️ Carte zones" styleClass="sidebar-agent-button" onAction="#handleShowCarteZones"/>
+            <Button fx:id="btnMesMissions" text="📋 Mes missions" styleClass="sidebar-agent-button" onAction="#handleShowMesMissions"/>
             <Region prefHeight="8"/>
             <Label text="HISTORIQUE" styleClass="sidebar-section-label-agent"/>
             <Button fx:id="btnHistorique" text="📜 Historique" styleClass="sidebar-agent-button" onAction="#handleShowHistorique"/>
@@ -73,6 +73,7 @@
                 <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="btn-outline-sm" onAction="#chargerDonnees"/>
                 <Button fx:id="btnGpsActiver" text="GPS" styleClass="btn-outline-sm" onAction="#handleToggleGps"/>
                 <Label fx:id="lblPositionActuelle" text="Position..." styleClass="missions-count-badge" wrapText="false"/>
+                <Label fx:id="lblGpsStatus" text="GPS inactif ⚠️" styleClass="missions-count-badge" wrapText="false"/>
                 <Label fx:id="lblMissionsCount" text="0 missions" styleClass="missions-count-badge"/>
             </HBox>
 
@@ -86,7 +87,8 @@
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Vue d'ensemble" styleClass="page-title-agent"/>
-                            <Label text="Toutes vos missions actives du jour" styleClass="page-subtitle"/>
+                            <Label text="Missions actives" styleClass="page-subtitle"/>
+                            <Label text="(fond orange = en attente depuis plus de 24h)" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <HBox spacing="8" alignment="CENTER_RIGHT">
@@ -192,8 +194,8 @@
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
                                 <Label text="✅" style="-fx-font-size:36px;"/>
-                                <Label text="Aucune mission pour aujourd'hui" styleClass="empty-state-title"/>
-                                <Label text="Profitez de cette journée calme !" styleClass="empty-state-desc"/>
+                                <Label text="Aucune mission active" styleClass="empty-state-title"/>
+                                <Label text="Toutes vos missions sont terminées !" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
@@ -218,7 +220,7 @@
                         <columns>
                             <TableColumn fx:id="colMissionId" text="ID" prefWidth="60"/>
                             <TableColumn fx:id="colMissionZone" text="Zone" prefWidth="110"/>
-                            <TableColumn fx:id="colMissionAdresse" text="Adresse" prefWidth="180"/>
+                            <TableColumn fx:id="colMissionAdresse" text="Description" prefWidth="180"/>
                             <TableColumn fx:id="colMissionType" text="Type déchet" prefWidth="130"/>
                             <TableColumn fx:id="colMissionDate" text="Date" prefWidth="140"/>
                             <TableColumn fx:id="colMissionStatut" text="Statut" prefWidth="120"/>
@@ -293,15 +295,31 @@
                         <padding><Insets top="12" left="12" right="12" bottom="12"/></padding>
                         <Label text="GPS Mobile — Scannez le QR code" styleClass="map-detail-title"/>
                         <Region styleClass="profile-divider" prefHeight="1"/>
+                        <!-- Légende couleurs carte -->
+                        <HBox spacing="16" alignment="CENTER">
+                            <HBox spacing="4" alignment="CENTER_LEFT">
+                                <Label text="●" style="-fx-text-fill:#FFC107;-fx-font-size:16px;"/>
+                                <Label text="En attente" style="-fx-font-size:11px;"/>
+                            </HBox>
+                            <HBox spacing="4" alignment="CENTER_LEFT">
+                                <Label text="●" style="-fx-text-fill:#1E88E5;-fx-font-size:16px;"/>
+                                <Label text="En cours" style="-fx-font-size:11px;"/>
+                            </HBox>
+                            <HBox spacing="4" alignment="CENTER_LEFT">
+                                <Label text="●" style="-fx-text-fill:#43A047;-fx-font-size:16px;"/>
+                                <Label text="Terminé" style="-fx-font-size:11px;"/>
+                            </HBox>
+                        </HBox>
+                        <Region styleClass="profile-divider" prefHeight="1"/>
                         <HBox spacing="12" alignment="CENTER">
                             <VBox spacing="6" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
                                 <Label text="Page GPS" styleClass="map-detail-label"/>
-                                <Label fx:id="mapQrUrlLabel" text="" wrapText="true" styleClass="map-detail-url"/>
+                                <Label fx:id="qrUrlLabelCarte" text="" wrapText="true" styleClass="map-detail-url"/>
                                 <Button text="Copier l'URL" onAction="#handleCopierUrlGps" styleClass="btn-outline-sm" prefWidth="110"/>
                             </VBox>
                             <VBox spacing="6" alignment="CENTER">
                                 <Label text="QR Code" styleClass="map-detail-label"/>
-                                <ImageView fx:id="mapQrCodeImageView" fitWidth="140" fitHeight="140" preserveRatio="true"/>
+                                <ImageView fx:id="qrCodeImageViewCarte" fitWidth="140" fitHeight="140" preserveRatio="true"/>
                             </VBox>
                         </HBox>
                     </VBox>
@@ -314,23 +332,26 @@
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Historique des missions" styleClass="page-title-agent"/>
-                            <Label text="Consultez vos missions passées par date" styleClass="page-subtitle"/>
+                            <Label text="Missions terminées — date de collecte" styleClass="page-subtitle"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <HBox spacing="10" alignment="CENTER_RIGHT">
+                            <Label text="Date collecte :" styleClass="quick-actions-label-agent"/>
                             <DatePicker fx:id="historiqueDatePicker" prefWidth="180" prefHeight="40" styleClass="dash-datepicker"/>
                             <Button text="Filtrer" prefHeight="40" onAction="#handleFiltrerHistorique" styleClass="button-agent"/>
                             <Button text="Réinitialiser" prefHeight="40" onAction="#handleResetHistorique" styleClass="btn-outline-sm"/>
+                            <Label fx:id="lblHistoriqueCount" text="" styleClass="missions-count-badge"/>
                         </HBox>
                     </HBox>
                     <TableView fx:id="tableHistorique" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
                         <columns>
-                            <TableColumn fx:id="colHistId" text="ID" prefWidth="70"/>
-                            <TableColumn fx:id="colHistZone" text="Zone" prefWidth="130"/>
-                            <TableColumn fx:id="colHistAdresse" text="Adresse" prefWidth="280"/>
-                            <TableColumn fx:id="colHistType" text="Type déchet" prefWidth="140"/>
-                            <TableColumn fx:id="colHistDate" text="Date" prefWidth="160"/>
-                            <TableColumn fx:id="colHistStatut" text="Statut" prefWidth="130"/>
+                            <TableColumn fx:id="colHistId" text="ID" prefWidth="60"/>
+                            <TableColumn fx:id="colHistZone" text="Zone" prefWidth="120"/>
+                            <TableColumn fx:id="colHistAdresse" text="Description" prefWidth="220"/>
+                            <TableColumn fx:id="colHistType" text="Type déchet" prefWidth="130"/>
+                            <TableColumn fx:id="colHistDate" text="Date collecte" prefWidth="140"/>
+                            <TableColumn fx:id="colHistStatut" text="Statut" prefWidth="110"/>
+                            <TableColumn fx:id="colHistDuree" text="Durée" prefWidth="90"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
@@ -373,18 +394,24 @@
                         <VBox spacing="6">
                             <Label text="Zone assignée" styleClass="auth-field-label"/>
                             <TextField fx:id="profilZoneField" styleClass="dash-field" editable="false"/>
+                            <Label text="Modifiable par l'administrateur" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
                         </VBox>
-                        <VBox spacing="6">
-                            <Label text="URL GPS mobile" styleClass="auth-field-label"/>
-                            <HBox spacing="8" alignment="CENTER_LEFT">
-                                <Label fx:id="qrUrlLabel" text="" wrapText="true" styleClass="map-detail-url" HBox.hgrow="ALWAYS"/>
-                                <Button text="Copier" onAction="#handleCopierUrlGps" styleClass="btn-outline-sm"/>
-                            </HBox>
-                        </VBox>
-                        <VBox spacing="6" alignment="CENTER">
-                            <Label text="QR Code — scannez depuis votre téléphone" styleClass="auth-field-label"/>
-                            <ImageView fx:id="qrCodeImageView" fitWidth="160" fitHeight="160" preserveRatio="true"/>
-                        </VBox>
+
+                        <Region styleClass="profile-divider" prefHeight="1"/>
+
+                        <!-- Stats de performance -->
+                        <HBox spacing="12">
+                            <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                                <Label fx:id="profilStatMissionsLabel" text="0" styleClass="stat-card-number-agent"/>
+                                <Label text="Missions traitées" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                                <Label fx:id="profilStatScoreLabel" text="-" styleClass="stat-card-number-agent"/>
+                                <Label text="Taux de réussite" styleClass="stat-card-label"/>
+                            </VBox>
+                        </HBox>
+
+                        <Region styleClass="profile-divider" prefHeight="1"/>
 
                         <HBox spacing="12">
                             <Button text="Enregistrer" prefHeight="40" onAction="#handleModifierProfil" styleClass="button-agent" HBox.hgrow="ALWAYS"/>

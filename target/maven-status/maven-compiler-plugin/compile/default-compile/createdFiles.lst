@@ -8,9 +8,11 @@ com\smartcity\controller\AgentDashboardController$1.class
 com\smartcity\model\Signalement.class
 com\smartcity\service\GeolocationService.class
 com\smartcity\controller\LoginController.class
+com\smartcity\controller\AgentDashboardController$9.class
 com\smartcity\service\RealTimeGPSService$1.class
 com\smartcity\service\ReportService$RealTimeDashboard.class
 com\smartcity\utils\ValidationUtils.class
+com\smartcity\controller\AgentDashboardController$6.class
 com\smartcity\controller\ForgotPasswordController.class
 com\smartcity\utils\DbEnumUtils.class
 com\smartcity\utils\QrCodeUtils.class
@@ -19,6 +21,7 @@ com\smartcity\service\SuiviService$EvaluationEntry.class
 com\smartcity\service\GpsApiServer.class
 com\smartcity\service\SuiviService$SuiviSignalement.class
 com\smartcity\utils\ValidationUtils$ValidationResult.class
+com\smartcity\controller\AgentDashboardController$10.class
 com\smartcity\service\GeoConfig.class
 com\smartcity\service\ReportService$AgentStats.class
 com\smartcity\controller\RegisterController.class
@@ -40,9 +43,10 @@ com\smartcity\service\ReportService$WeeklyReport.class
 com\smartcity\controller\AdminDashboardController$AgentStatsRow.class
 com\smartcity\utils\DatabaseConnection.class
 com\smartcity\service\UtilisateurService.class
+com\smartcity\controller\AgentDashboardController$8.class
 com\smartcity\service\SuiviService$HistoriqueEntry.class
 com\smartcity\utils\NetworkUtils.class
-com\smartcity\model\SignalementStatut$1.class
+com\smartcity\controller\AgentDashboardController$5.class
 com\smartcity\service\PositionAgentService$Position.class
 com\smartcity\utils\SessionManager.class
 com\smartcity\websocket\WebSocketServer.class
@@ -54,6 +58,7 @@ com\smartcity\controller\AdminDashboardController$AgentLiveRow.class
 com\smartcity\controller\AdminDashboardController$2.class
 com\smartcity\service\ReportService$MonthlyReport.class
 com\smartcity\websocket\AgentMissionEndpoint.class
+com\smartcity\controller\AgentDashboardController$11.class
 com\smartcity\controller\CitizenDashboardController$1.class
 com\smartcity\controller\AgentLiveRow.class
 com\smartcity\controller\ReportsController$1.class
@@ -66,6 +71,7 @@ com\smartcity\controller\ReportsController$DateRange.class
 com\smartcity\service\AffectationService$AgentLiveStatus.class
 com\smartcity\service\PositionAgentService.class
 com\smartcity\controller\CitizenDashboardController.class
+com\smartcity\controller\AgentDashboardController$7.class
 com\smartcity\service\AffectationService.class
 com\smartcity\config\GeoConfig.class
 com\smartcity\service\ZoneService.class

@@ -1,24 +1,26 @@
 package com.smartcity.app;
 
+import java.io.IOException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.smartcity.controller.AdminDashboardController;
 import com.smartcity.controller.AgentDashboardController;
 import com.smartcity.controller.CitizenDashboardController;
 import com.smartcity.controller.ForgotPasswordController;
 import com.smartcity.controller.LoginController;
-import com.smartcity.controller.ReportsController;
 import com.smartcity.controller.RegisterController;
+import com.smartcity.controller.ReportsController;
 import com.smartcity.service.GpsApiServer;
 import com.smartcity.utils.SessionManager;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * Point d'entrée principal de l'application SmartCity Déchets.
@@ -65,22 +67,47 @@ public class MainApp extends Application {
     }
 
     private void startGpsServer() {
+        // ✅ Vérifier que les ports sont libres avant démarrage
+        if (!isPortAvailable(GpsApiServer.PORT) || !isPortAvailable(GpsApiServer.HTTPS_PORT)) {
+            logger.error("❌ Ports {} ou {} déjà occupés. Un autre processus les utilise.", 
+                GpsApiServer.PORT, GpsApiServer.HTTPS_PORT);
+            java.awt.Toolkit.getDefaultToolkit().beep();
+            return;
+        }
+        
         gpsApiServer = new GpsApiServer();
         try {
             gpsApiServer.start(0); // defaultAgentId=0 : tokens crees a la demande par chaque agent
             logger.info("✅ GPS API Server démarré sur les ports {} et {}", GpsApiServer.PORT, GpsApiServer.HTTPS_PORT);
         } catch (IOException e) {
-            logger.warn("⚠️ Impossible de démarrer le GPS API Server (ports {} / {} occupés ?): {}",
+            logger.error("❌ Impossible de démarrer le GPS API Server (ports {} / {} occupés ?): {}",
                     GpsApiServer.PORT, GpsApiServer.HTTPS_PORT, e.getMessage());
         }
     }
 
     private void startWebSocketServer() {
+        // ✅ Vérifier que le port est libre avant démarrage
+        int wsPort = com.smartcity.config.GeoConfig.getWebSocketPort();
+        if (!isPortAvailable(wsPort)) {
+            logger.error("❌ Port {} (WebSocket) déjà occupé.", wsPort);
+            return;
+        }
+        
         webSocketServer = new com.smartcity.websocket.WebSocketServer();
         try {
             webSocketServer.start();
+            logger.info("✅ WebSocket Server démarré sur le port {}", wsPort);
         } catch (Exception e) {
-            logger.warn("⚠️ Impossible de démarrer le WebSocket Server: {}", e.getMessage());
+            logger.error("❌ Impossible de démarrer le WebSocket Server (port {} occupé ?): {}", wsPort, e.getMessage());
+        }
+    }
+    
+    /** ✅ Vérifier si un port est disponible */
+    private static boolean isPortAvailable(int port) {
+        try (java.net.ServerSocket socket = new java.net.ServerSocket(port)) {
+            return true;
+        } catch (java.io.IOException e) {
+            return false;
         }
     }
 

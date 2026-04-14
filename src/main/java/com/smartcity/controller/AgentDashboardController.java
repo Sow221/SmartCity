@@ -4,103 +4,54 @@ package com.smartcity.controller;
 
 
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import com.smartcity.app.MainApp;
-
-
 import com.smartcity.model.Signalement;
-
-
 import com.smartcity.model.SignalementStatut;
-
-
 import com.smartcity.model.Utilisateur;
-
-
 import com.smartcity.service.GeolocationService;
-
-
 import com.smartcity.service.GpsApiServer;
-
-
 import com.smartcity.service.RealTimeGPSService;
-
-
 import com.smartcity.service.SignalementService;
-
-
 import com.smartcity.service.UtilisateurService;
-
-
 import com.smartcity.service.ZoneService;
-
-
 import com.smartcity.utils.SessionManager;
 
-
 import javafx.animation.FadeTransition;
-
-
-import javafx.animation.ScaleTransition;
-
-
 import javafx.animation.PauseTransition;
-
-
+import javafx.animation.ScaleTransition;
 import javafx.application.Platform;
-
-
 import javafx.beans.property.SimpleStringProperty;
-
-
 import javafx.collections.FXCollections;
-
-
 import javafx.collections.ObservableList;
-
-
 import javafx.fxml.FXML;
-
-
-import javafx.scene.control.*;
-
-
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
-
-
 import javafx.scene.layout.BorderPane;
-
-
 import javafx.scene.layout.HBox;
-
-
 import javafx.scene.layout.VBox;
-
-
 import javafx.scene.web.WebEngine;
-
-
 import javafx.scene.web.WebView;
-
-
 import javafx.util.Duration;
-
-
-
-
-
-import java.time.LocalDate;
-
-
-import java.util.List;
-
-
-import java.util.Locale;
-
-
-import java.util.Optional;
-
-
-import java.util.stream.Collectors;
 
 
 
@@ -465,6 +416,31 @@ public class AgentDashboardController {
 
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AgentDashboardController.class);
+    
+    // ✅ Contenu embarqué des ressources JS statiques
+    private static String SMART_GPS_MAP_JS = null;
+    
+    static {
+        loadEmbeddedResources();
+    }
+    
+    private static void loadEmbeddedResources() {
+        try {
+            // Charger smart-gps-map.js une seule fois au démarrage
+            try (var is = AgentDashboardController.class.getClassLoader().getResourceAsStream("js/smart-gps-map.js")) {
+                if (is != null) {
+                    SMART_GPS_MAP_JS = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    logger.info("✅ smart-gps-map.js chargé en mémoire ({} bytes)", SMART_GPS_MAP_JS.length());
+                } else {
+                    logger.error("❌ smart-gps-map.js not found in classpath");
+                    SMART_GPS_MAP_JS = "";
+                }
+            }
+        } catch (Exception e) {
+            logger.error("❌ Erreur chargement ressources embarquées", e);
+            SMART_GPS_MAP_JS = "";
+        }
+    }
 
 
     private javafx.scene.media.AudioClip nearbyBeep;
@@ -795,6 +771,7 @@ public class AgentDashboardController {
 
 
             refreshTourneeSummary();
+            if (tableMesMissions != null) tableMesMissions.refresh(); // ? Refresh distances GPS
 
 
             if (!distances.isEmpty()) {
@@ -983,6 +960,7 @@ public class AgentDashboardController {
             missionList.forEach(s -> missionsSnapshot.add(s.getIdSignalement()));
 
 
+            String currentFilter = (filterMissionsStatutCombo != null) ? filterMissionsStatutCombo.getValue() : "Tous";
             missions.setAll(missionList);
 
 
@@ -1005,6 +983,8 @@ public class AgentDashboardController {
 
 
             refreshCards();
+            // ? R�appliquer le filtre apr�s rechargement
+            if (!"Tous".equals(currentFilter) && filterMissionsStatutCombo != null) filterMissionsStatutCombo.setValue(currentFilter);
 
 
             refreshTourneeSummary();
@@ -3241,19 +3221,21 @@ public class AgentDashboardController {
         if (mapWebView == null) return;
         installMapFallbackHandlers(mapWebView.getEngine(), "Carte agent indisponible.");
         String html = buildLeafletHtml(selectedMission, showRoute);
-        // Reinstaller le bridge apres chaque loadContent
-        mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
-                try {
-                    netscape.javascript.JSObject win = (netscape.javascript.JSObject)
-                        mapWebView.getEngine().executeScript("window");
-                    win.setMember("javaAgent", new JSBridgeAgent());
-                } catch (Exception e) {
-                    logger.warn("Erreur bridge carte GPS", e);
+        // ✅ Charger SEULEMENT la première fois
+        if (mapWebView.getEngine().getLocation() == null || mapWebView.getEngine().getLocation().isEmpty()) {
+            mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+                if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                    try {
+                        netscape.javascript.JSObject win = (netscape.javascript.JSObject)
+                            mapWebView.getEngine().executeScript("window");
+                        win.setMember("javaAgent", new JSBridgeAgent());
+                    } catch (Exception e) {
+                        logger.warn("Erreur bridge carte GPS", e);
+                    }
                 }
-            }
-        });
-        mapWebView.getEngine().loadContent(html);
+            });
+            mapWebView.getEngine().loadContent(html);
+        }
     }
 
 
@@ -3353,53 +3335,49 @@ public class AgentDashboardController {
 
             return;
 
-
-        installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
-
-
-        // Afficher toutes les missions + la route optimisée par-dessus
-
-
-        String html = buildLeafletHtml(null, false);
-
-
-        if (!optimizedRoute.isEmpty()) {
-
-
-            GeolocationService.Coordinates startPoint = getTourneeStartPoint();
-
-
-            // Injecter la polyline de route dans le HTML existant
-
-
-            StringBuilder routePoints = new StringBuilder();
-
-
-            routePoints.append(String.format("[%.6f,%.6f]", startPoint.lat, startPoint.lon));
-
-
-            for (Signalement m : optimizedRoute) {
-
-
-                Point p = missionPoint(m, indexOfMission(m));
-
-
-                routePoints.append(String.format(",[%.6f,%.6f]", p.lat, p.lon));
-
-
-            }
-
-
-            String routeLine = "L.polyline([" + routePoints + "],{color:'#FF5722',weight:4,dashArray:'10 5',opacity:0.8}).addTo(map);";
-
-
-            html = html.replace("</body></html>", "<script>" + routeLine + "</script></body></html>");
-
-
+        // ✅ SI PREMIÈRE FOIS: charger l'HTML complet
+        if (mapWebView.getEngine().getLocation() == null || mapWebView.getEngine().getLocation().isEmpty()) {
+            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
+            String html = buildLeafletHtml(null, false);
+            mapWebView.getEngine().loadContent(html);
+            return; // Attendre que la carte soit chargée
         }
 
+        // ✅ MISE À JOUR DYNAMIQUE VIA executeScript (pas de clignotement)
+        try {
+            // Nettoyer anciens marqueurs
+            mapWebView.getEngine().executeScript("if (typeof window.clearMissions === 'function') window.clearMissions();");
 
-        mapWebView.getEngine().loadContent(html);
+            // Ajouter nouvelles missions
+            for (Signalement m : optimizedRoute) {
+                Point p = missionPoint(m, indexOfMission(m));
+                String markerColor = statusColorHex(getDisplayStatut(m.getStatut()));
+                String popup = "Mission #" + m.getIdSignalement() + " - " + getDisplayStatut(m.getStatut());
+                String jsAddMarker = "L.circleMarker([" + fmt(p.lat) + "," + fmt(p.lon) + "],{radius:9,color:'" + markerColor + 
+                    "',fillColor:'" + markerColor + "',fillOpacity:0.88}).addTo(map).bindPopup('" + popup.replace("'", "\\'") + "');";
+                mapWebView.getEngine().executeScript(jsAddMarker);
+            }
+
+            // Tracer la route dynamiquement
+            if (!optimizedRoute.isEmpty()) {
+                GeolocationService.Coordinates startPoint = getTourneeStartPoint();
+                StringBuilder routePoints = new StringBuilder("[");
+                routePoints.append(String.format("[%.6f,%.6f]", startPoint.lat, startPoint.lon));
+                for (Signalement m : optimizedRoute) {
+                    Point p = missionPoint(m, indexOfMission(m));
+                    routePoints.append(String.format(",[%.6f,%.6f]", p.lat, p.lon));
+                }
+                routePoints.append("]");
+                String routeLine = "L.polyline(" + routePoints + ",{color:'#FF5722',weight:4,dashArray:'10 5',opacity:0.8}).addTo(map);";
+                mapWebView.getEngine().executeScript(routeLine);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Erreur mise à jour carte temps-réel", e);
+            // Fallback: recharger complètement si executeScript échoue
+            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible.");
+            String html = buildLeafletHtml(null, false);
+            mapWebView.getEngine().loadContent(html);
+        }
 
 
     }
@@ -3498,14 +3476,9 @@ public class AgentDashboardController {
 
 
 
-    /** ✅ URL du JS de la carte depuis les ressources */
-    private static String getSmartGpsMapJsUrl() {
-        java.net.URL url = AgentDashboardController.class.getResource("/js/smart-gps-map.js");
-        if (url == null) {
-            logger.warn("⚠️ smart-gps-map.js not found in resources");
-            return null;
-        }
-        return url.toExternalForm();
+    /** ✅ INJECTER LE JS EMBARQUÉ AU LIEU D'UNE URL EXTERNE */
+    private static String getSmartGpsMapJsInline() {
+        return SMART_GPS_MAP_JS != null ? SMART_GPS_MAP_JS : "";
     }
 
     /** ✅ CRÉER LE CLIENT WEBSOCKET POUR MISES À JOUR TEMPS RÉEL */
@@ -3853,7 +3826,7 @@ public class AgentDashboardController {
                 "</script>" +
 
                 "<script>window._wsPort=" + com.smartcity.config.GeoConfig.getWebSocketPort() + ";</script>" +
-                (getSmartGpsMapJsUrl() != null ? "<script src='" + getSmartGpsMapJsUrl() + "'></script>" : "") +
+                "<script>" + getSmartGpsMapJsInline() + "</script>" +
                 "<script>" + getWebSocketClientJs() + "</script>" +
 
                 "</body></html>";

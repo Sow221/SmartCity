@@ -129,6 +129,8 @@ public class CitizenDashboardController {
     private final com.smartcity.service.SuiviService suiviService = new com.smartcity.service.SuiviService();
     private final ObservableList<Signalement> mesSignalements = FXCollections.observableArrayList();
     private final java.util.Map<Integer, com.smartcity.service.SuiviService.SuiviSignalement> suiviCache = new java.util.HashMap<>();
+    private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
+        .connectTimeout(java.time.Duration.ofSeconds(1)).build();
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -633,8 +635,6 @@ public class CitizenDashboardController {
         String token = com.smartcity.service.GpsApiServer.getOrCreateCitizenToken(citizenId);
         String pollUrl = "http://localhost:" + com.smartcity.service.GpsApiServer.PORT
             + "/api/citizen-position?citizenId=" + citizenId + "&token=" + token;
-        java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-            .connectTimeout(java.time.Duration.ofSeconds(1)).build();
         gpsPollingTimeline = new javafx.animation.Timeline(
             new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), e -> {
                 // Ne pas poller si position déjà obtenue

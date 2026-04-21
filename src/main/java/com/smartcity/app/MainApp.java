@@ -32,6 +32,9 @@ public class MainApp extends Application {
     private static Stage primaryStage;
     private static GpsApiServer gpsApiServer;
     private static com.smartcity.websocket.WebSocketServer webSocketServer;
+    private static boolean webSocketServerRunning = false;
+
+    public static boolean isWebSocketServerRunning() { return webSocketServerRunning; }
 
     private CitizenDashboardController activeCitizenController;
     private AgentDashboardController   activeAgentController;
@@ -96,6 +99,7 @@ public class MainApp extends Application {
         webSocketServer = new com.smartcity.websocket.WebSocketServer();
         try {
             webSocketServer.start();
+            webSocketServerRunning = true;
             logger.info("✅ WebSocket Server démarré sur le port {}", wsPort);
         } catch (Exception e) {
             logger.error("❌ Impossible de démarrer le WebSocket Server (port {} occupé ?): {}", wsPort, e.getMessage());

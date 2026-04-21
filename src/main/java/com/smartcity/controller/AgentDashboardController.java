@@ -1,4 +1,4 @@
-package com.smartcity.controller;
+ï»¿package com.smartcity.controller;
 
 
 
@@ -983,7 +983,7 @@ public class AgentDashboardController {
 
 
             refreshCards();
-            // ? Réappliquer le filtre après rechargement
+            // ? Rï¿½appliquer le filtre aprï¿½s rechargement
             if (!"Tous".equals(currentFilter) && filterMissionsStatutCombo != null) filterMissionsStatutCombo.setValue(currentFilter);
 
 
@@ -3825,9 +3825,8 @@ public class AgentDashboardController {
 
                 "</script>" +
 
-                "<script>window._wsPort=" + com.smartcity.config.GeoConfig.getWebSocketPort() + ";</script>" +
                 "<script>" + getSmartGpsMapJsInline() + "</script>" +
-                "<script>" + getWebSocketClientJs() + "</script>" +
+                (MainApp.isWebSocketServerRunning() ? "<script>window._wsPort=" + com.smartcity.config.GeoConfig.getWebSocketPort() + ";</script><script>" + getWebSocketClientJs() + "</script>" : "") +
 
                 "</body></html>";
 
@@ -4126,15 +4125,6 @@ public class AgentDashboardController {
 
 
 
-
-
-    private void showAgentDashboardPage() {
-
-
-        showPage(pageAgentDashboard, btnAgentDashboard);
-
-
-    }
 
 
 

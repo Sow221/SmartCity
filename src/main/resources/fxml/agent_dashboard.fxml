@@ -118,7 +118,7 @@
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardEnAttente" text="0" styleClass="stat-card-number-agent"/>
-                                    <Label text="En attente" styleClass="stat-card-label"/>
+                                    <Label text="Affectées" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>

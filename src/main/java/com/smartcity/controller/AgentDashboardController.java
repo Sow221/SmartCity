@@ -450,6 +450,7 @@ public class AgentDashboardController {
 
 
     private boolean mapFallbackHandlersInstalled;
+    private boolean mapBridgeInstalled;
 
 
     // Snapshot ids missions pour detecter les nouvelles affectations
@@ -1836,7 +1837,7 @@ public class AgentDashboardController {
         int total    = missions.size();
 
 
-        int attente  = (int) missions.stream().filter(s -> "En attente".equalsIgnoreCase(s.getStatut())).count();
+        int attente  = (int) missions.stream().filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut())).count();
 
 
         int enCours  = (int) missions.stream().filter(s -> "En cours".equalsIgnoreCase(s.getStatut())).count();
@@ -2987,7 +2988,7 @@ public class AgentDashboardController {
             int actives = (int) missions.stream().filter(
 
 
-                    s -> "En attente".equalsIgnoreCase(s.getStatut()) || "En cours".equalsIgnoreCase(s.getStatut()))
+                    s -> SignalementStatut.AFFECTE.matches(s.getStatut()) || "En cours".equalsIgnoreCase(s.getStatut()))
 
 
                     .count();
@@ -3220,9 +3221,9 @@ public class AgentDashboardController {
     private void refreshMap(Signalement selectedMission, boolean showRoute) {
         if (mapWebView == null) return;
         installMapFallbackHandlers(mapWebView.getEngine(), "Carte agent indisponible.");
-        String html = buildLeafletHtml(selectedMission, showRoute);
-        // ✅ Charger SEULEMENT la première fois
-        if (mapWebView.getEngine().getLocation() == null || mapWebView.getEngine().getLocation().isEmpty()) {
+        // Installer le bridge JSBridgeAgent une seule fois
+        if (!mapBridgeInstalled) {
+            mapBridgeInstalled = true;
             mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
                 if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
                     try {
@@ -3234,8 +3235,8 @@ public class AgentDashboardController {
                     }
                 }
             });
-            mapWebView.getEngine().loadContent(html);
         }
+        mapWebView.getEngine().loadContent(buildLeafletHtml(selectedMission, showRoute));
     }
 
 
@@ -3328,58 +3329,11 @@ public class AgentDashboardController {
 
 
     private void refreshMapWithOptimizedRoute(List<Signalement> optimizedRoute) {
-
-
-        if (mapWebView == null)
-
-
-            return;
-
-        // ✅ SI PREMIÈRE FOIS: charger l'HTML complet
-        if (mapWebView.getEngine().getLocation() == null || mapWebView.getEngine().getLocation().isEmpty()) {
-            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
-            String html = buildLeafletHtml(null, false);
-            mapWebView.getEngine().loadContent(html);
-            return; // Attendre que la carte soit chargée
-        }
-
-        // ✅ MISE À JOUR DYNAMIQUE VIA executeScript (pas de clignotement)
-        try {
-            // Nettoyer anciens marqueurs
-            mapWebView.getEngine().executeScript("if (typeof window.clearMissions === 'function') window.clearMissions();");
-
-            // Ajouter nouvelles missions
-            for (Signalement m : optimizedRoute) {
-                Point p = missionPoint(m, indexOfMission(m));
-                String markerColor = statusColorHex(getDisplayStatut(m.getStatut()));
-                String popup = "Mission #" + m.getIdSignalement() + " - " + getDisplayStatut(m.getStatut());
-                String jsAddMarker = "L.circleMarker([" + fmt(p.lat) + "," + fmt(p.lon) + "],{radius:9,color:'" + markerColor + 
-                    "',fillColor:'" + markerColor + "',fillOpacity:0.88}).addTo(map).bindPopup('" + popup.replace("'", "\\'") + "');";
-                mapWebView.getEngine().executeScript(jsAddMarker);
-            }
-
-            // Tracer la route dynamiquement
-            if (!optimizedRoute.isEmpty()) {
-                GeolocationService.Coordinates startPoint = getTourneeStartPoint();
-                StringBuilder routePoints = new StringBuilder("[");
-                routePoints.append(String.format("[%.6f,%.6f]", startPoint.lat, startPoint.lon));
-                for (Signalement m : optimizedRoute) {
-                    Point p = missionPoint(m, indexOfMission(m));
-                    routePoints.append(String.format(",[%.6f,%.6f]", p.lat, p.lon));
-                }
-                routePoints.append("]");
-                String routeLine = "L.polyline(" + routePoints + ",{color:'#FF5722',weight:4,dashArray:'10 5',opacity:0.8}).addTo(map);";
-                mapWebView.getEngine().executeScript(routeLine);
-            }
-        } catch (Exception e) {
-            logger.error("❌ Erreur mise à jour carte temps-réel", e);
-            // Fallback: recharger complètement si executeScript échoue
-            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible.");
-            String html = buildLeafletHtml(null, false);
-            mapWebView.getEngine().loadContent(html);
-        }
-
-
+        if (mapWebView == null) return;
+        // Toujours recharger avec la route optimisée complète
+        installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
+        String html = buildLeafletHtml(null, false);
+        mapWebView.getEngine().loadContent(html);
     }
 
 

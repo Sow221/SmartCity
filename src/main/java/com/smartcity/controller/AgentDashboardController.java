@@ -357,6 +357,8 @@ public class AgentDashboardController {
 
     private Label profilStatScoreLabel;
 
+    @FXML private javafx.scene.control.TextArea mapCommentaireField;
+
 
 
 
@@ -3209,6 +3211,8 @@ public class AgentDashboardController {
         if (mapCommentaireLabel != null) {
             String commentaire = affectationService.getCommentaireBySignalement(mission.getIdSignalement());
             mapCommentaireLabel.setText(commentaire != null && !commentaire.isBlank() ? commentaire : "-");
+            if (mapCommentaireField != null)
+                mapCommentaireField.setText(commentaire != null ? commentaire : "");
         }
     }
 
@@ -3265,6 +3269,24 @@ public class AgentDashboardController {
         mapWebView.getEngine().executeScript("if(typeof activerModePosition==='function')activerModePosition()");
 
 
+    }
+
+    @FXML
+    private void handleSauvegarderCommentaire() {
+        Signalement selected = tableMesMissions.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAgentMessage("Sélectionnez une mission d'abord.", false);
+            return;
+        }
+        if (mapCommentaireField == null) return;
+        String commentaire = mapCommentaireField.getText().trim();
+        if (affectationService.sauvegarderCommentaire(selected.getIdSignalement(), commentaire)) {
+            if (mapCommentaireLabel != null)
+                mapCommentaireLabel.setText(commentaire.isBlank() ? "-" : commentaire);
+            showAgentMessage("✅ Commentaire sauvegardé.", true);
+        } else {
+            showAgentMessage("❌ Erreur lors de la sauvegarde du commentaire.", false);
+        }
     }
 
 

@@ -283,6 +283,8 @@
                                 <VBox spacing="4">
                                     <Label text="Commentaire" styleClass="map-detail-label"/>
                                     <Label fx:id="mapCommentaireLabel" text="-" wrapText="true" styleClass="map-detail-value"/>
+                                    <TextArea fx:id="mapCommentaireField" promptText="Ajouter un commentaire..." prefRowCount="3" wrapText="true" styleClass="dash-field"/>
+                                    <Button text="💾 Sauvegarder" onAction="#handleSauvegarderCommentaire" styleClass="btn-outline-sm" maxWidth="Infinity"/>
                                 </VBox>
                                 <Region VBox.vgrow="ALWAYS"/>
                                 <Button text="Itinéraire optimal" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent" maxWidth="Infinity"/>

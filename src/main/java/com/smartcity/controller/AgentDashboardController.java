@@ -971,13 +971,12 @@ public class AgentDashboardController {
             // Les urgentes (>24h en attente) sont mises en evidence visuellement
 
 
-            java.time.LocalDateTime seuil24h = java.time.LocalDateTime.now().minusHours(24);
-
-
             missionsUrgentes.setAll(missionList.stream()
 
 
-                    .filter(s -> !isTermine(s))
+                    .filter(s -> !isTermine(s)
+                        && s.getDateSignalement() != null
+                        && s.getDateSignalement().isBefore(java.time.LocalDateTime.now().minusHours(24)))
 
 
                     .collect(Collectors.toList()));
@@ -2868,13 +2867,12 @@ public class AgentDashboardController {
             missions.setAll(missionList);
 
 
-            java.time.LocalDateTime seuil24h = java.time.LocalDateTime.now().minusHours(24);
-
-
             missionsUrgentes.setAll(missionList.stream()
 
 
-                .filter(s -> !isTermine(s))
+                .filter(s -> !isTermine(s)
+                        && s.getDateSignalement() != null
+                        && s.getDateSignalement().isBefore(java.time.LocalDateTime.now().minusHours(24)))
 
 
                 .collect(Collectors.toList()));

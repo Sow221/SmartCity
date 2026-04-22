@@ -1,4 +1,4 @@
-﻿package com.smartcity.controller;
+package com.smartcity.controller;
 
 
 
@@ -358,6 +358,7 @@ public class AgentDashboardController {
     private Label profilStatScoreLabel;
 
     @FXML private javafx.scene.control.TextArea mapCommentaireField;
+    @FXML private Button btnTerminerDepuisCarte;
 
 
 
@@ -453,6 +454,7 @@ public class AgentDashboardController {
 
     private boolean mapFallbackHandlersInstalled;
     private boolean mapBridgeInstalled;
+    private boolean mapNeedsRefresh = true; // true = carte doit etre rechargee
 
 
     // Snapshot ids missions pour detecter les nouvelles affectations
@@ -666,6 +668,8 @@ public class AgentDashboardController {
 
 
         gpsService.startRealTimeTracking();
+        if (lblPositionActuelle != null) lblPositionActuelle.setText("\uD83D\uDCCD Position par defaut (Pikine) - scannez le QR code");
+        if (lblGpsStatus != null) lblGpsStatus.setText("GPS en attente \u23F3");
 
 
         gpsService.addLocationUpdateListener(new RealTimeGPSService.LocationUpdateListener() {
@@ -964,7 +968,7 @@ public class AgentDashboardController {
 
 
             String currentFilter = (filterMissionsStatutCombo != null) ? filterMissionsStatutCombo.getValue() : "Tous";
-            missions.setAll(missionList);
+            missions.setAll(missionList); mapNeedsRefresh = true;
 
 
             // Missions actives = tout ce qui n'est pas termine
@@ -985,6 +989,13 @@ public class AgentDashboardController {
 
 
             refreshCards();
+            if (missionsSnapshot.isEmpty()) {
+                Utilisateur agentW = SessionManager.getUtilisateurConnecte();
+                if (agentW != null) {
+                    long nb = missionList.stream().filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut())).count();
+                    showAgentMessage("Bonjour " + agentW.getNom() + " ! Vous avez " + nb + " mission" + (nb > 1 ? "s" : "") + " affect\u00e9e" + (nb > 1 ? "s" : "") + " aujourd'hui.", true);
+                }
+            }
             // ? R�appliquer le filtre apr�s rechargement
             if (!"Tous".equals(currentFilter) && filterMissionsStatutCombo != null) filterMissionsStatutCombo.setValue(currentFilter);
 
@@ -1107,6 +1118,13 @@ public class AgentDashboardController {
 
 
     private void handleShowCarteZones() {
+        mapNeedsRefresh = true; // forcer rechargement a l'ouverture de la page
+        if (tableMesMissions.getSelectionModel().getSelectedItem() == null && !missions.isEmpty()) {
+            Signalement first = missions.stream().filter(s -> !isTermine(s)).findFirst().orElse(missions.get(0));
+            tableMesMissions.getSelectionModel().select(first);
+            updateMapDetails(first);
+            updateDistanceAndTime();
+        }
 
 
         showPage(pageCarteZonesScroll, btnCarteZones);
@@ -1125,6 +1143,7 @@ public class AgentDashboardController {
 
 
         if (qrUrlLabelCarte != null) qrUrlLabelCarte.setText(gpsUrl);
+        if (qrUrlLabel != null) qrUrlLabel.setText(gpsUrl); // sync barre rapide
 
 
         if (qrCodeImageViewCarte != null) {
@@ -1456,6 +1475,15 @@ public class AgentDashboardController {
 
 
 
+
+    @FXML
+    private void handleResetFiltresMissions() {
+        if (filterMissionsStatutCombo != null) {
+            filterMissionsStatutCombo.setValue("Tous");
+        }
+        tableMesMissions.setItems(missions);
+        showAgentMessage("Filtre r\u00e9initialis\u00e9 \u2014 toutes les missions affich\u00e9es.", true);
+    }
 
     @FXML
 
@@ -1901,7 +1929,7 @@ public class AgentDashboardController {
             if (tourneeTempsLabel != null) tourneeTempsLabel.setText("0 min");
 
 
-            if (tourneeProchaineLabel != null) tourneeProchaineLabel.setText("Aucune");
+            if (tourneeProchaineLabel != null) tourneeProchaineLabel.setText(gpsService.getCurrentPosition() != null ? "Aucune" : "GPS requis \u26a0");
 
 
             return;
@@ -2183,7 +2211,7 @@ public class AgentDashboardController {
                 }
 
 
-                boolean urgente = "En attente".equalsIgnoreCase(item.getStatut())
+                boolean urgente = (SignalementStatut.AFFECTE.matches(item.getStatut()) || "En attente".equalsIgnoreCase(item.getStatut()))
 
 
                     && item.getDateSignalement() != null
@@ -2240,7 +2268,7 @@ public class AgentDashboardController {
             RealTimeGPSService.Coordinates pos = gpsService.getCurrentPosition();
 
 
-            if (pos == null || cell.getValue().getLatitude() == 0.0)
+            if (pos == null || (cell.getValue().getLatitude() == 0.0 && cell.getValue().getLongitude() == 0.0))
 
 
                 return new SimpleStringProperty("-");
@@ -2250,9 +2278,9 @@ public class AgentDashboardController {
 
 
                     cell.getValue().getLatitude(), cell.getValue().getLongitude());
-
-
-            return new SimpleStringProperty(String.format("%.2f km", d));
+            // Indiquer approximation si position par defaut (Pikine)
+            boolean isDefaultPos = Math.abs(pos.lat - 14.7646) < 0.001 && Math.abs(pos.lon - (-17.3920)) < 0.001;
+            return new SimpleStringProperty(isDefaultPos ? String.format("~%.1f km", d) : String.format("%.2f km", d));
 
 
         });
@@ -2269,6 +2297,19 @@ public class AgentDashboardController {
         tableMesMissions.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             updateMapDetails(newVal);
             updateDistanceAndTime();
+        });
+        // Double-clic -> naviguer vers la carte centree sur la mission
+        tableMesMissions.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Signalement selected = tableMesMissions.getSelectionModel().getSelectedItem();
+                if (selected != null && !isTermine(selected)) {
+                    showPage(pageCarteZonesScroll, btnCarteZones);
+                    updateMapDetails(selected);
+                    updateDistanceAndTime();
+                    refreshTourneeMap();
+                    showAgentMessage("\uD83D\uDDFA\uFE0F Mission #" + selected.getIdSignalement() + " - voir sur la carte", true);
+                }
+            }
         });
 
 
@@ -2779,7 +2820,7 @@ public class AgentDashboardController {
                 showAgentMessage("🎉 Mission #" + idMission + " terminée ! Excellent travail !", true);
 
 
-                rechargerEtReselectionner(idMission);
+                rechargerEtReselectionnerEtHistorique(idMission);
 
 
             } else {
@@ -2866,7 +2907,7 @@ public class AgentDashboardController {
             List<Signalement> missionList = task.getValue();
 
 
-            missions.setAll(missionList);
+            missions.setAll(missionList); mapNeedsRefresh = true;
 
 
             missionsUrgentes.setAll(missionList.stream()
@@ -2905,6 +2946,13 @@ public class AgentDashboardController {
 
 
                     tableMesMissions.scrollTo(m);
+                    if ("En cours".equalsIgnoreCase(m.getStatut())) {
+                        showPage(pageCarteZonesScroll, btnCarteZones);
+                        updateMapDetails(m);
+                        updateDistanceAndTime();
+                        refreshTourneeMap();
+                        showAgentMessage("Mission #" + idMission + " demarree - voici votre itineraire !", true);
+                    }
 
 
                 });
@@ -2922,6 +2970,37 @@ public class AgentDashboardController {
     }
 
 
+    /** Recharge, reselectionne et navigue vers l'historique apres une mission terminee. */
+    private void rechargerEtReselectionnerEtHistorique(int idMission) {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+        int idAgent = current.getIdUser();
+        javafx.concurrent.Task<java.util.List<Signalement>> task = new javafx.concurrent.Task<>() {
+            @Override protected java.util.List<Signalement> call() {
+                return affectationService.getSignalementsByAgent(idAgent);
+            }
+        };
+        task.setOnSucceeded(e -> {
+            java.util.List<Signalement> missionList = task.getValue();
+            missions.setAll(missionList); mapNeedsRefresh = true;
+            missionsUrgentes.setAll(missionList.stream()
+                .filter(s -> !isTermine(s)
+                    && s.getDateSignalement() != null
+                    && s.getDateSignalement().isBefore(java.time.LocalDateTime.now().minusHours(24)))
+                .collect(java.util.stream.Collectors.toList()));
+            refreshCards();
+            refreshTourneeSummary();
+            gpsService.updateMissions(missionList);
+            historique.setAll(missionList.stream().filter(this::isTermine).collect(java.util.stream.Collectors.toList()));
+            if (lblHistoriqueCount != null) lblHistoriqueCount.setText(historique.size() + " mission" + (historique.size() > 1 ? "s" : ""));
+            showPage(pageHistorique, btnHistorique);
+            missionList.stream().filter(m -> m.getIdSignalement() == idMission).findFirst()
+                .ifPresent(m -> { tableHistorique.getSelectionModel().select(m); tableHistorique.scrollTo(m); });
+            showAgentMessage("\uD83C\uDF89 Mission #" + idMission + " termin\u00e9e ! Consultez votre historique.", true);
+        });
+        task.setOnFailed(e -> logger.error("Erreur rechargement missions", task.getException()));
+        Thread t = new Thread(task, "mission-reload"); t.setDaemon(true); t.start();
+    }
     private void animateButton(Button button, double scaleToValue, boolean isSuccess) {
 
 
@@ -3018,7 +3097,7 @@ public class AgentDashboardController {
         Optional<Signalement> prochaineMission = missions.stream()
 
 
-                .filter(s -> "En attente".equalsIgnoreCase(s.getStatut())).findFirst();
+                .filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut())).findFirst();
 
 
         if (prochaineMission.isPresent()) {
@@ -3039,7 +3118,10 @@ public class AgentDashboardController {
                 tableMesMissions.getSelectionModel().select(mission);
 
 
-                showPage(pageMesMissions, btnMesMissions);
+                showPage(pageCarteZonesScroll, btnCarteZones);
+                updateMapDetails(mission);
+                updateDistanceAndTime();
+                refreshTourneeMap();
 
 
             } else {
@@ -3072,7 +3154,8 @@ public class AgentDashboardController {
     private void handleVoirMissionsEnCours() {
 
 
-        List<Signalement> enCours = missions.stream().filter(s -> "En cours".equalsIgnoreCase(s.getStatut()))
+        List<Signalement> enCours = missions.stream().filter(s -> "En cours".equalsIgnoreCase(s.getStatut())
+                || SignalementStatut.AFFECTE.matches(s.getStatut()))
 
 
                 .collect(Collectors.toList());
@@ -3208,6 +3291,9 @@ public class AgentDashboardController {
 
 
         mapMissionStatutLabel.setText(getDisplayStatut(mission.getStatut()));
+        // Activer le bouton Terminer uniquement si la mission est En cours
+        if (btnTerminerDepuisCarte != null)
+            btnTerminerDepuisCarte.setDisable(!"En cours".equalsIgnoreCase(mission.getStatut()));
         if (mapCommentaireLabel != null) {
             String commentaire = affectationService.getCommentaireBySignalement(mission.getIdSignalement());
             mapCommentaireLabel.setText(commentaire != null && !commentaire.isBlank() ? commentaire : "-");
@@ -3238,6 +3324,17 @@ public class AgentDashboardController {
                 }
             });
         }
+        // Feedback chargement carte
+        showAgentMessage("\uD83D\uDDFA\uFE0F Chargement de la carte...", true);
+        mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs2, os2, ns2) -> {
+            if (ns2 == javafx.concurrent.Worker.State.SUCCEEDED || ns2 == javafx.concurrent.Worker.State.FAILED) {
+                javafx.application.Platform.runLater(() -> {
+                    agentMessageLabel.setVisible(false);
+                    agentMessageLabel.setManaged(false);
+                    agentMessageLabel.setText("");
+                });
+            }
+        });
         mapWebView.getEngine().loadContent(buildLeafletHtml(selectedMission, showRoute));
     }
 
@@ -3269,6 +3366,16 @@ public class AgentDashboardController {
         mapWebView.getEngine().executeScript("if(typeof activerModePosition==='function')activerModePosition()");
 
 
+    }
+
+    @FXML
+    private void handleTerminerDepuisCarte() {
+        Signalement selected = tableMesMissions.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAgentMessage("S\u00e9lectionnez une mission sur la carte d'abord.", false);
+            return;
+        }
+        marquerTermineAvecAnimation(selected, btnTerminerDepuisCarte);
     }
 
     @FXML
@@ -3764,7 +3871,7 @@ public class AgentDashboardController {
                 +
 
 
-                "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>" +
+                "<link rel='stylesheet' href='" + com.smartcity.utils.MapResourceUtils.leafletCss() + "'/>" +
 
 
                 "<style>html,body,#map{height:100%;margin:0;position:relative;}</style>" +
@@ -3779,7 +3886,7 @@ public class AgentDashboardController {
                 "<div id='map'></div>" +
 
 
-                "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>" +
+                "<script src='" + com.smartcity.utils.MapResourceUtils.leafletJs() + "'></script>" +
 
 
                 "<script>" +
@@ -3934,6 +4041,8 @@ public class AgentDashboardController {
 
 
     private void refreshTourneeMap() {
+        if (!mapNeedsRefresh && mapWebView != null && mapWebView.getEngine().getDocument() != null) return;
+        mapNeedsRefresh = false;
 
 
         List<Signalement> activeMissions = getActiveMissions();
@@ -4137,7 +4246,7 @@ public class AgentDashboardController {
         String fullMessage = emoji + " " + message;
 
 
-        agentMessageLabel.setText(fullMessage);
+        agentMessageLabel.setVisible(true); agentMessageLabel.setManaged(true); agentMessageLabel.setOpacity(1); agentMessageLabel.setText(fullMessage);
 
 
         String baseStyle = "-fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 12 16; -fx-font-size: 13px;";
@@ -4188,7 +4297,7 @@ public class AgentDashboardController {
             fadeOut.setToValue(0);
 
 
-            fadeOut.setOnFinished(e -> agentMessageLabel.setText(""));
+            fadeOut.setOnFinished(e -> { agentMessageLabel.setText(""); agentMessageLabel.setVisible(false); agentMessageLabel.setManaged(false); });
 
 
             fadeOut.play();

@@ -574,10 +574,10 @@ public class CitizenDashboardController {
     private String buildSignalementMapHtml(double centerLat, double centerLon) {
         return "<!DOCTYPE html><html><head>"
             + "<meta charset='UTF-8'>"
-            + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>"
+            + "<link rel='stylesheet' href='" + com.smartcity.utils.MapResourceUtils.leafletCss() + "'/>"
             + "<style>html,body,#map{height:100%;margin:0;}</style></head><body>"
             + "<div id='map'></div>"
-            + "<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>"
+            + "<script src='" + com.smartcity.utils.MapResourceUtils.leafletJs() + "'></script>"
             + "<script>"
             + "var map=L.map('map').setView([" + String.format(java.util.Locale.US, "%.6f,%.6f", centerLat, centerLon) + "],14);"
             + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);"
@@ -639,31 +639,32 @@ public class CitizenDashboardController {
             new javafx.animation.KeyFrame(javafx.util.Duration.seconds(3), e -> {
                 // Ne pas poller si position déjà obtenue
                 if (selectedLatitude != 0.0 || selectedLongitude != 0.0) return;
-                try {
-                    java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
                         .uri(java.net.URI.create(pollUrl))
                         .timeout(java.time.Duration.ofSeconds(1)).GET().build();
-                    java.net.http.HttpResponse<String> resp =
-                        httpClient.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
-                    if (resp.statusCode() == 200) {
-                        com.google.gson.JsonObject json =
-                            com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
-                        double lat = json.get("lat").getAsDouble();
-                        double lon = json.get("lon").getAsDouble();
-                        javafx.application.Platform.runLater(() -> {
-                            onPositionSelected(lat, lon, true);
-                            // Placer le marqueur sur la carte aussi
-                            if (signalementMapView != null) {
-                                signalementMapView.getEngine().executeScript(
-                                    String.format(java.util.Locale.US,
-                                        "if(marker)map.removeLayer(marker);"
-                                        + "marker=L.marker([%.6f,%.6f]).addTo(map).bindPopup('\uD83D� GPS t\u00e9l\u00e9phone').openPopup();"
-                                        + "map.setView([%.6f,%.6f],16);",
-                                        lat, lon, lat, lon));
-                            }
-                        });
-                    }
-                } catch (Exception ex) { /* silencieux */ }
+                httpClient.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(resp -> {
+                        if (resp.statusCode() == 200) {
+                            try {
+                                com.google.gson.JsonObject json =
+                                    com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
+                                double lat = json.get("lat").getAsDouble();
+                                double lon = json.get("lon").getAsDouble();
+                                javafx.application.Platform.runLater(() -> {
+                                    onPositionSelected(lat, lon, true);
+                                    if (signalementMapView != null) {
+                                        signalementMapView.getEngine().executeScript(
+                                            String.format(java.util.Locale.US,
+                                                "if(marker)map.removeLayer(marker);"
+                                                + "marker=L.marker([%.6f,%.6f]).addTo(map).bindPopup('\uD83D\uDCCD GPS t\u00e9l\u00e9phone').openPopup();"
+                                                + "map.setView([%.6f,%.6f],16);",
+                                                lat, lon, lat, lon));
+                                    }
+                                });
+                            } catch (Exception ex) { /* silencieux */ }
+                        }
+                    })
+                    .exceptionally(ex -> null);
             })
         );
         gpsPollingTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
@@ -708,7 +709,8 @@ public class CitizenDashboardController {
             citizenPieChart.setAnimated(dashboardVisible);
             citizenPieChart.setData(FXCollections.observableArrayList(
                 new PieChart.Data("En attente (" + attente + ")", Math.max(attente, 0.01)),
-                new PieChart.Data("En cours (" + enCours + ")", Math.max(enCours, 0.01)),
+                new PieChart.Data("Affect\u00e9 (" + affecte + ")", Math.max(affecte, 0.01)),
+                new PieChart.Data("En cours (" + (enCours - affecte) + ")", Math.max(enCours - affecte, 0.01)),
                 new PieChart.Data("Termin\u00e9 (" + collectes + ")", Math.max(collectes, 0.01))));
             citizenPieChart.setLabelsVisible(true);
             citizenPieChart.setLegendVisible(true);
@@ -936,7 +938,7 @@ public class CitizenDashboardController {
             .forEach(s -> statutsSnapshot.put(s.getIdSignalement(), s.getStatut()));
         // Polling toutes les 30 secondes
         pollingTimeline = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(30), e -> checkStatutChanges()));
+            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(10), e -> checkStatutChanges()));
         pollingTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
         pollingTimeline.play();
     }
@@ -1037,7 +1039,11 @@ public class CitizenDashboardController {
             javafx.animation.FadeTransition fade =
                 new javafx.animation.FadeTransition(javafx.util.Duration.millis(400), citizenMessageLabel);
             fade.setFromValue(1); fade.setToValue(0);
-            fade.setOnFinished(ev -> citizenMessageLabel.setText(""));
+            fade.setOnFinished(ev -> {
+                citizenMessageLabel.setText("");
+                citizenMessageLabel.setVisible(false);
+                citizenMessageLabel.setManaged(false);
+            });
             fade.play();
         });
         citizenMsgDelay.playFromStart();

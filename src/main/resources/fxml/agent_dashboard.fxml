@@ -349,6 +349,26 @@
                             <Label fx:id="lblHistoriqueCount" text="" styleClass="missions-count-badge"/>
                         </HBox>
                     </HBox>
+
+                    <!-- Stats résumé historique -->
+                    <HBox spacing="12">
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTerminees" text="0" styleClass="stat-card-number-agent"/>
+                            <Label text="Missions terminées" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTaux" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Taux de réussite" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTemps" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Temps moyen" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatNote" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Note citoyens" styleClass="stat-card-label"/>
+                        </VBox>
+                    </HBox>
                     <TableView fx:id="tableHistorique" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
                         <columns>
                             <TableColumn fx:id="colHistId" text="ID" prefWidth="60"/>

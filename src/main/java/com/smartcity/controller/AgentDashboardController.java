@@ -358,6 +358,10 @@ public class AgentDashboardController {
     private Label profilStatScoreLabel;
 
     @FXML private javafx.scene.control.TextArea mapCommentaireField;
+    @FXML private Label histStatTerminees;
+    @FXML private Label histStatTaux;
+    @FXML private Label histStatTemps;
+    @FXML private Label histStatNote;
     @FXML private Button btnTerminerDepuisCarte;
 
 
@@ -383,6 +387,7 @@ public class AgentDashboardController {
 
 
     private com.smartcity.service.AffectationService affectationService = new com.smartcity.service.AffectationService();
+    private final com.smartcity.service.SuiviService suiviService = new com.smartcity.service.SuiviService();
 
 
 
@@ -2032,6 +2037,7 @@ public class AgentDashboardController {
 
 
             lblHistoriqueCount.setText(historique.size() + " mission" + (historique.size() > 1 ? "s" : ""));
+        refreshHistoriqueStats();
 
 
     }
@@ -2040,6 +2046,30 @@ public class AgentDashboardController {
 
 
 
+    private void refreshHistoriqueStats() {
+        Utilisateur current = SessionManager.getUtilisateurConnecte();
+        if (current == null) return;
+        int idAgent = current.getIdUser();
+        javafx.concurrent.Task<double[]> task = new javafx.concurrent.Task<>() {
+            @Override protected double[] call() {
+                int traites = signalementService.countTraitesByAgent(idAgent);
+                int actives = signalementService.countMissionsActivesParAgent(idAgent);
+                int total = traites + actives;
+                double taux = total > 0 ? traites * 100.0 / total : 0;
+                double tempsH = signalementService.getTempsResolutionMoyenH();
+                double note = suiviService.getNoteMoyenneGlobale();
+                return new double[]{traites, taux, tempsH, note};
+            }
+        };
+        task.setOnSucceeded(e -> {
+            double[] d = task.getValue();
+            if (histStatTerminees != null) histStatTerminees.setText(String.valueOf((int) d[0]));
+            if (histStatTaux != null) histStatTaux.setText(d[1] > 0 ? (int) d[1] + "%" : "-");
+            if (histStatTemps != null) histStatTemps.setText(d[2] > 0 ? String.format(java.util.Locale.US, "%.1fh", d[2]) : "-");
+            if (histStatNote != null) histStatNote.setText(d[3] > 0 ? String.format(java.util.Locale.US, "%.1f/5 \u2605", d[3]) : "-");
+        });
+        Thread t = new Thread(task, "hist-stats"); t.setDaemon(true); t.start();
+    }
     private void refreshProfil() {
 
 
@@ -2569,6 +2599,13 @@ public class AgentDashboardController {
 
 
         applyStatutColorCell(colHistStatut);
+        // Double-clic -> dialogue detail complet de la mission terminee
+        tableHistorique.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Signalement selected = tableHistorique.getSelectionModel().getSelectedItem();
+                if (selected != null) afficherDetailMissionTerminee(selected);
+            }
+        });
 
 
     }
@@ -3000,6 +3037,61 @@ public class AgentDashboardController {
         });
         task.setOnFailed(e -> logger.error("Erreur rechargement missions", task.getException()));
         Thread t = new Thread(task, "mission-reload"); t.setDaemon(true); t.start();
+    }
+    private void afficherDetailMissionTerminee(Signalement mission) {
+        javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("Detail mission #" + mission.getIdSignalement());
+        dialog.setHeaderText(mission.getCategorie() + " â€” " + mission.getZoneNom());
+        dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
+
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10);
+        content.setPadding(new javafx.geometry.Insets(14));
+        content.setPrefWidth(460);
+
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+        // Infos principales
+        addDetailRow(content, "Zone", mission.getZoneNom());
+        addDetailRow(content, "Categorie", mission.getCategorie());
+        addDetailRow(content, "Description", mission.getDescription() != null ? mission.getDescription() : "-");
+        addDetailRow(content, "Date signalement", mission.getDateSignalement() != null ? mission.getDateSignalement().format(fmt) : "-");
+        addDetailRow(content, "Date collecte", mission.getDateCollecte() != null ? mission.getDateCollecte().format(fmt) : "-");
+
+        // Duree
+        if (mission.getDateSignalement() != null && mission.getDateCollecte() != null) {
+            long heures = java.time.Duration.between(mission.getDateSignalement(), mission.getDateCollecte()).toHours();
+            String duree = heures < 1 ? "< 1h" : heures < 24 ? heures + "h" : (heures / 24) + "j " + (heures % 24) + "h";
+            addDetailRow(content, "Duree resolution", duree);
+        }
+
+        // Commentaire agent
+        String commentaire = affectationService.getCommentaireBySignalement(mission.getIdSignalement());
+        addDetailRow(content, "Commentaire agent", commentaire != null && !commentaire.isBlank() ? commentaire : "Aucun");
+
+        // Evaluation citoyen
+        com.smartcity.service.SuiviService.EvaluationEntry eval = suiviService.getEvaluationBySignalement(mission.getIdSignalement());
+        if (eval != null) {
+            String etoiles = "\u2605".repeat(eval.note) + "\u2606".repeat(5 - eval.note);
+            addDetailRow(content, "Evaluation citoyen", etoiles + " (" + eval.note + "/5)");
+            if (eval.commentaire != null && !eval.commentaire.isBlank())
+                addDetailRow(content, "Avis citoyen", eval.commentaire);
+        } else {
+            addDetailRow(content, "Evaluation citoyen", "Pas encore evaluee");
+        }
+
+        dialog.getDialogPane().setContent(new javafx.scene.control.ScrollPane(content));
+        dialog.showAndWait();
+    }
+
+    private void addDetailRow(javafx.scene.layout.VBox parent, String label, String value) {
+        javafx.scene.layout.HBox row = new javafx.scene.layout.HBox(10);
+        javafx.scene.control.Label lbl = new javafx.scene.control.Label(label + " :");
+        lbl.setStyle("-fx-font-weight: bold; -fx-min-width: 150px; -fx-text-fill: #374151;");
+        javafx.scene.control.Label val = new javafx.scene.control.Label(value);
+        val.setWrapText(true);
+        val.setStyle("-fx-text-fill: #1f2937;");
+        row.getChildren().addAll(lbl, val);
+        parent.getChildren().add(row);
     }
     private void animateButton(Button button, double scaleToValue, boolean isSuccess) {
 

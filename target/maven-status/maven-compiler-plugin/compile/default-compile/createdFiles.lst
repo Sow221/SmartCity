@@ -79,6 +79,7 @@ com\smartcity\service\GpsApiServer$1.class
 com\smartcity\controller\AdminDashboardController$4.class
 com\smartcity\utils\AnimationUtils.class
 com\smartcity\model\Affectation.class
+com\smartcity\controller\AgentDashboardController$13.class
 com\smartcity\controller\AgentDashboardController$JSBridgeAgent.class
 com\smartcity\model\SignalementStatut.class
 com\smartcity\controller\ForgotPasswordController$1.class

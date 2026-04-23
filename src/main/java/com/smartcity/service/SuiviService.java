@@ -237,6 +237,23 @@ public class SuiviService {
         }
     }
 
+    public double getNoteMoyenneParAgent(int idAgent) {
+        ensureSchema();
+        String query = "SELECT AVG(e.note) FROM EvaluationCollecte e "
+            + "JOIN Affectation a ON a.idSignalement = e.idSignalement "
+            + "WHERE a.idAgent = ?";
+        try (Connection conn = getConn();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, idAgent);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getDouble(1) : 0.0;
+            }
+        } catch (SQLException ex) {
+            logger.error("Erreur getNoteMoyenneParAgent #{}", idAgent, ex);
+            return 0.0;
+        }
+    }
+
     public double getNoteMoyenneParZone(String nomZone) {
         ensureSchema();
         String query = "SELECT AVG(e.note) FROM EvaluationCollecte e "

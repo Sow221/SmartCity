@@ -279,7 +279,8 @@ public class AgentDashboardController {
     @FXML
 
 
-    private TextField profilNomField, profilEmailField, profilZoneField;
+    private TextField profilNomField, profilEmailField;
+    @FXML private Label profilZoneField;
 
 
     @FXML
@@ -359,6 +360,8 @@ public class AgentDashboardController {
 
     @FXML private javafx.scene.control.TextArea mapCommentaireField;
     @FXML private Label histStatTerminees;
+    @FXML private Label profilStatNoteLabel;
+    @FXML private Label profilDateInscriptionLabel;
     @FXML private Label histStatTaux;
     @FXML private Label histStatTemps;
     @FXML private Label histStatNote;
@@ -1042,6 +1045,15 @@ public class AgentDashboardController {
 
 
         Thread t = new Thread(task, "agent-load"); t.setDaemon(true); t.start();
+        javafx.concurrent.Task<Double> noteTask = new javafx.concurrent.Task<>() {
+            @Override protected Double call() { return suiviService.getNoteMoyenneParAgent(idAgent); }
+        };
+        noteTask.setOnSucceeded(ev -> {
+            double note = noteTask.getValue();
+            if (profilStatNoteLabel != null)
+                profilStatNoteLabel.setText(note > 0 ? String.format(java.util.Locale.US, "%.1f/5 \u2605", note) : "-");
+        });
+        Thread nt = new Thread(noteTask, "profil-note"); nt.setDaemon(true); nt.start();
 
 
     }
@@ -2024,7 +2036,12 @@ public class AgentDashboardController {
                             .filter(this::isTermine)
 
 
-                            .filter(s -> s.getDateCollecte() != null && date.equals(s.getDateCollecte().toLocalDate()))
+                            .filter(s -> {
+                        java.time.LocalDate d = s.getDateCollecte() != null
+                            ? s.getDateCollecte().toLocalDate()
+                            : (s.getDateSignalement() != null ? s.getDateSignalement().toLocalDate() : null);
+                        return date.equals(d);
+                    })
 
 
                             .collect(Collectors.toList()));
@@ -2057,7 +2074,7 @@ public class AgentDashboardController {
                 int total = traites + actives;
                 double taux = total > 0 ? traites * 100.0 / total : 0;
                 double tempsH = signalementService.getTempsResolutionMoyenH();
-                double note = suiviService.getNoteMoyenneGlobale();
+                double note = suiviService.getNoteMoyenneParAgent(idAgent);
                 return new double[]{traites, taux, tempsH, note};
             }
         };
@@ -2104,6 +2121,9 @@ public class AgentDashboardController {
 
 
             profilZoneField.setText(zone != null ? zone.getNomZone() : "");
+        if (profilDateInscriptionLabel != null && current.getDateInscription() != null) {
+            profilDateInscriptionLabel.setText(current.getDateInscription().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        }
 
 
         } catch (Exception e) {

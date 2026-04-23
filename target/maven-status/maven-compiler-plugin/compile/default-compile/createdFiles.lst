@@ -59,6 +59,7 @@ com\smartcity\controller\AdminDashboardController$2.class
 com\smartcity\service\ReportService$MonthlyReport.class
 com\smartcity\websocket\AgentMissionEndpoint.class
 com\smartcity\controller\AgentDashboardController$11.class
+com\smartcity\controller\AgentDashboardController$14.class
 com\smartcity\controller\CitizenDashboardController$1.class
 com\smartcity\controller\AgentLiveRow.class
 com\smartcity\controller\ReportsController$1.class

@@ -419,8 +419,15 @@
                         </VBox>
                         <VBox spacing="6">
                             <Label text="Zone assignée" styleClass="auth-field-label"/>
-                            <TextField fx:id="profilZoneField" styleClass="dash-field" editable="false"/>
-                            <Label text="Modifiable par l'administrateur" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-background-color:#f0fdf4;-fx-background-radius:8;-fx-padding:10 14;-fx-border-color:#86efac;-fx-border-radius:8;-fx-border-width:1;">
+                                <Label text="📍" style="-fx-font-size:16px;"/>
+                                <Label fx:id="profilZoneField" text="-" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#166534;"/>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="6">
+                            <Label text="Membre depuis" styleClass="auth-field-label"/>
+                            <Label fx:id="profilDateInscriptionLabel" text="-" styleClass="dash-field" style="-fx-background-color:transparent;-fx-border-color:transparent;"/>
                         </VBox>
 
                         <Region styleClass="profile-divider" prefHeight="1"/>
@@ -434,6 +441,10 @@
                             <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
                                 <Label fx:id="profilStatScoreLabel" text="-" styleClass="stat-card-number-agent"/>
                                 <Label text="Taux de réussite" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                                <Label fx:id="profilStatNoteLabel" text="-" styleClass="stat-card-number-agent"/>
+                                <Label text="Note citoyens" styleClass="stat-card-label"/>
                             </VBox>
                         </HBox>
 

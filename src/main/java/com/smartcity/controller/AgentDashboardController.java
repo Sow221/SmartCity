@@ -549,6 +549,8 @@ public class AgentDashboardController {
         // Initialiser les labels avatar et nom profil
         Utilisateur agentInit = SessionManager.getUtilisateurConnecte();
         if (agentInit != null) {
+            if (agentNameLabel != null)
+                agentNameLabel.setText(agentInit.getNom());
             if (agentAvatarLabel != null)
                 agentAvatarLabel.setText(agentInit.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
             if (agentProfilAvatarLabel != null)
@@ -719,7 +721,7 @@ public class AgentDashboardController {
 
 
 
-        logger.info("�-�️ GPS RealTime initialisé");
+        logger.info("-️ GPS RealTime initialisé");
 
 
     }
@@ -1004,7 +1006,7 @@ public class AgentDashboardController {
                     showAgentMessage("Bonjour " + agentW.getNom() + " ! Vous avez " + nb + " mission" + (nb > 1 ? "s" : "") + " affect\u00e9e" + (nb > 1 ? "s" : "") + " aujourd'hui.", true);
                 }
             }
-            // ? R�appliquer le filtre apr�s rechargement
+            // Rappliquer le filtre apres rechargement
             if (!"Tous".equals(currentFilter) && filterMissionsStatutCombo != null) filterMissionsStatutCombo.setValue(currentFilter);
 
 
@@ -1382,7 +1384,7 @@ public class AgentDashboardController {
                     .append(String.format("   📍 Distance: %.2f km\n", distance))
 
 
-                    .append(String.format("   �-�️ Zone: %s\n\n", mission.getZoneNom()));
+                    .append(String.format("   -️ Zone: %s\n\n", mission.getZoneNom()));
 
 
             currentPos = new GeolocationService.Coordinates(mission.getLatitude(), mission.getLongitude());
@@ -1391,13 +1393,13 @@ public class AgentDashboardController {
         }
 
 
-        routeInfo.append(String.format("�- Distance totale estimée: %.2f km\n", totalDistance))
+        routeInfo.append(String.format("- Distance totale estimée: %.2f km\n", totalDistance))
 
 
                 .append(String.format("⏱️ Temps estimé: %.0f minutes\n\n", totalDistance * 3))
 
 
-                .append("�- Lien Google Maps:\n").append(routeUrl);
+                .append("- Lien Google Maps:\n").append(routeUrl);
 
 
 

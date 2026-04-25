@@ -30,34 +30,34 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Serveur HTTP embarqué pour la géolocalisation GPS temps réel.
+ * Serveur HTTP embarquÃƒÂ© pour la gÃƒÂ©olocalisation GPS temps rÃƒÂ©el.
  * Agents et citoyens envoient leur position depuis un navigateur mobile.
- * Port : résolu dynamiquement via GeoConfig (3001 par défaut).
+ * Port : rÃƒÂ©solu dynamiquement via GeoConfig (3001 par dÃƒÂ©faut).
  */
 public class GpsApiServer {
 
 
     /**
-     * ℹ️ NOTES SUR LES PROTOCOLES:
+     * Ã¢â€žÂ¹Ã¯Â¸Â NOTES SUR LES PROTOCOLES:
      * 
      * HTTP (PORT 3001):
-     *   - ✅ Fonctionne parfaitement sur WiFi local (192.168.x.x, 10.x.x.x)
-     *   - ✅ Pas d'avertissement certificat
-     *   - ✅ Idéal pour développement et tests
-     *   - ✅ Utilisé par défaut si HTTPS bloqué
+     *   - Ã¢Å“â€¦ Fonctionne parfaitement sur WiFi local (192.168.x.x, 10.x.x.x)
+     *   - Ã¢Å“â€¦ Pas d'avertissement certificat
+     *   - Ã¢Å“â€¦ IdÃƒÂ©al pour dÃƒÂ©veloppement et tests
+     *   - Ã¢Å“â€¦ UtilisÃƒÂ© par dÃƒÂ©faut si HTTPS bloquÃƒÂ©
      * 
      * HTTPS (PORT 3002):
-     *   - ✅ Sécurisé pour production
-     *   - ⚠️ Certificat auto-signé → avertissements navigateur mobile
-     *   - 💡 Solution: utiliser HTTP sur WiFi local, HTTPS en production
+     *   - Ã¢Å“â€¦ SÃƒÂ©curisÃƒÂ© pour production
+     *   - Ã¢Å¡Â Ã¯Â¸Â Certificat auto-signÃƒÂ© Ã¢â€ â€™ avertissements navigateur mobile
+     *   - Ã°Å¸â€™Â¡ Solution: utiliser HTTP sur WiFi local, HTTPS en production
      * 
-     * RECOMMANDATION: Pour développement/tests, préférer HTTP avec WiFi local
+     * RECOMMANDATION: Pour dÃƒÂ©veloppement/tests, prÃƒÂ©fÃƒÂ©rer HTTP avec WiFi local
      */
 
 
     private static final Logger logger = LoggerFactory.getLogger(GpsApiServer.class);
 
-    /** Port résolu une seule fois au démarrage — utilisé par PositionAgentService et MainApp. */
+    /** Port rÃƒÂ©solu une seule fois au dÃƒÂ©marrage Ã¢â‚¬â€ utilisÃƒÂ© par PositionAgentService et MainApp. */
     public static final int PORT = GeoConfig.getGpsPort();
     public static final int HTTPS_PORT = PORT + 1;
 
@@ -67,7 +67,7 @@ public class GpsApiServer {
     private HttpServer server;
     private HttpsServer httpsServer;
 
-    // ── Tokens ──────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Tokens Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     public static String getOrCreateToken(int agentId) {
         String token = agentTokens.computeIfAbsent(agentId,
@@ -87,7 +87,7 @@ public class GpsApiServer {
         return token != null && agentTokens.values().stream().anyMatch(t -> t.equals(token));
     }
 
-    // ── Démarrage ────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DÃƒÂ©marrage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     public void start(int defaultAgentId) throws IOException {
         ensureGpsSchema();
@@ -116,7 +116,7 @@ public class GpsApiServer {
 
         server.start();
         httpsServer.start();
-        logger.info("✅ GPS API Server démarré sur http://{}:{} (recommandé en test) et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
+        logger.info("Ã¢Å“â€¦ GPS API Server dÃƒÂ©marrÃƒÂ© sur http://{}:{} (recommandÃƒÂ© en test) et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
     }
 
     public void stop() {
@@ -126,7 +126,7 @@ public class GpsApiServer {
         if (httpsServer != null) {
             httpsServer.stop(0);
         }
-        logger.info("GPS API Server arrêté");
+        logger.info("GPS API Server arrÃƒÂªtÃƒÂ©");
     }
 
     private void createContexts(HttpServer server) {
@@ -155,7 +155,7 @@ public class GpsApiServer {
             sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
             return sslContext;
         } catch (Exception e) {
-            throw new RuntimeException("Impossible de créer le SSLContext pour le serveur HTTPS", e);
+            throw new RuntimeException("Impossible de crÃƒÂ©er le SSLContext pour le serveur HTTPS", e);
         }
     }
 
@@ -191,10 +191,10 @@ public class GpsApiServer {
         ks.setKeyEntry("gps", privateKey, password, new java.security.cert.Certificate[]{cert});
         return ks;
     }
-    // ── URLs publiques ───────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ URLs publiques Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     public static String getLocalIp() {
-        // ✅ UTILISER LA SOURCE CENTRALISÉE (NetworkUtils) - UNIQUE SOURCE DE VÉRITÉ
+        // Ã¢Å“â€¦ UTILISER LA SOURCE CENTRALISÃƒâ€°E (NetworkUtils) - UNIQUE SOURCE DE VÃƒâ€°RITÃƒâ€°
         return com.smartcity.utils.NetworkUtils.detectLocalIp();
     }
 
@@ -216,7 +216,7 @@ public class GpsApiServer {
         return "https://" + ip + ":" + HTTPS_PORT + "/citizen-gps?citizenId=" + citizenId + "&token=" + token;
     }
 
-    // ── Schéma DB ────────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ SchÃƒÂ©ma DB Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     private void ensureGpsSchema() {
         try (Connection conn = DatabaseConnection.getConnection();
@@ -247,14 +247,14 @@ public class GpsApiServer {
                 stmt.execute("ALTER TABLE Zone ADD COLUMN longitude DECIMAL(11,8) DEFAULT 0.0");
                 stmt.execute("UPDATE Zone SET latitude=14.7646, longitude=-17.3920 WHERE nomZone='Pikine'");
                 stmt.execute("UPDATE Zone SET latitude=14.7765, longitude=-17.4047 "
-                        + "WHERE nomZone IN ('Guédiawaye','Guediawaye')");
-                logger.info("✅ Colonnes GPS Zone initialisées");
+                        + "WHERE nomZone IN ('GuÃƒÂ©diawaye','Guediawaye')");
+                logger.info("Ã¢Å“â€¦ Colonnes GPS Zone initialisÃƒÂ©es");
             }
 
             loadTokensFromDatabase(conn);
 
         } catch (SQLException e) {
-            logger.warn("⚠️ Initialisation schéma GPS incomplète: {}", e.getMessage());
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Initialisation schÃƒÂ©ma GPS incomplÃƒÂ¨te: {}", e.getMessage());
         }
     }
 
@@ -286,9 +286,9 @@ public class GpsApiServer {
                 else                        citizenTokens.put(uid, token);
                 count++;
             }
-            if (count > 0) logger.info("✅ {} tokens GPS rechargés depuis la base", count);
+            if (count > 0) logger.info("Ã¢Å“â€¦ {} tokens GPS rechargÃƒÂ©s depuis la base", count);
         } catch (SQLException e) {
-            logger.warn("⚠️ Erreur chargement tokens GPS: {}", e.getMessage());
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Erreur chargement tokens GPS: {}", e.getMessage());
         }
     }
 
@@ -303,11 +303,11 @@ public class GpsApiServer {
             ps.setString(4, token);
             ps.executeUpdate();
         } catch (SQLException e) {
-            logger.warn("⚠️ Erreur sauvegarde token GPS: {}", e.getMessage());
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Erreur sauvegarde token GPS: {}", e.getMessage());
         }
     }
 
-    // ── Handlers HTTP ────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Handlers HTTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     private void handlePosition(HttpExchange exchange) throws IOException {
         addCorsHeaders(exchange);
@@ -350,7 +350,7 @@ public class GpsApiServer {
                 sendJson(exchange, 400, "{\"status\":\"invalid\"}");
             }
         } catch (Exception e) {
-            logger.error("❌ handlePosition: {}", e.getMessage());
+            logger.error("Ã¢ÂÅ’ handlePosition: {}", e.getMessage());
             sendJson(exchange, 500, "{\"status\":\"error\"}");
         }
     }
@@ -396,7 +396,7 @@ public class GpsApiServer {
                 sendJson(exchange, 400, "{\"status\":\"invalid\"}");
             }
         } catch (Exception e) {
-            logger.error("❌ handleCitizenPosition: {}", e.getMessage());
+            logger.error("Ã¢ÂÅ’ handleCitizenPosition: {}", e.getMessage());
             sendJson(exchange, 500, "{\"status\":\"error\"}");
         }
     }
@@ -408,7 +408,7 @@ public class GpsApiServer {
         try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
     }
 
-    // ── DB positions ─────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DB positions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     private double[] readPosition(int agentId) {
         try (Connection conn = DatabaseConnection.getConnection();
@@ -430,7 +430,7 @@ public class GpsApiServer {
             ps.setDouble(4, lat);  ps.setDouble(5, lon);
             ps.executeUpdate();
         } catch (SQLException e) {
-            logger.error("❌ savePosition agent {}: {}", agentId, e.getMessage());
+            logger.error("Ã¢ÂÅ’ savePosition agent {}: {}", agentId, e.getMessage());
         }
     }
 
@@ -454,11 +454,11 @@ public class GpsApiServer {
             ps.setDouble(4, lat);    ps.setDouble(5, lon);
             ps.executeUpdate();
         } catch (SQLException e) {
-            logger.error("❌ saveCitizenPosition citoyen {}: {}", citizenId, e.getMessage());
+            logger.error("Ã¢ÂÅ’ saveCitizenPosition citoyen {}: {}", citizenId, e.getMessage());
         }
     }
 
-    // ── Helpers HTTP ─────────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Helpers HTTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     private void addCorsHeaders(HttpExchange exchange) {
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
@@ -510,77 +510,62 @@ public class GpsApiServer {
         return "";
     }
 
-    // ── Page HTML mobile ─────────────────────────────────────────────────────
-
-    private String buildGpsHtml(int userId, String userType) {
-        String token    = "agent".equals(userType) ? getOrCreateToken(userId) : getOrCreateCitizenToken(userId);
-        String apiUrl   = "location.protocol+'//'+location.host+'/api/"
-                        + ("agent".equals(userType) ? "position" : "citizen-position");
-        String userParam = "agent".equals(userType) ? "agentId" : "citizenId";
-        String title    = "agent".equals(userType) ? "Agent GPS" : "Citoyen GPS";
-        String bgColor  = "agent".equals(userType) ? "#1565C0" : "#2E7D32";
-
-        return "<!DOCTYPE html><html><head>"
-            + "<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-            + "<title>SmartCity GPS</title>"
-            + "<style>"
-            + "*{box-sizing:border-box;margin:0;padding:0;}"
-            + "body{font-family:Arial,sans-serif;background:" + bgColor + ";color:white;"
-            + "display:flex;flex-direction:column;align-items:center;justify-content:center;"
-            + "min-height:100vh;padding:20px;text-align:center;}"
-            + "h2{font-size:20px;margin-bottom:16px;}"
-            + "#status{font-size:15px;margin:10px 0;padding:14px 20px;"
-            + "background:rgba(255,255,255,0.15);border-radius:12px;width:100%;max-width:320px;}"
-            + "#coords{font-size:13px;color:rgba(255,255,255,0.8);margin:6px 0;}"
-            + ".dot{width:12px;height:12px;background:#4CAF50;border-radius:50%;"
-            + "display:inline-block;margin-right:6px;animation:pulse 1.5s infinite;}"
-            + "@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}"
-            + ".btn{background:rgba(255,255,255,0.25);color:white;border:2px solid rgba(255,255,255,0.6);"
-            + "padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer;"
-            + "margin:8px 0;width:100%;max-width:320px;}"
-            + ".btn:active{background:rgba(255,255,255,0.4);}"
-            + "border-radius:8px;font-size:15px;cursor:pointer;width:100%;margin-top:8px;}"
-            + "#warn{font-size:12px;color:rgba(255,255,255,0.7);margin-top:10px;max-width:320px;}"
-            + "</style></head><body>"
-            + "<h2>\uD83D\uDCCD SmartCity " + title + "</h2>"
-            + "<div id='status'>Activation GPS...</div>"
-            + "<div id='coords'></div>"
-            + "<button class='btn' onclick='tryGps()'>\uD83D\uDCF1 Envoyer ma position GPS</button>"
-            + "</div>"
-            + "<p id='warn'>\u26A0\uFE0F Le GPS n\u00e9cessite HTTPS sur mobile. Utilisez la saisie manuelle ou connectez-vous via WiFi local.</p>"
-            + "<script>"
-            + "var userId=" + userId + ",token='" + token + "',apiUrl=" + apiUrl + ",userParam='" + userParam + "';"
-            + "function send(lat,lon,src){"
-            + "  fetch(apiUrl,{method:'POST',"
-            + "    headers:{'Content-Type':'application/x-www-form-urlencoded'},"
-            + "    body:userParam+'='+userId+'&lat='+lat+'&lon='+lon+'&token='+token})"
-            + "  .then(r=>r.json()).then(d=>{"
-            + "    if(d.status==='ok'){"
-            + "      document.getElementById('status').innerHTML='<span class=\"dot\"></span>Envoy\u00e9e ('+src+')';"
-            + "      document.getElementById('coords').innerHTML=parseFloat(lat).toFixed(5)+', '+parseFloat(lon).toFixed(5);"
-            + "    } else {"
-            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F '+d.status;"
-            + "    }"
-            + "  }).catch(()=>{"
-            + "    document.getElementById('status').innerHTML='\u26A0\uFE0F Erreur r\u00e9seau. V\u00e9rifiez le WiFi.';"
-            + "  });"
-            + "}"
-            + "function tryGps(){"
-            + "  if(location.protocol!=='https:'){document.getElementById('status').innerHTML='\u26A0\uFE0F GPS n\u00e9cessite HTTPS';return;}"
-            + "    document.getElementById('status').innerHTML='\u26A0\uFE0F GPS n\u00e9cessite HTTPS \u2014 saisie manuelle';"
-            + "    return;}"
-            + "  document.getElementById('status').innerHTML='Demande GPS...';"
-            + "  if(!navigator.geolocation){document.getElementById('status').innerHTML='GPS non disponible';return;}"
-            + "  navigator.geolocation.getCurrentPosition("
-            + "    function(p){send(p.coords.latitude,p.coords.longitude,'GPS');},"
-            + "    function(err){"
-            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F GPS refus\u00e9 \u2014 saisie manuelle';"
-            + "      document.getElementById('status').innerHTML='\u26A0\uFE0F GPS refus\u00e9';},"
-            + "    },{enableHighAccuracy:true,timeout:8000,maximumAge:0});"
-            + "}"
-            + "}"
-            + "if(location.protocol==='https:'){tryGps();}else{document.getElementById('status').innerHTML='\u26A0\uFE0F Connexion HTTP \u2014 GPS indisponible';}"
-            + "  document.getElementById('status').innerHTML='\u26A0\uFE0F Connexion HTTP \u2014 saisie manuelle requise';}"
-            + "</script></body></html>";
-    }
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Page HTML mobile Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    private String buildGpsHtml(int userId, String userType) {
+        String token = "agent".equals(userType) ? getOrCreateToken(userId) : getOrCreateCitizenToken(userId);
+        String apiPath = "/api/" + ("agent".equals(userType) ? "position" : "citizen-position");
+        String userParam = "agent".equals(userType) ? "agentId" : "citizenId";
+        String title = "agent".equals(userType) ? "Agent GPS" : "Citizen GPS";
+        String bgColor = "agent".equals(userType) ? "#1565C0" : "#2E7D32";
+
+        return "<!DOCTYPE html><html><head>"
+            + "<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            + "<title>SmartCity GPS</title>"
+            + "<style>"
+            + "*{box-sizing:border-box;margin:0;padding:0;}"
+            + "body{font-family:Arial,sans-serif;background:" + bgColor + ";color:white;"
+            + "display:flex;flex-direction:column;align-items:center;justify-content:center;"
+            + "min-height:100vh;padding:20px;text-align:center;}"
+            + "h2{font-size:20px;margin-bottom:16px;}"
+            + "#status{font-size:15px;margin:10px 0;padding:14px 20px;"
+            + "background:rgba(255,255,255,0.15);border-radius:12px;width:100%;max-width:320px;}"
+            + "#coords{font-size:13px;color:rgba(255,255,255,0.8);margin:6px 0;}"
+            + ".dot{width:12px;height:12px;background:#4CAF50;border-radius:50%;"
+            + "display:inline-block;margin-right:6px;animation:pulse 1.5s infinite;}"
+            + "@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}"
+            + ".btn{background:rgba(255,255,255,0.25);color:white;border:2px solid rgba(255,255,255,0.6);"
+            + "padding:12px 24px;border-radius:10px;font-size:15px;cursor:pointer;"
+            + "margin:8px 0;width:100%;max-width:320px;}"
+            + ".btn:active{background:rgba(255,255,255,0.4);}"
+            + "#warn{font-size:12px;color:rgba(255,255,255,0.7);margin-top:10px;max-width:320px;}"
+            + "</style></head><body>"
+            + "<h2>SmartCity " + title + "</h2>"
+            + "<div id='status'>GPS activation...</div>"
+            + "<div id='coords'></div>"
+            + "<button class='btn' onclick='tryGps()'>Send my GPS position</button>"
+            + "<p id='warn'>GPS requires HTTPS on mobile. Use manual input or connect via local WiFi.</p>"
+            + "<script>"
+            + "var userId=" + userId + ",token='" + token + "',apiUrl=location.protocol+'//'+location.host+'" + apiPath + "',userParam='" + userParam + "';"
+            + "function send(lat,lon,src){"
+            + "  fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+            + "    body:userParam+'='+userId+'&lat='+lat+'&lon='+lon+'&token='+token})"
+            + "  .then(r=>r.json()).then(d=>{"
+            + "    if(d.status==='ok'){"
+            + "      document.getElementById('status').innerHTML='<span class=\"dot\"></span>Sent ('+src+')';"
+            + "      document.getElementById('coords').innerHTML=parseFloat(lat).toFixed(5)+', '+parseFloat(lon).toFixed(5);"
+            + "    } else { document.getElementById('status').innerHTML='Status: '+d.status; }"
+            + "  }).catch(()=>{ document.getElementById('status').innerHTML='Network error. Check WiFi.'; });"
+            + "}"
+            + "function tryGps(){"
+            + "  if(location.protocol!=='https:'){document.getElementById('status').innerHTML='HTTP connection - manual input required';return;}"
+            + "  if(!navigator.geolocation){document.getElementById('status').innerHTML='GPS not available';return;}"
+            + "  document.getElementById('status').innerHTML='GPS request...';"
+            + "  navigator.geolocation.getCurrentPosition(function(p){send(p.coords.latitude,p.coords.longitude,'GPS');},"
+            + "    function(){document.getElementById('status').innerHTML='GPS denied';},"
+            + "    {enableHighAccuracy:true,timeout:8000,maximumAge:0});"
+            + "}"
+            + "if(location.protocol==='https:'){tryGps();}"
+            + "</script></body></html>";
+    }
 }
+

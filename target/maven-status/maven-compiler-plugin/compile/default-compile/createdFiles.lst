@@ -6,6 +6,8 @@ com\smartcity\service\GeolocationService$Coordinates.class
 com\smartcity\controller\CitizenDashboardController$2.class
 com\smartcity\controller\AgentDashboardController$1.class
 com\smartcity\model\Signalement.class
+com\smartcity\controller\AdminDashboardController$6.class
+com\smartcity\controller\AgentDashboardController$12.class
 com\smartcity\service\GeolocationService.class
 com\smartcity\controller\LoginController.class
 com\smartcity\controller\AgentDashboardController$9.class
@@ -22,7 +24,6 @@ com\smartcity\service\GpsApiServer.class
 com\smartcity\service\SuiviService$SuiviSignalement.class
 com\smartcity\utils\ValidationUtils$ValidationResult.class
 com\smartcity\controller\AgentDashboardController$10.class
-com\smartcity\service\GeoConfig.class
 com\smartcity\service\ReportService$AgentStats.class
 com\smartcity\controller\RegisterController.class
 com\smartcity\utils\SessionManager$SessionData.class
@@ -59,6 +60,7 @@ com\smartcity\controller\AdminDashboardController$2.class
 com\smartcity\service\ReportService$MonthlyReport.class
 com\smartcity\websocket\AgentMissionEndpoint.class
 com\smartcity\controller\AgentDashboardController$11.class
+com\smartcity\controller\AgentDashboardController$14.class
 com\smartcity\controller\CitizenDashboardController$1.class
 com\smartcity\controller\AgentLiveRow.class
 com\smartcity\controller\ReportsController$1.class
@@ -79,6 +81,7 @@ com\smartcity\service\GpsApiServer$1.class
 com\smartcity\controller\AdminDashboardController$4.class
 com\smartcity\utils\AnimationUtils.class
 com\smartcity\model\Affectation.class
+com\smartcity\controller\AgentDashboardController$13.class
 com\smartcity\controller\AgentDashboardController$JSBridgeAgent.class
 com\smartcity\model\SignalementStatut.class
 com\smartcity\controller\ForgotPasswordController$1.class

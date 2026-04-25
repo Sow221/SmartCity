@@ -1,4 +1,0 @@
-[FAIL] SEC-09 Citizen redirect
-[FAIL] FUNC-04 Agent done button
-[OK] QUAL-01 DialogUtils created
-[OK] DATA-04 index SQL

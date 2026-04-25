@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
@@ -66,9 +66,9 @@
             <padding><Insets top="20" right="24" bottom="24" left="24"/></padding>
 
             <HBox spacing="10" alignment="CENTER_LEFT" styleClass="quick-actions-bar-agent" fx:id="quickActionsBar">
-                <Button fx:id="btnActionDemarrerProchaine" text="Demarrer mission" styleClass="action-rapid-btn-agent" onAction="#handleDemarrerProchaineMission"/>
-                <Button fx:id="btnActionVoirEnCours" text="En cours" styleClass="action-rapid-btn-agent" onAction="#handleVoirMissionsEnCours"/>
-                <Button fx:id="btnActionItineraireRapide" text="Itineraire" styleClass="action-rapid-btn-agent" onAction="#handleItineraireRapide"/>
+                <Button fx:id="btnActionDemarrerProchaine" text="🚀 Démarrer prochaine" styleClass="action-rapid-btn-agent" onAction="#handleDemarrerProchaineMission"/>
+                <Button fx:id="btnActionVoirEnCours" text="⏳ Voir en cours" styleClass="action-rapid-btn-agent" onAction="#handleVoirMissionsEnCours"/>
+                <Button fx:id="btnActionItineraireRapide" text="🗺️ Optimiser tournée" styleClass="action-rapid-btn-agent" onAction="#handleItineraireRapide"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="btn-outline-sm" onAction="#chargerDonnees"/>
                 <Button fx:id="btnGpsActiver" text="GPS" styleClass="btn-outline-sm" onAction="#handleToggleGps"/>
@@ -77,7 +77,7 @@
                 <Label fx:id="lblMissionsCount" text="0 missions" styleClass="missions-count-badge"/>
             </HBox>
 
-            <Label fx:id="agentMessageLabel" text="" styleClass="floating-message"/>
+            <Label fx:id="agentMessageLabel" text="" styleClass="floating-message" visible="false" managed="false"/>
 
             <StackPane VBox.vgrow="ALWAYS">
 
@@ -86,9 +86,9 @@
                 <VBox spacing="20" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
-                            <Label text="Vue d'ensemble" styleClass="page-title-agent"/>
-                            <Label text="Missions actives" styleClass="page-subtitle"/>
-                            <Label text="(fond orange = en attente depuis plus de 24h)" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
+                            <Label text="Tableau de bord — Missions urgentes" styleClass="page-title-agent"/>
+                            <Label text="Missions urgentes" styleClass="page-subtitle"/>
+                            <Label text="(missions affectées depuis plus de 24h sans action)" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <HBox spacing="8" alignment="CENTER_RIGHT">
@@ -118,7 +118,7 @@
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="agentCardEnAttente" text="0" styleClass="stat-card-number-agent"/>
-                                    <Label text="En attente" styleClass="stat-card-label"/>
+                                    <Label text="Affectées" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
@@ -214,6 +214,7 @@
                         <HBox spacing="8" alignment="CENTER_RIGHT">
                             <Label text="Statut :" styleClass="quick-actions-label-agent"/>
                             <ComboBox fx:id="filterMissionsStatutCombo" prefWidth="140" prefHeight="36"/>
+                            <Button text="↺ Réinitialiser" prefHeight="36" onAction="#handleResetFiltresMissions" styleClass="btn-outline-sm"/>
                         </HBox>
                     </HBox>
                     <TableView fx:id="tableMesMissions" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
@@ -283,9 +284,14 @@
                                 <VBox spacing="4">
                                     <Label text="Commentaire" styleClass="map-detail-label"/>
                                     <Label fx:id="mapCommentaireLabel" text="-" wrapText="true" styleClass="map-detail-value"/>
+                                    <TextArea fx:id="mapCommentaireField" promptText="Ajouter un commentaire..." prefRowCount="3" wrapText="true" editable="true" styleClass="dash-textarea"/>
+                                    <Button text="💾 Sauvegarder" onAction="#handleSauvegarderCommentaire" styleClass="btn-outline-sm" maxWidth="Infinity"/>
                                 </VBox>
                                 <Region VBox.vgrow="ALWAYS"/>
-                                <Button text="Itinéraire optimal" prefHeight="40" onAction="#handleItineraireRapide" styleClass="button-agent" maxWidth="Infinity"/>
+                                <Button text="Itinéraire optimal" prefHeight="40" onAction="#handleItineraireRapide" styleClass="btn-outline-sm" maxWidth="Infinity"/>
+                                <Button fx:id="btnTerminerDepuisCarte" text="✅ Terminer la mission" prefHeight="40" onAction="#handleTerminerDepuisCarte" styleClass="button-agent" maxWidth="Infinity" disable="true">
+                                    <tooltip><Tooltip text="Sélectionnez une mission En cours pour activer ce bouton"/></tooltip>
+                                </Button>
                             </VBox>
                         </right>
                     </BorderPane>
@@ -299,7 +305,7 @@
                         <HBox spacing="16" alignment="CENTER">
                             <HBox spacing="4" alignment="CENTER_LEFT">
                                 <Label text="●" style="-fx-text-fill:#FFC107;-fx-font-size:16px;"/>
-                                <Label text="En attente" style="-fx-font-size:11px;"/>
+                                <Label text="Affecté" style="-fx-font-size:11px;"/>
                             </HBox>
                             <HBox spacing="4" alignment="CENTER_LEFT">
                                 <Label text="●" style="-fx-text-fill:#1E88E5;-fx-font-size:16px;"/>
@@ -343,6 +349,26 @@
                             <Label fx:id="lblHistoriqueCount" text="" styleClass="missions-count-badge"/>
                         </HBox>
                     </HBox>
+
+                    <!-- Stats résumé historique -->
+                    <HBox spacing="12">
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTerminees" text="0" styleClass="stat-card-number-agent"/>
+                            <Label text="Missions terminées" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTaux" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Taux de réussite" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatTemps" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Temps moyen" styleClass="stat-card-label"/>
+                        </VBox>
+                        <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                            <Label fx:id="histStatNote" text="-" styleClass="stat-card-number-agent"/>
+                            <Label text="Note citoyens" styleClass="stat-card-label"/>
+                        </VBox>
+                    </HBox>
                     <TableView fx:id="tableHistorique" VBox.vgrow="ALWAYS" styleClass="data-table-agent">
                         <columns>
                             <TableColumn fx:id="colHistId" text="ID" prefWidth="60"/>
@@ -356,8 +382,8 @@
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
                                 <Label text="📅" style="-fx-font-size:36px;"/>
-                                <Label text="Aucune mission pour cette date" styleClass="empty-state-title"/>
-                                <Label text="Sélectionnez une autre date" styleClass="empty-state-desc"/>
+                                <Label text="Aucune mission terminée" styleClass="empty-state-title"/>
+                                <Label text="Les missions terminées apparaitront ici" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
@@ -393,8 +419,15 @@
                         </VBox>
                         <VBox spacing="6">
                             <Label text="Zone assignée" styleClass="auth-field-label"/>
-                            <TextField fx:id="profilZoneField" styleClass="dash-field" editable="false"/>
-                            <Label text="Modifiable par l'administrateur" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-background-color:#f0fdf4;-fx-background-radius:8;-fx-padding:10 14;-fx-border-color:#86efac;-fx-border-radius:8;-fx-border-width:1;">
+                                <Label text="📍" style="-fx-font-size:16px;"/>
+                                <Label fx:id="profilZoneField" text="-" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#166534;"/>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="6">
+                            <Label text="Membre depuis" styleClass="auth-field-label"/>
+                            <Label fx:id="profilDateInscriptionLabel" text="-" styleClass="dash-field" style="-fx-background-color:transparent;-fx-border-color:transparent;"/>
                         </VBox>
 
                         <Region styleClass="profile-divider" prefHeight="1"/>
@@ -408,6 +441,10 @@
                             <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
                                 <Label fx:id="profilStatScoreLabel" text="-" styleClass="stat-card-number-agent"/>
                                 <Label text="Taux de réussite" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card-agent" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="4">
+                                <Label fx:id="profilStatNoteLabel" text="-" styleClass="stat-card-number-agent"/>
+                                <Label text="Note citoyens" styleClass="stat-card-label"/>
                             </VBox>
                         </HBox>
 

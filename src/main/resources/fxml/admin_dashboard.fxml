@@ -192,17 +192,18 @@
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Gestion Utilisateurs" styleClass="page-title"/>
-                            <Label text="Gérez les comptes citoyens de la plateforme" styleClass="page-subtitle"/>
+                            <Label text="Comptes citoyens inscrits sur la plateforme" styleClass="page-subtitle"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <TextField fx:id="searchUserField" prefWidth="200" prefHeight="36" promptText="Rechercher par nom ou email..." styleClass="dash-field"/>
                         <Button text="Ajouter" onAction="#handleAjouterUtilisateur" styleClass="action-button">
                             <tooltip><Tooltip text="Ajouter un nouvel utilisateur"/></tooltip>
                         </Button>
                         <Button fx:id="btnModifierUtilisateur" text="Modifier" onAction="#handleModifierUtilisateur" styleClass="btn-outline-sm">
                             <tooltip><Tooltip text="Modifier l'utilisateur sélectionné"/></tooltip>
                         </Button>
-                        <Button fx:id="btnSupprimerUtilisateur" text="Supprimer" onAction="#handleSupprimerUtilisateur" styleClass="danger-button">
-                            <tooltip><Tooltip text="Supprimer l'utilisateur sélectionné"/></tooltip>
+                        <Button fx:id="btnSupprimerUtilisateur" text="Désactiver" onAction="#handleSupprimerUtilisateur" styleClass="danger-button">
+                            <tooltip><Tooltip text="Désactiver le compte utilisateur sélectionné"/></tooltip>
                         </Button>
                     </HBox>
                     <TableView fx:id="tableUtilisateurs" VBox.vgrow="ALWAYS" styleClass="data-table">
@@ -233,22 +234,26 @@
                             <Label text="Gérez les agents de collecte sur le terrain" styleClass="page-subtitle"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <ComboBox fx:id="filterAgentZoneCombo" prefWidth="140" prefHeight="36" promptText="Toutes les zones" styleClass="dash-combo"/>
+                        <TextField fx:id="searchAgentField" prefWidth="180" prefHeight="36" promptText="Rechercher un agent..." styleClass="dash-field"/>
                         <Button text="Ajouter" onAction="#handleAjouterAgent" styleClass="action-button">
                             <tooltip><Tooltip text="Ajouter un nouvel agent"/></tooltip>
                         </Button>
                         <Button fx:id="btnModifierAgent" text="Modifier" onAction="#handleModifierAgent" styleClass="btn-outline-sm">
                             <tooltip><Tooltip text="Modifier l'agent sélectionné"/></tooltip>
                         </Button>
-                        <Button fx:id="btnSupprimerAgent" text="Supprimer" onAction="#handleSupprimerAgent" styleClass="danger-button">
-                            <tooltip><Tooltip text="Supprimer l'agent sélectionné"/></tooltip>
+                        <Button fx:id="btnSupprimerAgent" text="Désactiver" onAction="#handleSupprimerAgent" styleClass="danger-button">
+                            <tooltip><Tooltip text="Désactiver le compte agent sélectionné"/></tooltip>
                         </Button>
                     </HBox>
                     <TableView fx:id="tableAgents" VBox.vgrow="ALWAYS" styleClass="data-table">
                         <columns>
-                            <TableColumn fx:id="colAgentId" text="ID" prefWidth="70"/>
-                            <TableColumn fx:id="colAgentNom" text="Nom complet" prefWidth="240"/>
-                            <TableColumn fx:id="colAgentZone" text="Zone affectée" prefWidth="200"/>
-                            <TableColumn fx:id="colAgentTraites" text="Missions traitées" prefWidth="180"/>
+                            <TableColumn fx:id="colAgentId" text="ID" prefWidth="60"/>
+                            <TableColumn fx:id="colAgentNom" text="Nom complet" prefWidth="180"/>
+                            <TableColumn fx:id="colAgentEmail" text="Email" prefWidth="200"/>
+                            <TableColumn fx:id="colAgentZone" text="Zone affectée" prefWidth="150"/>
+                            <TableColumn fx:id="colAgentTraites" text="Missions traitées" prefWidth="140"/>
+                            <TableColumn fx:id="colAgentStatut" text="Statut" prefWidth="90"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">

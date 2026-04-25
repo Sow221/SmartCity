@@ -5,9 +5,9 @@ import java.util.Locale;
 
 public enum SignalementStatut {
     EN_ATTENTE("En attente", "En attente"),
-    AFFECTE("Affecte", "Affect\u00e9"),
+    AFFECTE("Affecté", "Affecté"),
     EN_COURS("En cours", "En cours"),
-    TERMINE("Termine", "Termin\u00e9");
+    TERMINE("Terminé", "Terminé");
 
     /** Cat\u00e9gories de d\u00e9chets centralis\u00e9es. */
     public static final java.util.List<String> CATEGORIES = java.util.List.of(

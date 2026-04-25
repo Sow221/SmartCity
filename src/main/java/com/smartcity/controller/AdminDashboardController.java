@@ -1,13 +1,17 @@
 package com.smartcity.controller;
 
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+
 import com.smartcity.app.MainApp;
-import com.smartcity.model.Affectation;
 import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
 import com.smartcity.service.ZoneService;
 import com.smartcity.utils.SessionManager;
+
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -18,15 +22,23 @@ import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
-
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Controleur du dashboard administrateur.
@@ -103,6 +115,11 @@ public class AdminDashboardController {
     @FXML private TableColumn<AgentStatsRow, String> colAgentNom;
     @FXML private TableColumn<AgentStatsRow, String> colAgentZone;
     @FXML private TableColumn<AgentStatsRow, Integer> colAgentTraites;
+    @FXML private TableColumn<AgentStatsRow, String> colAgentEmail;
+    @FXML private TableColumn<AgentStatsRow, Void> colAgentStatut;
+    @FXML private javafx.scene.control.TextField searchUserField;
+    @FXML private javafx.scene.control.TextField searchAgentField;
+    @FXML private javafx.scene.control.ComboBox<String> filterAgentZoneCombo;
     @FXML private Button btnModifierAgent;
     @FXML private Button btnSupprimerAgent;
 
@@ -196,7 +213,29 @@ public class AdminDashboardController {
             btnReaffecterSignalement.disableProperty().bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
 
         tableUtilisateurs.setItems(utilisateurs);
+        // Recherche temps reel utilisateurs
+        if (searchUserField != null) {
+            searchUserField.textProperty().addListener((obs, old, val) -> {
+                if (val == null || val.isBlank()) { tableUtilisateurs.setItems(utilisateurs); return; }
+                String lower = val.toLowerCase(java.util.Locale.ROOT);
+                tableUtilisateurs.setItems(javafx.collections.FXCollections.observableArrayList(
+                    utilisateurs.stream().filter(u -> u.getNom().toLowerCase(java.util.Locale.ROOT).contains(lower)
+                        || u.getEmail().toLowerCase(java.util.Locale.ROOT).contains(lower))
+                    .collect(java.util.stream.Collectors.toList())));
+            });
+        }
         tableAgents.setItems(agents);
+        // Filtre zone + recherche agents
+        if (filterAgentZoneCombo != null) {
+            filterAgentZoneCombo.getItems().clear();
+            filterAgentZoneCombo.getItems().add("Toutes les zones");
+            zoneService.getAllZones().forEach(z -> filterAgentZoneCombo.getItems().add(z.getNomZone()));
+            filterAgentZoneCombo.setValue("Toutes les zones");
+            filterAgentZoneCombo.valueProperty().addListener((obs, old, val) -> filtrerAgents());
+        }
+        if (searchAgentField != null) {
+            searchAgentField.textProperty().addListener((obs, old, val) -> filtrerAgents());
+        }
         tableSignalements.setItems(signalements);
         if (tableLiveAgents != null) tableLiveAgents.setItems(liveAgents);
         // Pagination : boutons Précédent/Suivant ajoutés dynamiquement sous la table
@@ -235,7 +274,7 @@ public class AdminDashboardController {
                 int collectes  = signalementService.countByStatut("Termin\u00e9");
                 int urgents    = signalementService.countUrgents();
                 int totalUsers = utilisateurService.countAllActifs();
-                List<Utilisateur> users = utilisateurService.getAllUtilisateurs();
+                List<Utilisateur> users = utilisateurService.getUtilisateursByRole("Citoyen");
                 List<Signalement> sigs  = signalementService.getAllSignalements();
                 // Fix N+1 agents : 1 seule requête SQL avec JOIN
                 List<UtilisateurService.AgentStats> agentStats = utilisateurService.getAgentsWithStats();
@@ -256,7 +295,7 @@ public class AdminDashboardController {
                     utilisateurs.setAll(users);
                     signalements.setAll(sigs);
                     agents.clear();
-                    agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.zoneNom(), a.traites())));
+                    agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.email(), a.zoneNom(), a.traites(), a.actif())));
                     // Appliquer la map agent sans requêtes supplémentaires
                     if (colSignalementCommentaire != null)
                         colSignalementCommentaire.setCellValueFactory(cell ->
@@ -550,7 +589,7 @@ public class AdminDashboardController {
         }
 
         if (utilisateurService.deleteUtilisateur(selected.getIdUser())) {
-            showAdminMessage("Utilisateur desactive avec succes.", true);
+            showAdminMessage("Compte désactivé avec succès.", true);
             chargerDonnees();
         } else {
             showAdminMessage("Echec de la suppression utilisateur.", false);
@@ -622,7 +661,7 @@ public class AdminDashboardController {
         }
 
         if (utilisateurService.deleteUtilisateur(selected.id())) {
-            showAdminMessage("Agent desactive avec succes.", true);
+            showAdminMessage("Agent supprim\u00e9 (d\u00e9sactiv\u00e9) avec succ\u00e8s.", true);
             chargerDonnees();
         } else {
             showAdminMessage("Echec de la suppression agent.", false);
@@ -1134,6 +1173,21 @@ public class AdminDashboardController {
         return dialog.showAndWait();
     }
 
+    private void filtrerAgents() {
+        String zone = filterAgentZoneCombo != null ? filterAgentZoneCombo.getValue() : null;
+        String search = searchAgentField != null ? searchAgentField.getText() : null;
+        boolean allZones = zone == null || "Toutes les zones".equals(zone);
+        boolean noSearch = search == null || search.isBlank();
+        if (allZones && noSearch) { tableAgents.setItems(agents); return; }
+        String lowerSearch = noSearch ? "" : search.toLowerCase(java.util.Locale.ROOT);
+        tableAgents.setItems(javafx.collections.FXCollections.observableArrayList(
+            agents.stream().filter(a ->
+                (allZones || zone.equals(a.zone())) &&
+                (noSearch || a.nom().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)
+                    || a.email().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)))
+            .collect(java.util.stream.Collectors.toList())));
+    }
+
     private void configureUsersTable() {
         colUserId.setCellValueFactory(new PropertyValueFactory<>("idUser"));
         colUserNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
@@ -1155,8 +1209,20 @@ public class AdminDashboardController {
     private void configureAgentsTable() {
         colAgentId.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().id()).asObject());
         colAgentNom.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
+        if (colAgentEmail != null) colAgentEmail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().email()));
         colAgentZone.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
         colAgentTraites.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().nombreTraites()).asObject());
+        if (colAgentStatut != null) colAgentStatut.setCellFactory(col -> new javafx.scene.control.TableCell<AgentStatsRow, Void>() {
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                if (empty) { setGraphic(null); return; }
+                AgentStatsRow row = getTableView().getItems().get(getIndex());
+                boolean actif = row.actif();
+                javafx.scene.control.Label lbl = new javafx.scene.control.Label(actif ? "\u2705 Actif" : "\u274c Inactif");
+                lbl.setStyle(actif ? "-fx-text-fill:#2E7D32;-fx-font-weight:bold;" : "-fx-text-fill:#C62828;-fx-font-weight:bold;");
+                setGraphic(lbl);
+            }
+        });
 
         centerColumn(colAgentId);
         centerColumn(colAgentNom);
@@ -1437,15 +1503,21 @@ public class AdminDashboardController {
     public static class AgentStatsRow {
         private final int id;
         private final String nom;
+        private final String email;
         private final String zone;
         private final int nombreTraites;
+        private final boolean actif;
 
-        public AgentStatsRow(int id, String nom, String zone, int nombreTraites) {
+        public AgentStatsRow(int id, String nom, String email, String zone, int nombreTraites, boolean actif) {
             this.id = id;
             this.nom = nom;
+            this.email = email;
             this.zone = zone;
             this.nombreTraites = nombreTraites;
+            this.actif = actif;
         }
+        public String email() { return email; }
+        public boolean actif() { return actif; }
 
         public int id() {
             return id;

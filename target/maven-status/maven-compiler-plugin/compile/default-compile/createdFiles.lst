@@ -6,6 +6,7 @@ com\smartcity\service\GeolocationService$Coordinates.class
 com\smartcity\controller\CitizenDashboardController$2.class
 com\smartcity\controller\AgentDashboardController$1.class
 com\smartcity\model\Signalement.class
+com\smartcity\controller\AdminDashboardController$6.class
 com\smartcity\controller\AgentDashboardController$12.class
 com\smartcity\service\GeolocationService.class
 com\smartcity\controller\LoginController.class

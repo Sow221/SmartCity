@@ -359,14 +359,14 @@ public class UtilisateurService {
     public List<AgentStats> getAgentsWithStats() {
         List<AgentStats> result = new ArrayList<>();
         String query =
-            "SELECT u.idUser, u.nom, z.nomZone, " +
+            "SELECT u.idUser, u.nom, u.email, z.nomZone, u.actif, " +
             "COUNT(CASE WHEN s.statut = ? THEN 1 END) AS traites " +
             "FROM Utilisateur u " +
             "LEFT JOIN Zone z ON u.idZone = z.idZone " +
             "LEFT JOIN Affectation a ON a.idAgent = u.idUser " +
             "LEFT JOIN Signalement s ON s.idSignalement = a.idSignalement " +
-            "WHERE u.role = 'Agent' AND u.actif = 1 " +
-            "GROUP BY u.idUser, u.nom, z.nomZone ORDER BY u.nom";
+            "WHERE u.role = 'Agent' " +
+            "GROUP BY u.idUser, u.nom, u.email, z.nomZone, u.actif ORDER BY u.nom";
         try (Connection conn = getConn();
              java.sql.PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, com.smartcity.model.SignalementStatut.TERMINE.dbValue());
@@ -375,8 +375,10 @@ public class UtilisateurService {
                     result.add(new AgentStats(
                         rs.getInt("idUser"),
                         rs.getString("nom"),
+                        rs.getString("email") != null ? rs.getString("email") : "",
                         rs.getString("nomZone") != null ? rs.getString("nomZone") : "Zone inconnue",
-                        rs.getInt("traites")
+                        rs.getInt("traites"),
+                        rs.getInt("actif") == 1
                     ));
                 }
             }
@@ -387,7 +389,7 @@ public class UtilisateurService {
     }
 
     /** DTO léger pour les stats agent — évite de charger l'objet Utilisateur complet. */
-    public record AgentStats(int idUser, String nom, String zoneNom, int traites) {}
+    public record AgentStats(int idUser, String nom, String email, String zoneNom, int traites, boolean actif) {}
 
     public int countAllActifs() {
         String query = "SELECT COUNT(*) FROM Utilisateur WHERE actif = 1";

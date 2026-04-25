@@ -16,6 +16,7 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+<<<<<<< HEAD
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -132,6 +133,150 @@ public class GpsApiServer {
         }
     }
 
+=======
+import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+/**
+ * Serveur HTTP embarquÃƒÂ© pour la gÃƒÂ©olocalisation GPS temps rÃƒÂ©el.
+ * Agents et citoyens envoient leur position depuis un navigateur mobile.
+ * Port : rÃƒÂ©solu dynamiquement via GeoConfig (3001 par dÃƒÂ©faut).
+ */
+public class GpsApiServer {
+
+
+    /**
+     * Ã¢â€žÂ¹Ã¯Â¸Â NOTES SUR LES PROTOCOLES:
+     * 
+     * HTTP (PORT 3001):
+     *   - Ã¢Å“â€¦ Fonctionne parfaitement sur WiFi local (192.168.x.x, 10.x.x.x)
+     *   - Ã¢Å“â€¦ Pas d'avertissement certificat
+     *   - Ã¢Å“â€¦ IdÃƒÂ©al pour dÃƒÂ©veloppement et tests
+     *   - Ã¢Å“â€¦ UtilisÃƒÂ© par dÃƒÂ©faut si HTTPS bloquÃƒÂ©
+     * 
+     * HTTPS (PORT 3002):
+     *   - Ã¢Å“â€¦ SÃƒÂ©curisÃƒÂ© pour production
+     *   - Ã¢Å¡Â Ã¯Â¸Â Certificat auto-signÃƒÂ© Ã¢â€ â€™ avertissements navigateur mobile
+     *   - Ã°Å¸â€™Â¡ Solution: utiliser HTTP sur WiFi local, HTTPS en production
+     * 
+     * RECOMMANDATION: Pour dÃƒÂ©veloppement/tests, prÃƒÂ©fÃƒÂ©rer HTTP avec WiFi local
+     */
+
+
+    private static final Logger logger = LoggerFactory.getLogger(GpsApiServer.class);
+
+    /** Port rÃƒÂ©solu une seule fois au dÃƒÂ©marrage Ã¢â‚¬â€ utilisÃƒÂ© par PositionAgentService et MainApp. */
+    public static final int PORT = GeoConfig.getGpsPort();
+    public static final int HTTPS_PORT = PORT + 1;
+
+    private static final ConcurrentHashMap<Integer, String> agentTokens   = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, String> citizenTokens = new ConcurrentHashMap<>();
+
+    private HttpServer server;
+    private HttpsServer httpsServer;
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Tokens Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    public static String getOrCreateToken(int agentId) {
+        String token = agentTokens.computeIfAbsent(agentId,
+                id -> UUID.randomUUID().toString().replace("-", ""));
+        saveTokenToDatabase(agentId, "agent", token);
+        return token;
+    }
+
+    public static String getOrCreateCitizenToken(int citizenId) {
+        String token = citizenTokens.computeIfAbsent(citizenId,
+                id -> UUID.randomUUID().toString().replace("-", ""));
+        saveTokenToDatabase(citizenId, "citizen", token);
+        return token;
+    }
+
+    public static boolean isValidAgentToken(String token) {
+        return token != null && agentTokens.values().stream().anyMatch(t -> t.equals(token));
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DÃƒÂ©marrage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    public void start(int defaultAgentId) throws IOException {
+        ensureGpsSchema();
+        AffectationService.resetPositionTableFlag();
+
+        int resolvedPort = GeoConfig.getGpsPort();
+        server = HttpServer.create(new InetSocketAddress("0.0.0.0", resolvedPort), 0);
+        httpsServer = HttpsServer.create(new InetSocketAddress("0.0.0.0", HTTPS_PORT), 0);
+
+        createContexts(server);
+        createContexts(httpsServer);
+
+        httpsServer.setHttpsConfigurator(new HttpsConfigurator(createSslContext()) {
+            @Override
+            public void configure(HttpsParameters params) {
+                SSLContext c = getSSLContext();
+                SSLParameters sslParams = c.getDefaultSSLParameters();
+                sslParams.setNeedClientAuth(false);
+                params.setSSLParameters(sslParams);
+            }
+        });
+
+        var executor = Executors.newFixedThreadPool(8);
+        server.setExecutor(executor);
+        httpsServer.setExecutor(executor);
+
+        server.start();
+        httpsServer.start();
+        logger.info("Ã¢Å“â€¦ GPS API Server dÃƒÂ©marrÃƒÂ© sur http://{}:{} (recommandÃƒÂ© en test) et https://{}:{}", getLocalIp(), PORT, getLocalIp(), HTTPS_PORT);
+    }
+
+    public void stop() {
+        if (server != null) {
+            server.stop(0);
+        }
+        if (httpsServer != null) {
+            httpsServer.stop(0);
+        }
+        logger.info("GPS API Server arrÃƒÂªtÃƒÂ©");
+    }
+
+    private void createContexts(HttpServer server) {
+        server.createContext("/api/position",        this::handlePosition);
+        server.createContext("/api/citizen-position", this::handleCitizenPosition);
+        server.createContext("/gps", exchange -> {
+            int id = parseParam(exchange.getRequestURI().getQuery(), "agentId");
+            if (id <= 0) { exchange.sendResponseHeaders(400, -1); return; }
+            handleGpsPage(exchange, id, "agent");
+        });
+        server.createContext("/citizen-gps", exchange -> {
+            int id = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
+            if (id <= 0) { exchange.sendResponseHeaders(400, -1); return; }
+            handleGpsPage(exchange, id, "citizen");
+        });
+    }
+
+    private SSLContext createSslContext() {
+        try {
+            KeyStore keyStore = createSelfSignedKeyStore();
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            char[] password = "changeit".toCharArray();
+            kmf.init(keyStore, password);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
+            return sslContext;
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible de crÃƒÂ©er le SSLContext pour le serveur HTTPS", e);
+        }
+    }
+
+>>>>>>> 5121ef39d7ee82acebd416c9f69d5ae26be83c0e
     @SuppressWarnings("restriction")
     private KeyStore createSelfSignedKeyStore() throws Exception {
         char[] password = "changeit".toCharArray();
@@ -153,6 +298,7 @@ public class GpsApiServer {
         ks.setKeyEntry("gps", privateKey, password, new java.security.cert.Certificate[]{cert});
         return ks;
     }
+<<<<<<< HEAD
 
     // ── URLs publiques ───────────────────────────────────────────────────────
 
@@ -487,6 +633,334 @@ public class GpsApiServer {
         // pour eviter les problemes de location.host sur mobile
         String serverIp = getLocalIp();
         String apiUrl   = "http://" + serverIp + ":" + PORT + "/api/" + apiPath;
+=======
+    // Ã¢â€â‚¬Ã¢â€â‚¬ URLs publiques Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    public static String getLocalIp() {
+        // Ã¢Å“â€¦ UTILISER LA SOURCE CENTRALISÃƒâ€°E (NetworkUtils) - UNIQUE SOURCE DE VÃƒâ€°RITÃƒâ€°
+        return com.smartcity.utils.NetworkUtils.detectLocalIp();
+    }
+
+    public static String getGpsPageUrl(int agentId) {
+        return getGpsPageUrl(agentId, getLocalIp());
+    }
+
+    public static String getGpsPageUrl(int agentId, String ip) {
+        String token = getOrCreateToken(agentId);
+        return "https://" + ip + ":" + HTTPS_PORT + "/gps?agentId=" + agentId + "&token=" + token;
+    }
+
+    public static String getCitizenGpsPageUrl(int citizenId) {
+        return getCitizenGpsPageUrl(citizenId, getLocalIp());
+    }
+
+    public static String getCitizenGpsPageUrl(int citizenId, String ip) {
+        String token = getOrCreateCitizenToken(citizenId);
+        return "https://" + ip + ":" + HTTPS_PORT + "/citizen-gps?citizenId=" + citizenId + "&token=" + token;
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ SchÃƒÂ©ma DB Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    private void ensureGpsSchema() {
+        try (Connection conn = DatabaseConnection.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS position_agent ("
+                    + "idAgent INT PRIMARY KEY, latitude DECIMAL(10,8) NOT NULL, "
+                    + "longitude DECIMAL(11,8) NOT NULL, "
+                    + "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (idAgent) REFERENCES Utilisateur(idUser) ON DELETE CASCADE)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS position_citoyen ("
+                    + "idCitoyen INT PRIMARY KEY, latitude DECIMAL(10,8) NOT NULL, "
+                    + "longitude DECIMAL(11,8) NOT NULL, "
+                    + "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (idCitoyen) REFERENCES Utilisateur(idUser) ON DELETE CASCADE)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS gps_token ("
+                    + "id INT AUTO_INCREMENT PRIMARY KEY, userId INT NOT NULL, "
+                    + "userType ENUM('agent','citizen') NOT NULL, "
+                    + "token VARCHAR(255) UNIQUE NOT NULL, "
+                    + "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, "
+                    + "FOREIGN KEY (userId) REFERENCES Utilisateur(idUser) ON DELETE CASCADE, "
+                    + "UNIQUE KEY uq_user_type (userId, userType))");
+
+            if (!hasColumn(conn, "Zone", "latitude")) {
+                stmt.execute("ALTER TABLE Zone ADD COLUMN latitude DECIMAL(10,8) DEFAULT 0.0");
+                stmt.execute("ALTER TABLE Zone ADD COLUMN longitude DECIMAL(11,8) DEFAULT 0.0");
+                stmt.execute("UPDATE Zone SET latitude=14.7646, longitude=-17.3920 WHERE nomZone='Pikine'");
+                stmt.execute("UPDATE Zone SET latitude=14.7765, longitude=-17.4047 "
+                        + "WHERE nomZone IN ('GuÃƒÂ©diawaye','Guediawaye')");
+                logger.info("Ã¢Å“â€¦ Colonnes GPS Zone initialisÃƒÂ©es");
+            }
+
+            loadTokensFromDatabase(conn);
+
+        } catch (SQLException e) {
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Initialisation schÃƒÂ©ma GPS incomplÃƒÂ¨te: {}", e.getMessage());
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String table, String col) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                + "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?")) {
+            ps.setString(1, table);
+            ps.setString(2, col);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private void loadTokensFromDatabase(Connection conn) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT userId, userType, token FROM gps_token "
+                + "WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)");
+             java.sql.ResultSet rs = ps.executeQuery()) {
+            int count = 0;
+            while (rs.next()) {
+                int uid = rs.getInt("userId");
+                String type = rs.getString("userType");
+                String token = rs.getString("token");
+                if ("agent".equals(type))   agentTokens.put(uid, token);
+                else                        citizenTokens.put(uid, token);
+                count++;
+            }
+            if (count > 0) logger.info("Ã¢Å“â€¦ {} tokens GPS rechargÃƒÂ©s depuis la base", count);
+        } catch (SQLException e) {
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Erreur chargement tokens GPS: {}", e.getMessage());
+        }
+    }
+
+    public static void saveTokenToDatabase(int userId, String type, String token) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO gps_token (userId, userType, token) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE token=?, createdAt=NOW()")) {
+            ps.setInt(1, userId);
+            ps.setString(2, type);
+            ps.setString(3, token);
+            ps.setString(4, token);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Erreur sauvegarde token GPS: {}", e.getMessage());
+        }
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Handlers HTTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    private void handlePosition(HttpExchange exchange) throws IOException {
+        addCorsHeaders(exchange);
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            int agentId = parseParam(exchange.getRequestURI().getQuery(), "agentId");
+            String token = parseParamStr(exchange.getRequestURI().getQuery(), "token");
+            if (agentId > 0 && agentTokens.getOrDefault(agentId, "").equals(token)) {
+                double[] pos = readPosition(agentId);
+                sendJson(exchange, 200, pos != null
+                        ? String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1])
+                        : "{\"status\":\"not_found\"}");
+            } else {
+                sendJson(exchange, 403, "{\"status\":\"forbidden\"}");
+            }
+            return;
+        }
+
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            int agentId    = parseBodyInt(body, "agentId");
+            double lat     = parseBodyDouble(body, "lat");
+            double lon     = parseBodyDouble(body, "lon");
+            String token   = parseBodyStr(body, "token");
+
+            if (agentId > 0 && agentTokens.getOrDefault(agentId, "").equals(token)
+                    && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                savePosition(agentId, lat, lon);
+                sendJson(exchange, 200, "{\"status\":\"ok\"}");
+            } else {
+                sendJson(exchange, 400, "{\"status\":\"invalid\"}");
+            }
+        } catch (Exception e) {
+            logger.error("Ã¢ÂÅ’ handlePosition: {}", e.getMessage());
+            sendJson(exchange, 500, "{\"status\":\"error\"}");
+        }
+    }
+
+    private void handleCitizenPosition(HttpExchange exchange) throws IOException {
+        addCorsHeaders(exchange);
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            int citizenId = parseParam(exchange.getRequestURI().getQuery(), "citizenId");
+            String token  = parseParamStr(exchange.getRequestURI().getQuery(), "token");
+            if (citizenId > 0 && citizenTokens.getOrDefault(citizenId, "").equals(token)) {
+                double[] pos = readCitizenPosition(citizenId);
+                sendJson(exchange, 200, pos != null
+                        ? String.format("{\"lat\":%.6f,\"lon\":%.6f}", pos[0], pos[1])
+                        : "{\"status\":\"not_found\"}");
+            } else {
+                sendJson(exchange, 403, "{\"status\":\"forbidden\"}");
+            }
+            return;
+        }
+
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            int citizenId = parseBodyInt(body, "citizenId");
+            double lat    = parseBodyDouble(body, "lat");
+            double lon    = parseBodyDouble(body, "lon");
+            String token  = parseBodyStr(body, "token");
+
+            if (citizenId > 0 && citizenTokens.getOrDefault(citizenId, "").equals(token)
+                    && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                saveCitizenPosition(citizenId, lat, lon);
+                sendJson(exchange, 200, "{\"status\":\"ok\"}");
+            } else {
+                sendJson(exchange, 400, "{\"status\":\"invalid\"}");
+            }
+        } catch (Exception e) {
+            logger.error("Ã¢ÂÅ’ handleCitizenPosition: {}", e.getMessage());
+            sendJson(exchange, 500, "{\"status\":\"error\"}");
+        }
+    }
+
+    private void handleGpsPage(HttpExchange exchange, int userId, String userType) throws IOException {
+        exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+        byte[] bytes = buildGpsHtml(userId, userType).getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DB positions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    private double[] readPosition(int agentId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT latitude, longitude FROM position_agent WHERE idAgent=?")) {
+            ps.setInt(1, agentId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
+            }
+        } catch (SQLException e) { return null; }
+    }
+
+    private void savePosition(int agentId, double lat, double lon) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO position_agent (idAgent,latitude,longitude) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE latitude=?,longitude=?,updatedAt=NOW()")) {
+            ps.setInt(1, agentId); ps.setDouble(2, lat); ps.setDouble(3, lon);
+            ps.setDouble(4, lat);  ps.setDouble(5, lon);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Ã¢ÂÅ’ savePosition agent {}: {}", agentId, e.getMessage());
+        }
+    }
+
+    private double[] readCitizenPosition(int citizenId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT latitude, longitude FROM position_citoyen WHERE idCitoyen=?")) {
+            ps.setInt(1, citizenId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? new double[]{rs.getDouble(1), rs.getDouble(2)} : null;
+            }
+        } catch (SQLException e) { return null; }
+    }
+
+    private void saveCitizenPosition(int citizenId, double lat, double lon) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO position_citoyen (idCitoyen,latitude,longitude) VALUES (?,?,?) "
+                + "ON DUPLICATE KEY UPDATE latitude=?,longitude=?,updatedAt=NOW()")) {
+            ps.setInt(1, citizenId); ps.setDouble(2, lat); ps.setDouble(3, lon);
+            ps.setDouble(4, lat);    ps.setDouble(5, lon);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Ã¢ÂÅ’ saveCitizenPosition citoyen {}: {}", citizenId, e.getMessage());
+        }
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Helpers HTTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    private void addCorsHeaders(HttpExchange exchange) {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+    }
+
+    private void sendJson(HttpExchange exchange, int code, String body) throws IOException {
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(code, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
+    }
+
+    private int parseParam(String query, String key) {
+        if (query == null) return -1;
+        for (String p : query.split("&")) {
+            String[] kv = p.split("=", 2);
+            if (kv.length == 2 && key.equals(kv[0])) {
+                try { return Integer.parseInt(kv[1]); } catch (Exception e) { return -1; }
+            }
+        }
+        return -1;
+    }
+
+    private String parseParamStr(String query, String key) {
+        if (query == null) return null;
+        for (String p : query.split("&")) {
+            String[] kv = p.split("=", 2);
+            if (kv.length == 2 && key.equals(kv[0])) return kv[1];
+        }
+        return null;
+    }
+
+    private int parseBodyInt(String body, String key) {
+        try { return Integer.parseInt(parseBodyStr(body, key)); } catch (Exception e) { return -1; }
+    }
+
+    private double parseBodyDouble(String body, String key) {
+        try { return Double.parseDouble(parseBodyStr(body, key)); } catch (Exception e) { return 0; }
+    }
+
+    private String parseBodyStr(String body, String key) {
+        for (String p : body.split("&")) {
+            String[] kv = p.split("=", 2);
+            if (kv.length == 2 && key.equals(kv[0])) return kv[1];
+        }
+        return "";
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Page HTML mobile Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    private String buildGpsHtml(int userId, String userType) {
+        String token = "agent".equals(userType) ? getOrCreateToken(userId) : getOrCreateCitizenToken(userId);
+        String apiPath = "/api/" + ("agent".equals(userType) ? "position" : "citizen-position");
+        String userParam = "agent".equals(userType) ? "agentId" : "citizenId";
+        String title = "agent".equals(userType) ? "Agent GPS" : "Citizen GPS";
+        String bgColor = "agent".equals(userType) ? "#1565C0" : "#2E7D32";
+>>>>>>> 5121ef39d7ee82acebd416c9f69d5ae26be83c0e
 
         return "<!DOCTYPE html><html><head>"
             + "<meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -509,6 +983,7 @@ public class GpsApiServer {
             + ".btn:active{background:rgba(255,255,255,0.4);}"
             + "#warn{font-size:12px;color:rgba(255,255,255,0.7);margin-top:10px;max-width:320px;}"
             + "</style></head><body>"
+<<<<<<< HEAD
             + "<h2>\uD83D\uDCCD SmartCity " + title + "</h2>"
             + "<div id='status'>Activation GPS...</div>"
             + "<div id='coords'></div>"
@@ -546,3 +1021,35 @@ public class GpsApiServer {
             + "</script></body></html>";
     }
 }
+=======
+            + "<h2>SmartCity " + title + "</h2>"
+            + "<div id='status'>GPS activation...</div>"
+            + "<div id='coords'></div>"
+            + "<button class='btn' onclick='tryGps()'>Send my GPS position</button>"
+            + "<p id='warn'>GPS requires HTTPS on mobile. Use manual input or connect via local WiFi.</p>"
+            + "<script>"
+            + "var userId=" + userId + ",token='" + token + "',apiUrl=location.protocol+'//'+location.host+'" + apiPath + "',userParam='" + userParam + "';"
+            + "function send(lat,lon,src){"
+            + "  fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+            + "    body:userParam+'='+userId+'&lat='+lat+'&lon='+lon+'&token='+token})"
+            + "  .then(r=>r.json()).then(d=>{"
+            + "    if(d.status==='ok'){"
+            + "      document.getElementById('status').innerHTML='<span class=\"dot\"></span>Sent ('+src+')';"
+            + "      document.getElementById('coords').innerHTML=parseFloat(lat).toFixed(5)+', '+parseFloat(lon).toFixed(5);"
+            + "    } else { document.getElementById('status').innerHTML='Status: '+d.status; }"
+            + "  }).catch(()=>{ document.getElementById('status').innerHTML='Network error. Check WiFi.'; });"
+            + "}"
+            + "function tryGps(){"
+            + "  if(location.protocol!=='https:'){document.getElementById('status').innerHTML='HTTP connection - manual input required';return;}"
+            + "  if(!navigator.geolocation){document.getElementById('status').innerHTML='GPS not available';return;}"
+            + "  document.getElementById('status').innerHTML='GPS request...';"
+            + "  navigator.geolocation.getCurrentPosition(function(p){send(p.coords.latitude,p.coords.longitude,'GPS');},"
+            + "    function(){document.getElementById('status').innerHTML='GPS denied';},"
+            + "    {enableHighAccuracy:true,timeout:8000,maximumAge:0});"
+            + "}"
+            + "if(location.protocol==='https:'){tryGps();}"
+            + "</script></body></html>";
+    }
+}
+
+>>>>>>> 5121ef39d7ee82acebd416c9f69d5ae26be83c0e

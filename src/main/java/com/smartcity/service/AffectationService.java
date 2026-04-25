@@ -304,9 +304,9 @@ public class AffectationService {
         if (positionAgentTableMissing) return new ArrayList<>();
         List<AgentLiveStatus> list = new ArrayList<>();
         String query = "SELECT u.idUser, u.nom, z.nomZone, pa.latitude, pa.longitude, pa.updatedAt, "
-            + "SUM(CASE WHEN s.statut IN ('En attente', 'Affecte', 'En cours') THEN 1 ELSE 0 END) AS missionsActives, "
+            + "SUM(CASE WHEN s.statut IN ('En attente', '" + SignalementStatut.AFFECTE.dbValue() + "', 'En cours') THEN 1 ELSE 0 END) AS missionsActives, "
             + "SUM(CASE WHEN s.statut = 'En cours' THEN 1 ELSE 0 END) AS missionsEnCours, "
-            + "MIN(CASE WHEN s.statut IN ('En attente', 'Affecte', 'En cours') THEN s.dateSignalement END) AS prochaineMissionDate "
+            + "MIN(CASE WHEN s.statut IN ('En attente', '" + SignalementStatut.AFFECTE.dbValue() + "', 'En cours') THEN s.dateSignalement END) AS prochaineMissionDate "
             + "FROM Utilisateur u "
             + "LEFT JOIN Zone z ON u.idZone = z.idZone "
             + "LEFT JOIN position_agent pa ON pa.idAgent = u.idUser "

@@ -242,8 +242,8 @@
                         <Button fx:id="btnModifierAgent" text="Modifier" onAction="#handleModifierAgent" styleClass="btn-outline-sm">
                             <tooltip><Tooltip text="Modifier l'agent sélectionné"/></tooltip>
                         </Button>
-                        <Button fx:id="btnSupprimerAgent" text="Supprimer" onAction="#handleSupprimerAgent" styleClass="danger-button">
-                            <tooltip><Tooltip text="Supprimer l'agent sélectionné"/></tooltip>
+                        <Button fx:id="btnSupprimerAgent" text="Désactiver" onAction="#handleSupprimerAgent" styleClass="danger-button">
+                            <tooltip><Tooltip text="Désactiver le compte agent sélectionné"/></tooltip>
                         </Button>
                     </HBox>
                     <TableView fx:id="tableAgents" VBox.vgrow="ALWAYS" styleClass="data-table">
@@ -393,6 +393,33 @@
                                 </HBox>
                             </VBox>
                         </HBox>
+                        <!-- Ligne 3 KPIs -->
+                        <HBox spacing="12">
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="&#x23F1;" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardTempsResolution" text="-" styleClass="stat-card-number"/><Label text="Temps moyen" styleClass="stat-card-label"/></VBox>
+                                </HBox>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="&#x2605;" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardSatisfaction" text="-" styleClass="stat-card-number"/><Label text="Satisfaction" styleClass="stat-card-label"/></VBox>
+                                </HBox>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-teal" alignment="CENTER"><Label text="&#x1F4C5;" style="-fx-font-size:14px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardAujourdhui" text="0" styleClass="stat-card-number"/><Label text="Aujourd'hui" styleClass="stat-card-label"/></VBox>
+                                </HBox>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER"><Label text="&#x0394;" style="-fx-font-size:16px;"/></StackPane>
+                                    <VBox spacing="2"><Label fx:id="statCardDelta7j" text="0" styleClass="stat-card-number"/><Label text="Delta 7 jours" styleClass="stat-card-label"/></VBox>
+                                </HBox>
+                            </VBox>
+                        </HBox>
                         <HBox spacing="20">
                             <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
                                 <Label text="Répartition par catégorie" styleClass="chart-card-title"/>
@@ -464,7 +491,14 @@
                         </VBox>
                         <VBox spacing="6">
                             <Label text="Rôle" styleClass="auth-field-label"/>
-                            <TextField fx:id="adminProfilRoleField" styleClass="dash-field" editable="false"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-background-color:#eff6ff;-fx-background-radius:8;-fx-padding:10 14;-fx-border-color:#93c5fd;-fx-border-radius:8;-fx-border-width:1;">
+                                <Label text="🔒" style="-fx-font-size:14px;"/>
+                                <Label fx:id="adminProfilRoleField" text="Administrateur" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e40af;"/>
+                            </HBox>
+                        </VBox>
+                        <VBox spacing="6">
+                            <Label text="Membre depuis" styleClass="auth-field-label"/>
+                            <Label fx:id="adminProfilDateLabel" text="-" style="-fx-font-size:13px;-fx-text-fill:#374151;"/>
                         </VBox>
                         <HBox spacing="12">
                             <Button text="Enregistrer les modifications" prefHeight="40" onAction="#handleModifierAdminProfil" styleClass="action-button" HBox.hgrow="ALWAYS"/>

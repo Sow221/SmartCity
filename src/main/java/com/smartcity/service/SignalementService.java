@@ -172,7 +172,7 @@ public class SignalementService {
             } else if ("critique >72h".equals(prioriteNorm)) {
                 query.append(" AND s.statut = 'En attente' AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 72 HOUR)");
             } else if ("a traiter aujourd'hui".equals(prioriteNorm) || "a traiter aujourd hui".equals(prioriteNorm)) {
-                query.append(" AND s.statut IN ('En attente', 'Affecte', 'En cours')");
+                query.append(" AND s.statut IN ('En attente', '" + SignalementStatut.AFFECTE.dbValue() + "', 'En cours')");
             }
         }
         if (affectation != null && !affectation.isBlank()) {
@@ -275,7 +275,7 @@ public class SignalementService {
         return countSimple(
             "SELECT COUNT(*) FROM Signalement s "
             + "LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement "
-            + "WHERE s.statut IN ('En attente', 'Affecte', 'En cours') "
+            + "WHERE s.statut IN ('En attente', '" + SignalementStatut.AFFECTE.dbValue() + "', 'En cours') "
             + "AND a.idAffectation IS NULL");
     }
 
@@ -283,7 +283,7 @@ public class SignalementService {
         return countSimple(
             "SELECT COUNT(DISTINCT a.idAgent) FROM Affectation a "
             + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
-            + "WHERE s.statut IN ('En attente', 'Affecte', 'En cours')");
+            + "WHERE s.statut IN ('En attente', '" + SignalementStatut.AFFECTE.dbValue() + "', 'En cours')");
     }
 
     public int countByStatut(String statut) {
@@ -331,7 +331,7 @@ public class SignalementService {
     public double getTempsResolutionMoyenH() {
         String query = "SELECT AVG(TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)) "
             + "FROM Signalement s JOIN Affectation a ON s.idSignalement = a.idSignalement "
-            + "WHERE s.statut = 'Termine' AND a.dateCollecte IS NOT NULL";
+            + "WHERE s.statut = '" + SignalementStatut.TERMINE.dbValue() + "' AND a.dateCollecte IS NOT NULL";
         try (Connection conn = getConn();
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {

@@ -150,7 +150,8 @@ public class AdminDashboardController {
     @FXML private Label adminProfilNomDisplay;
     @FXML private TextField adminProfilNomField;
     @FXML private TextField adminProfilEmailField;
-    @FXML private TextField adminProfilRoleField;
+    @FXML private Label adminProfilRoleField;
+    @FXML private Label adminProfilDateLabel;
     @FXML private TextField nouvelleZoneField;
     @FXML private Label zonesListLabel;
 
@@ -199,6 +200,12 @@ public class AdminDashboardController {
         configureUsersTable();
         configureAgentsTable();
         configureSignalementsTable();
+        tableSignalements.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Signalement sel = tableSignalements.getSelectionModel().getSelectedItem();
+                if (sel != null) afficherDetailSignalement(sel);
+            }
+        });
         configureLiveAgentsTable();
         configureFilters();
         refreshZoneSettings();
@@ -364,6 +371,8 @@ public class AdminDashboardController {
             adminProfilNomField.setText(current.getNom());
             adminProfilEmailField.setText(current.getEmail());
             adminProfilRoleField.setText(current.getRole());
+            if (adminProfilDateLabel != null && current.getDateInscription() != null)
+                adminProfilDateLabel.setText(current.getDateInscription().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             if (adminProfilAvatarLabel != null)
                 adminProfilAvatarLabel.setText(current.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
             if (adminProfilNomDisplay != null)
@@ -694,6 +703,7 @@ public class AdminDashboardController {
     private void handleReaffecterSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
         if (selected == null) return;
+        if (!confirm("R\u00e9affecter", "R\u00e9affecter le signalement #" + selected.getIdSignalement() + " \u00e0 un autre agent ?")) return;
         affectationService.supprimerAffectationParSignalement(selected.getIdSignalement());
         if (signalementService.updateStatut(selected.getIdSignalement(), "En attente")) {
             affectationService.affecterAgentParZone(selected.getIdSignalement(), selected.getIdZone());
@@ -744,7 +754,7 @@ public class AdminDashboardController {
         java.time.LocalDate dateDebut = filterDateDebutPicker != null ? filterDateDebutPicker.getValue() : null;
         java.time.LocalDate dateFin   = filterDateFinPicker   != null ? filterDateFinPicker.getValue()   : null;
         signalements.setAll(signalementService.getSignalementsFiltres(zone, statut, categorie, dateDebut, dateFin, priorite, affectation));
-        showAdminMessage("Filtres appliques.", true);
+        showAdminMessage("Filtres appliqu\u00e9s.", true);
     }
 
     private void refreshDashboardCharts() {
@@ -884,9 +894,7 @@ public class AdminDashboardController {
         if (statCardDelta7j != null) {
             String deltaText = delta7j > 0 ? "+" + delta7j : String.valueOf(delta7j);
             statCardDelta7j.setText(deltaText);
-            statCardDelta7j.setStyle(delta7j > 0
-                ? "-fx-text-fill: #dc2626; -fx-font-weight: bold;"
-                : "-fx-text-fill: #16a34a; -fx-font-weight: bold;");
+            statCardDelta7j.setStyle("-fx-text-fill: #1565C0; -fx-font-weight: bold;");
         }
 
         if (statPieCategorie != null) {
@@ -930,7 +938,7 @@ public class AdminDashboardController {
                 .append(k.urgents).append(" urgents | "));
             if (noteMoyenne > 0)
                 kpiMsg.append(String.format(" | Satisfaction : %.1f/5 \u2605", noteMoyenne));
-            showAdminMessage(kpiMsg.toString().replaceAll(" \\| $", ""), true);
+            String kpiStr = kpiMsg.toString().replaceAll(" \\| $", ""); if (kpiStr.length() > 120) kpiStr = kpiStr.substring(0, 117) + "..."; showAdminMessage(kpiStr, true);
         }
     }
 
@@ -1386,6 +1394,47 @@ public class AdminDashboardController {
                     com.smartcity.model.SignalementStatut.CATEGORIES.stream()
                 ).collect(java.util.stream.Collectors.toList())));
         filterCategorieCombo.setValue(ALL_CATEGORIES);
+    }
+
+    private void afficherDetailSignalement(Signalement sig) {
+        javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("Signalement #" + sig.getIdSignalement());
+        dialog.setHeaderText(sig.getCategorie() + " \u2014 " + sig.getZoneNom());
+        dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10);
+        content.setPadding(new javafx.geometry.Insets(14));
+        content.setPrefWidth(500);
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        addAdminDetailRow(content, "Zone", sig.getZoneNom());
+        addAdminDetailRow(content, "Cat\u00e9gorie", sig.getCategorie());
+        addAdminDetailRow(content, "Description", sig.getDescription() != null ? sig.getDescription() : "-");
+        addAdminDetailRow(content, "Statut", sig.getStatut());
+        addAdminDetailRow(content, "Citoyen", sig.getUtilisateurNom() != null ? sig.getUtilisateurNom() : "-");
+        addAdminDetailRow(content, "Date signalement", sig.getDateSignalement() != null ? sig.getDateSignalement().format(fmt) : "-");
+        if (sig.getDateCollecte() != null) addAdminDetailRow(content, "Date collecte", sig.getDateCollecte().format(fmt));
+        com.smartcity.model.Affectation aff = affectationService.getAffectationBySignalement(sig.getIdSignalement());
+        if (aff != null) {
+            com.smartcity.model.Utilisateur agent = utilisateurService.getUtilisateurById(aff.getIdAgent());
+            addAdminDetailRow(content, "Agent affect\u00e9", agent != null ? agent.getNom() : "Agent #" + aff.getIdAgent());
+            if (aff.getCommentaire() != null && !aff.getCommentaire().isBlank()) addAdminDetailRow(content, "Commentaire", aff.getCommentaire());
+        }
+        com.smartcity.service.SuiviService.EvaluationEntry eval = suiviService.getEvaluationBySignalement(sig.getIdSignalement());
+        if (eval != null) {
+            addAdminDetailRow(content, "Note citoyen", "\u2605".repeat(eval.note) + "\u2606".repeat(5-eval.note) + " (" + eval.note + "/5)");
+            if (eval.commentaire != null && !eval.commentaire.isBlank()) addAdminDetailRow(content, "Avis citoyen", eval.commentaire);
+        }
+        dialog.getDialogPane().setContent(new javafx.scene.control.ScrollPane(content));
+        dialog.showAndWait();
+    }
+
+    private void addAdminDetailRow(javafx.scene.layout.VBox parent, String label, String value) {
+        javafx.scene.layout.HBox row = new javafx.scene.layout.HBox(10);
+        javafx.scene.control.Label lbl = new javafx.scene.control.Label(label + " :");
+        lbl.setStyle("-fx-font-weight:bold;-fx-min-width:150px;-fx-text-fill:#374151;");
+        javafx.scene.control.Label val = new javafx.scene.control.Label(value);
+        val.setWrapText(true); val.setStyle("-fx-text-fill:#1f2937;");
+        row.getChildren().addAll(lbl, val);
+        parent.getChildren().add(row);
     }
 
     private void showAdminDashboardPage() {

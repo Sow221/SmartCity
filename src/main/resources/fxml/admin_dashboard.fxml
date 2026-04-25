@@ -242,8 +242,8 @@
                         <Button fx:id="btnModifierAgent" text="Modifier" onAction="#handleModifierAgent" styleClass="btn-outline-sm">
                             <tooltip><Tooltip text="Modifier l'agent sélectionné"/></tooltip>
                         </Button>
-                        <Button fx:id="btnSupprimerAgent" text="Supprimer" onAction="#handleSupprimerAgent" styleClass="danger-button">
-                            <tooltip><Tooltip text="Supprimer l'agent sélectionné"/></tooltip>
+                        <Button fx:id="btnSupprimerAgent" text="Désactiver" onAction="#handleSupprimerAgent" styleClass="danger-button">
+                            <tooltip><Tooltip text="Désactiver le compte agent sélectionné"/></tooltip>
                         </Button>
                     </HBox>
                     <TableView fx:id="tableAgents" VBox.vgrow="ALWAYS" styleClass="data-table">

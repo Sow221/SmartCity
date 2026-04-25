@@ -584,7 +584,7 @@ public class AdminDashboardController {
             return;
         }
 
-        if (!confirm("Confirmer", "Supprimer l'utilisateur " + selected.getNom() + " ?")) {
+        if (!confirm("Confirmer", "Désactiver le compte de " + selected.getNom() + " ?")) {
             return;
         }
 
@@ -592,7 +592,7 @@ public class AdminDashboardController {
             showAdminMessage("Compte désactivé avec succès.", true);
             chargerDonnees();
         } else {
-            showAdminMessage("Echec de la suppression utilisateur.", false);
+            showAdminMessage("Echec de la désactivation du compte.", false);
         }
     }
 
@@ -656,15 +656,15 @@ public class AdminDashboardController {
             return;
         }
 
-        if (!confirm("Confirmer", "Supprimer l'agent " + selected.nom() + " ?")) {
+        if (!confirm("Confirmer", "Désactiver le compte de l'agent " + selected.nom() + " ?")) {
             return;
         }
 
         if (utilisateurService.deleteUtilisateur(selected.id())) {
-            showAdminMessage("Agent supprim\u00e9 (d\u00e9sactiv\u00e9) avec succ\u00e8s.", true);
+            showAdminMessage("Agent désactivé avec succès.", true);
             chargerDonnees();
         } else {
-            showAdminMessage("Echec de la suppression agent.", false);
+            showAdminMessage("Echec de la désactivation de l'agent.", false);
         }
     }
 

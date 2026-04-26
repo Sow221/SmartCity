@@ -515,10 +515,22 @@
     -fx-font-size: 12px;
 }
 
+.chart-legend-item .label {
+    -fx-text-fill: #374151;
+}
+
 .chart-legend-item-symbol {
     -fx-background-radius: 4px;
     -fx-pref-width: 12px;
     -fx-pref-height: 12px;
+}
+
+.axis,
+.axis-label,
+.axis .label,
+.axis .tick-label {
+    -fx-text-fill: #374151;
+    -fx-fill: #374151;
 }
 
 .chart-pie-label {
@@ -536,7 +548,19 @@
     -fx-text-fill: #D1D5DB;
 }
 
+.app-root.dark-mode .chart-legend-item .label {
+    -fx-text-fill: #D1D5DB;
+}
+
 .app-root.dark-mode .chart-pie-label {
+    -fx-fill: #D1D5DB;
+}
+
+.app-root.dark-mode .axis,
+.app-root.dark-mode .axis-label,
+.app-root.dark-mode .axis .label,
+.app-root.dark-mode .axis .tick-label {
+    -fx-text-fill: #D1D5DB;
     -fx-fill: #D1D5DB;
 }
 
@@ -1186,6 +1210,7 @@
 }
 .app-root.dark-mode .data-table-agent .column-header-background { -fx-background-color: #252538; }
 .app-root.dark-mode .data-table-agent .column-header { -fx-text-fill: #93c5fd; }
+.app-root.dark-mode .data-table-agent .column-header .label { -fx-text-fill: #93c5fd; }
 .app-root.dark-mode .data-table-agent .table-row-cell { -fx-background-color: #1e1e2e; }
 .app-root.dark-mode .data-table-agent .table-row-cell:odd { -fx-background-color: #252538; }
 .app-root.dark-mode .data-table-agent .table-row-cell:selected { -fx-background-color: #1e3a5f; }
@@ -1282,6 +1307,24 @@
     -fx-font-weight: bold;
     -fx-text-fill: #1e3a5f;
     -fx-padding: 12px 8px;
+}
+
+/* Force l'affichage des noms de colonnes (meme si une autre regle les masque) */
+.data-table-agent .column-header .label {
+    -fx-text-fill: #1e3a5f;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-opacity: 1;
+}
+.data-table-agent .column-header-background,
+.data-table-agent .nested-column-header,
+.data-table-agent .table-header-row {
+    -fx-visible: true;
+    visibility: visible;
+    -fx-opacity: 1;
+    -fx-min-height: 32px;
+    -fx-pref-height: 36px;
+    -fx-max-height: 1000px;
 }
 
 .data-table-agent .table-row-cell:selected {
@@ -1430,6 +1473,19 @@
     -fx-font-weight: bold;
     -fx-text-fill: #374151;
     -fx-padding: 12px 8px;
+}
+.data-table .column-header .label {
+    -fx-text-fill: #374151;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-opacity: 1;
+}
+.data-table .column-header-background,
+.data-table .nested-column-header,
+.data-table .table-header-row {
+    -fx-opacity: 1;
+    -fx-min-height: 32px;
+    -fx-pref-height: 36px;
 }
 .data-table .table-row-cell {
     -fx-background-color: white;
@@ -2617,3 +2673,4 @@
     -fx-border-width: 1px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 8, 0, 0, 2);
 }
+

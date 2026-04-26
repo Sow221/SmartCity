@@ -220,6 +220,7 @@ public class AdminDashboardController {
             btnReaffecterSignalement.disableProperty().bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
 
         tableUtilisateurs.setItems(utilisateurs);
+        tableUtilisateurs.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         // Recherche temps reel utilisateurs
         if (searchUserField != null) {
             searchUserField.textProperty().addListener((obs, old, val) -> {
@@ -232,6 +233,7 @@ public class AdminDashboardController {
             });
         }
         tableAgents.setItems(agents);
+        tableAgents.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         // Filtre zone + recherche agents
         if (filterAgentZoneCombo != null) {
             filterAgentZoneCombo.getItems().clear();
@@ -244,6 +246,7 @@ public class AdminDashboardController {
             searchAgentField.textProperty().addListener((obs, old, val) -> filtrerAgents());
         }
         tableSignalements.setItems(signalements);
+        tableSignalements.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         if (tableLiveAgents != null) tableLiveAgents.setItems(liveAgents);
         // Pagination : boutons Précédent/Suivant ajoutés dynamiquement sous la table
         ajouterPagination();
@@ -280,7 +283,6 @@ public class AdminDashboardController {
                 int encours    = signalementService.countByStatut("En cours") + signalementService.countByStatut("Affect\u00e9");
                 int collectes  = signalementService.countByStatut("Termin\u00e9");
                 int urgents    = signalementService.countUrgents();
-                int totalUsers = utilisateurService.countAllActifs();
                 List<Utilisateur> users = utilisateurService.getUtilisateursByRole("Citoyen");
                 List<Signalement> sigs  = signalementService.getAllSignalements();
                 // Fix N+1 agents : 1 seule requête SQL avec JOIN
@@ -288,31 +290,40 @@ public class AdminDashboardController {
                 // Fix N+1 colonne agent : 1 seule requête JOIN
                 java.util.Map<Integer, String> agentParSig = affectationService.getAgentNomParSignalement();
                 javafx.application.Platform.runLater(() -> {
-                    adminCardTotalSignalements.setText(String.valueOf(total));
-                    adminCardEnAttente.setText(String.valueOf(attente));
-                    adminCardEnCours.setText(String.valueOf(encours));
-                    adminCardCollectes.setText(String.valueOf(collectes));
-                    adminCardTotalUtilisateurs.setText(String.valueOf(totalUsers));
-                    if (adminCardUrgents != null) {
-                        adminCardUrgents.setText(String.valueOf(urgents));
-                        adminCardUrgents.setStyle(urgents > 0
-                            ? "-fx-text-fill: #D32F2F; -fx-font-weight: bold;"
-                            : "-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                    try {
+                        adminCardTotalSignalements.setText(String.valueOf(total));
+                        adminCardEnAttente.setText(String.valueOf(attente));
+                        adminCardEnCours.setText(String.valueOf(encours));
+                        adminCardCollectes.setText(String.valueOf(collectes));
+                        adminCardTotalUtilisateurs.setText(String.valueOf(users.size()));
+                        if (adminCardUrgents != null) {
+                            adminCardUrgents.setText(String.valueOf(urgents));
+                            adminCardUrgents.setStyle(urgents > 0
+                                ? "-fx-text-fill: #D32F2F; -fx-font-weight: bold;"
+                                : "-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                        }
+                        utilisateurs.setAll(users);
+                        signalements.setAll(sigs);
+                        agents.clear();
+                        agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.email(), a.zoneNom(), a.traites(), a.actif())));
+                        // Appliquer la map agent sans requetes supplementaires
+                        if (colSignalementCommentaire != null) {
+                            colSignalementCommentaire.setCellValueFactory(cell ->
+                                new SimpleStringProperty(agentParSig.getOrDefault(cell.getValue().getIdSignalement(), "-")));
+                        }
+                        refreshLiveTracking();
+                        refreshDashboardCharts();
+                        if (pageStatistiques != null && pageStatistiques.isVisible()) refreshCharts();
+                    } catch (Exception ex) {
+                        showAdminMessage("Erreur lors de la mise a jour de l'interface.", false);
+                    } finally {
+                        if (loadingSpinner != null) {
+                            loadingSpinner.setVisible(false);
+                            loadingSpinner.setManaged(false);
+                        }
+                        if (btnActualiser != null) btnActualiser.setDisable(false);
+                        isLoading = false;
                     }
-                    utilisateurs.setAll(users);
-                    signalements.setAll(sigs);
-                    agents.clear();
-                    agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.email(), a.zoneNom(), a.traites(), a.actif())));
-                    // Appliquer la map agent sans requêtes supplémentaires
-                    if (colSignalementCommentaire != null)
-                        colSignalementCommentaire.setCellValueFactory(cell ->
-                            new SimpleStringProperty(agentParSig.getOrDefault(cell.getValue().getIdSignalement(), "-")));
-                    refreshLiveTracking();
-                    if (loadingSpinner != null) { loadingSpinner.setVisible(false); loadingSpinner.setManaged(false); }
-                    if (btnActualiser != null) btnActualiser.setDisable(false);
-                    isLoading = false;
-                    refreshDashboardCharts();
-                    if (pageStatistiques != null && pageStatistiques.isVisible()) refreshCharts();
                 });
                 return null;
             }
@@ -361,7 +372,12 @@ public class AdminDashboardController {
     @FXML
     private void handleShowStatistiques() {
         showPage(pageStatistiques, btnStatistiques);
-        refreshChartsAnimated();
+        try {
+            refreshChartsAnimated();
+        } catch (Exception ex) {
+            showAdminMessage("Erreur affichage statistiques. Rechargement...", false);
+            javafx.application.Platform.runLater(this::refreshCharts);
+        }
     }
 
     @FXML
@@ -504,13 +520,18 @@ public class AdminDashboardController {
         try (java.io.OutputStreamWriter fw = new java.io.OutputStreamWriter(
                 new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
             fw.write('\uFEFF');
-            fw.write("Zone,Total,En attente,En cours,Termin\u00e9,Taux resolution\n");
+            writeCsvLine(fw, "Zone", "Total", "En attente", "En cours", "Termine", "Taux resolution");
             for (com.smartcity.service.SuiviService.KpiZone k : suiviService.getKpiParZone()) {
                 String taux = String.format(java.util.Locale.US, "%.1f%%", k.tauxResolution);
-                fw.write(String.format("%s,%d,%d,%d,%d,%s\n",
-                    k.nomZone, k.total, k.enAttente, k.enCours, k.termines, taux));
+                writeCsvLine(fw,
+                    k.nomZone,
+                    String.valueOf(k.total),
+                    String.valueOf(k.enAttente),
+                    String.valueOf(k.enCours),
+                    String.valueOf(k.termines),
+                    taux);
             }
-            showAdminMessage("Export statistiques réussi : " + file.getName(), true);
+            showAdminMessage("Export statistiques reussi : " + file.getName(), true);
         } catch (java.io.IOException e) {
             showAdminMessage("Erreur export statistiques.", false);
         }
@@ -527,16 +548,19 @@ public class AdminDashboardController {
         try (java.io.OutputStreamWriter fw = new java.io.OutputStreamWriter(
                 new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
             fw.write('\uFEFF');
-            fw.write("ID,Description,Categorie,Zone,Date,Statut,Citoyen\n");
-            for (Signalement s : signalements) {
-                fw.write(String.format("%d,%s,%s,%s,%s,%s,%s\n",
-                    s.getIdSignalement(),
-                    s.getDescription() != null ? s.getDescription().replace(",", " ") : "",
-                    s.getCategorie(), s.getZoneNom(),
+            writeCsvLine(fw, "ID", "Description", "Categorie", "Zone", "Date", "Statut", "Citoyen");
+            List<Signalement> source = tousLesSignalements.isEmpty() ? signalements : tousLesSignalements;
+            for (Signalement s : source) {
+                writeCsvLine(fw,
+                    String.valueOf(s.getIdSignalement()),
+                    s.getDescription(),
+                    s.getCategorie(),
+                    s.getZoneNom(),
                     s.getDateSignalement() != null ? s.getDateSignalement().format(DATE_FORMATTER) : "",
-                    s.getStatut(), valueOrDash(s.getUtilisateurNom())));
+                    s.getStatut(),
+                    valueOrDash(s.getUtilisateurNom()));
             }
-            showAdminMessage("Export CSV reussi : " + file.getName(), true);
+            showAdminMessage("Export CSV reussi : " + file.getName() + " (" + source.size() + " lignes)", true);
         } catch (java.io.IOException e) {
             showAdminMessage("Erreur export CSV.", false);
         }
@@ -544,23 +568,7 @@ public class AdminDashboardController {
 
     @FXML
     private void handleAjouterUtilisateur() {
-        Optional<Utilisateur> result = openUtilisateurDialog("Ajouter utilisateur", null, false);
-        if (result.isEmpty()) {
-            return;
-        }
-
-        Utilisateur nouveau = result.get();
-        if (utilisateurService.emailExiste(nouveau.getEmail())) {
-            showAdminMessage("Email deja utilise.", false);
-            return;
-        }
-
-        if (utilisateurService.inscription(nouveau)) {
-            showAdminMessage("Utilisateur ajoute avec succes.", true);
-            chargerDonnees();
-        } else {
-            showAdminMessage("Echec de l'ajout utilisateur.", false);
-        }
+        showAdminMessage("Creation citoyen desactivee. Utiliser l'inscription citoyenne.", false);
     }
 
     @FXML
@@ -570,7 +578,7 @@ public class AdminDashboardController {
             return;
         }
 
-        Optional<Utilisateur> result = openUtilisateurDialog("Modifier utilisateur", selected, false);
+        Optional<Utilisateur> result = openUtilisateurDialog("Modifier citoyen", selected, "Citoyen");
         if (result.isEmpty()) {
             return;
         }
@@ -607,13 +615,12 @@ public class AdminDashboardController {
 
     @FXML
     private void handleAjouterAgent() {
-        Optional<Utilisateur> result = openUtilisateurDialog("Ajouter agent", null, true);
+        Optional<Utilisateur> result = openUtilisateurDialog("Ajouter agent", null, "Agent");
         if (result.isEmpty()) {
             return;
         }
 
         Utilisateur agent = result.get();
-        agent.setRole("Agent");
 
         if (utilisateurService.emailExiste(agent.getEmail())) {
             showAdminMessage("Email deja utilise.", false);
@@ -641,7 +648,7 @@ public class AdminDashboardController {
             return;
         }
 
-        Optional<Utilisateur> result = openUtilisateurDialog("Modifier agent", base, true);
+        Optional<Utilisateur> result = openUtilisateurDialog("Modifier agent", base, "Agent");
         if (result.isEmpty()) {
             return;
         }
@@ -737,7 +744,6 @@ public class AdminDashboardController {
         if (filterStatutCombo != null) filterStatutCombo.setValue(ALL_STATUTS);
         if (filterCategorieCombo != null) filterCategorieCombo.setValue(ALL_CATEGORIES);
         if (filterPrioriteCombo != null) filterPrioriteCombo.setValue("Toutes");
-        if (filterAffectationCombo != null) filterAffectationCombo.setValue("Toutes");
         if (filterDateDebutPicker != null) filterDateDebutPicker.setValue(null);
         if (filterDateFinPicker != null) filterDateFinPicker.setValue(null);
         signalements.setAll(signalementService.getAllSignalements());
@@ -750,7 +756,7 @@ public class AdminDashboardController {
         String statut    = getFilterValue(filterStatutCombo, ALL_STATUTS);
         String categorie = getFilterValue(filterCategorieCombo, ALL_CATEGORIES);
         String priorite  = getFilterValue(filterPrioriteCombo, "Toutes");
-        String affectation = getFilterValue(filterAffectationCombo, "Toutes");
+        String affectation = null;
         java.time.LocalDate dateDebut = filterDateDebutPicker != null ? filterDateDebutPicker.getValue() : null;
         java.time.LocalDate dateFin   = filterDateFinPicker   != null ? filterDateFinPicker.getValue()   : null;
         signalements.setAll(signalementService.getSignalementsFiltres(zone, statut, categorie, dateDebut, dateFin, priorite, affectation));
@@ -798,7 +804,13 @@ public class AdminDashboardController {
     }
 
     private void refreshChartsAnimated() {
-        com.smartcity.utils.AnimationUtils.fadeSlideIn(pageStatistiques).play();
+        if (pageStatistiques != null) {
+            try {
+                com.smartcity.utils.AnimationUtils.fadeSlideIn(pageStatistiques).play();
+            } catch (Exception ignored) {
+                // Fallback silencieux: l'animation ne doit pas casser l'ouverture de page.
+            }
+        }
         refreshCharts();
     }
 
@@ -836,11 +848,11 @@ public class AdminDashboardController {
                                int moyJour, int critiques72h, int nonAssignes, int tourneesActives,
                                int aujourdhui, int delta7j, double tempsResolutionH, double satisfaction) {
         // --- Dashboard charts (setData AVANT setLegendVisible) ---
+        int enCoursTraitement = affecte + enCours;
         ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
                 new PieChart.Data("En attente (" + enAttente + ")", Math.max(enAttente, 0.01)),
-                new PieChart.Data("Affect\u00e9 (" + affecte + ")",   Math.max(affecte, 0.01)),
-                new PieChart.Data("En cours (" + enCours + ")",   Math.max(enCours, 0.01)),
-                new PieChart.Data("Termin\u00e9 (" + termines + ")",   Math.max(termines, 0.01))
+                new PieChart.Data("En cours de traitement (" + enCoursTraitement + ")", Math.max(enCoursTraitement, 0.01)),
+                new PieChart.Data("Termin\u00e9 (" + termines + ")", Math.max(termines, 0.01))
         );
         if (statsPieChart != null) {
             statsPieChart.setData(pieData);
@@ -911,12 +923,21 @@ public class AdminDashboardController {
         }
         if (statBarZone != null) {
             statBarZone.getData().clear();
-            for (String statut : new String[]{"En attente", "Affect\u00e9", "En cours", "Termin\u00e9"}) {
+            for (String statut : new String[]{"En attente", "En cours", "Termin\u00e9"}) {
                 XYChart.Series<String, Number> s = new XYChart.Series<>();
-                s.setName(statut);
-                zoneService.getAllZones().forEach(z ->
-                    s.getData().add(new XYChart.Data<>(z.getNomZone(),
-                        signalementService.countByStatutAndZone(statut, z.getNomZone()))));
+                if ("En cours".equals(statut)) {
+                    s.setName("En cours de traitement");
+                    zoneService.getAllZones().forEach(z -> {
+                        int count = signalementService.countByStatutAndZone("En cours", z.getNomZone())
+                                + signalementService.countByStatutAndZone("Affect\u00e9", z.getNomZone());
+                        s.getData().add(new XYChart.Data<>(z.getNomZone(), count));
+                    });
+                } else {
+                    s.setName(statut);
+                    zoneService.getAllZones().forEach(z ->
+                        s.getData().add(new XYChart.Data<>(z.getNomZone(),
+                            signalementService.countByStatutAndZone(statut, z.getNomZone()))));
+                }
                 statBarZone.getData().add(s);
             }
             statBarZone.setLegendVisible(true);
@@ -1099,7 +1120,7 @@ public class AdminDashboardController {
             + "</script></body></html>";
     }
 
-    private Optional<Utilisateur> openUtilisateurDialog(String title, Utilisateur initial, boolean roleLockedAgent) {
+    private Optional<Utilisateur> openUtilisateurDialog(String title, Utilisateur initial, String forcedRole) {
         Dialog<Utilisateur> dialog = new Dialog<>();
         dialog.setTitle(title);
         dialog.setHeaderText(null);
@@ -1117,14 +1138,14 @@ public class AdminDashboardController {
             ? "Laisser vide pour conserver"
             : "Mot de passe requis");
         ComboBox<String> roleCombo = new ComboBox<>(FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur"));
-        roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : (roleLockedAgent ? "Agent" : "Citoyen"));
+        roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : "Citoyen");
         ComboBox<String> zoneCombo = new ComboBox<>();
         zoneService.getAllZones().forEach(z -> zoneCombo.getItems().add(z.getNomZone()));
         com.smartcity.model.Zone zoneInitial = initial != null ? zoneService.getZoneById(initial.getIdZone()) : null;
         zoneCombo.setValue(zoneInitial != null ? zoneInitial.getNomZone() : (zoneCombo.getItems().isEmpty() ? "Pikine" : zoneCombo.getItems().get(0)));
 
-        if (roleLockedAgent) {
-            roleCombo.setValue("Agent");
+        if (forcedRole != null && !forcedRole.isBlank()) {
+            roleCombo.setValue(forcedRole);
             roleCombo.setDisable(true);
         }
 
@@ -1197,6 +1218,10 @@ public class AdminDashboardController {
     }
 
     private void configureUsersTable() {
+        if (tableUtilisateurs != null) {
+            tableUtilisateurs.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        }
+
         colUserId.setCellValueFactory(new PropertyValueFactory<>("idUser"));
         colUserNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
         colUserEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
@@ -1220,7 +1245,10 @@ public class AdminDashboardController {
         if (colAgentEmail != null) colAgentEmail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().email()));
         colAgentZone.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
         colAgentTraites.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().nombreTraites()).asObject());
-        if (colAgentStatut != null) colAgentStatut.setCellFactory(col -> new javafx.scene.control.TableCell<AgentStatsRow, Void>() {
+        if (colAgentStatut != null) {
+            // Required for a custom status cell on a Void column.
+            colAgentStatut.setCellValueFactory(cell -> new javafx.beans.property.SimpleObjectProperty<>(null));
+            colAgentStatut.setCellFactory(col -> new javafx.scene.control.TableCell<AgentStatsRow, Void>() {
             @Override protected void updateItem(Void v, boolean empty) {
                 super.updateItem(v, empty);
                 if (empty) { setGraphic(null); return; }
@@ -1231,6 +1259,7 @@ public class AdminDashboardController {
                 setGraphic(lbl);
             }
         });
+        }
 
         centerColumn(colAgentId);
         centerColumn(colAgentNom);
@@ -1383,10 +1412,7 @@ public class AdminDashboardController {
             filterPrioriteCombo.setValue("Toutes");
         }
 
-        if (filterAffectationCombo != null) {
-            filterAffectationCombo.setItems(FXCollections.observableArrayList("Toutes", "Assignes", "Non assignes"));
-            filterAffectationCombo.setValue("Toutes");
-        }
+        // Filtre affectation retire de l'interface admin (non pertinent au flux principal).
 
         filterCategorieCombo.setItems(FXCollections.observableArrayList(
                 java.util.stream.Stream.concat(
@@ -1444,9 +1470,9 @@ public class AdminDashboardController {
     private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
         com.smartcity.utils.NavigationUtils.showPage(
             pageToShow,
-            new javafx.scene.Node[]{pageAdminDashboard, pageAdminUsers, pageAdminAgents, pageAdminSignalements, pageStatistiques, pageAdminProfil, pageParametres},
+            new javafx.scene.Node[]{pageAdminDashboard, pageAdminAgents, pageAdminUsers, pageAdminSignalements, pageStatistiques, pageAdminProfil, pageParametres},
             activeButton,
-            new Button[]{btnAdminDashboard, btnGestionUtilisateurs, btnGestionAgents, btnGestionSignalements, btnStatistiques, btnAdminProfil, btnParametres},
+            new Button[]{btnAdminDashboard, btnGestionAgents, btnGestionUtilisateurs, btnGestionSignalements, btnStatistiques, btnAdminProfil, btnParametres},
             "sidebar-button-active"
         );
     }
@@ -1472,6 +1498,27 @@ public class AdminDashboardController {
 
     private String valueOrDash(String value) {
         return (value == null || value.isBlank()) ? "-" : value;
+    }
+
+    private void writeCsvLine(java.io.OutputStreamWriter writer, String... values) throws java.io.IOException {
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) {
+                writer.write(',');
+            }
+            writer.write(escapeCsv(values[i]));
+        }
+        writer.write('\n');
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "\"\"";
+        }
+        String normalized = value
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace("\"", "\"\"");
+        return "\"" + normalized + "\"";
     }
 
     private void animatePercent(Label label, int endPct) {
@@ -1627,3 +1674,4 @@ public class AdminDashboardController {
         }
     }
 }
+

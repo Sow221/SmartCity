@@ -8,6 +8,7 @@ import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
 import com.smartcity.service.ZoneService;
 import com.smartcity.utils.SessionManager;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -707,10 +708,10 @@ public class CitizenDashboardController {
 
         if (total > 0) {
             citizenPieChart.setAnimated(dashboardVisible);
+            int enCoursTraitement = affecte + (enCours - affecte);
             citizenPieChart.setData(FXCollections.observableArrayList(
                 new PieChart.Data("En attente (" + attente + ")", Math.max(attente, 0.01)),
-                new PieChart.Data("Affect\u00e9 (" + affecte + ")", Math.max(affecte, 0.01)),
-                new PieChart.Data("En cours (" + (enCours - affecte) + ")", Math.max(enCours - affecte, 0.01)),
+                new PieChart.Data("En cours de traitement (" + enCoursTraitement + ")", Math.max(enCoursTraitement, 0.01)),
                 new PieChart.Data("Termin\u00e9 (" + collectes + ")", Math.max(collectes, 0.01))));
             citizenPieChart.setLabelsVisible(true);
             citizenPieChart.setLegendVisible(true);
@@ -747,9 +748,7 @@ public class CitizenDashboardController {
                 TableColumn<Signalement, String> colDelai = (TableColumn<Signalement, String>) col;
                 colDelai.setCellValueFactory(cell -> {
                     com.smartcity.service.SuiviService.SuiviSignalement suivi = suiviMap.get(cell.getValue().getIdSignalement());
-                    if (suivi == null) return new SimpleStringProperty("-");
-                    if (suivi.heuresResolution != null) return new SimpleStringProperty(suivi.heuresResolution + "h \u2705");
-                    return new SimpleStringProperty(suivi.heuresEcoules + "h");
+                    return new SimpleStringProperty(formatDelaiForDisplay(suivi, cell.getValue().getStatut()));
                 });
             }
         }
@@ -771,6 +770,10 @@ public class CitizenDashboardController {
     }
 
     private void configureMesSignalementsTable() {
+        if (tableMesSignalements != null) {
+            tableMesSignalements.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        }
+
         colMesId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
         colMesDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
         colMesCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
@@ -816,16 +819,14 @@ public class CitizenDashboardController {
         colDelai.setCellValueFactory(cell -> {
             com.smartcity.service.SuiviService.SuiviSignalement suivi =
                 suiviCache.get(cell.getValue().getIdSignalement());
-            if (suivi == null) return new SimpleStringProperty("-");
-            if (suivi.heuresResolution != null)
-                return new SimpleStringProperty(suivi.heuresResolution + "h ✅");
-            return new SimpleStringProperty(suivi.heuresEcoules + "h");
+            return new SimpleStringProperty(formatDelaiForDisplay(suivi, cell.getValue().getStatut()));
         });
 
         // Colonne Évaluation (bouton pour les terminés)
         TableColumn<Signalement, Void> colEval = new TableColumn<>("★ Évaluer");
         colEval.setStyle("-fx-alignment: CENTER;");
         colEval.setPrefWidth(100);
+        colEval.setCellValueFactory(cell -> new SimpleObjectProperty<>(null));
         colEval.setCellFactory(col -> new TableCell<>() {
             private final Button btn = new Button("★ Évaluer");
             { btn.setStyle("-fx-background-color:#FF9800;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:3 8;");
@@ -849,6 +850,19 @@ public class CitizenDashboardController {
         if (tableMesSignalements.getColumns().size() <= 6) {
             tableMesSignalements.getColumns().addAll(colAgent, colDelai, colEval);
         }
+    }
+
+    private String formatDelaiForDisplay(com.smartcity.service.SuiviService.SuiviSignalement suivi, String statut) {
+        if (suivi == null) {
+            return "-";
+        }
+        if (suivi.heuresResolution != null) {
+            return suivi.heuresResolution + "h ✅";
+        }
+        if (SignalementStatut.TERMINE.matches(statut)) {
+            return "-";
+        }
+        return suivi.heuresEcoules + "h";
     }
 
     private void afficherHistoriqueSignalement(Signalement signalement) {
@@ -1079,3 +1093,4 @@ public class CitizenDashboardController {
         }
     }
 }
+

@@ -47,6 +47,7 @@ com\smartcity\service\UtilisateurService.class
 com\smartcity\controller\AgentDashboardController$8.class
 com\smartcity\service\SuiviService$HistoriqueEntry.class
 com\smartcity\utils\NetworkUtils.class
+com\smartcity\model\SignalementStatut$1.class
 com\smartcity\controller\AgentDashboardController$5.class
 com\smartcity\service\PositionAgentService$Position.class
 com\smartcity\utils\SessionManager.class

@@ -13,6 +13,7 @@ import com.smartcity.controller.LoginController;
 import com.smartcity.controller.RegisterController;
 import com.smartcity.controller.ReportsController;
 import com.smartcity.service.GpsApiServer;
+import com.smartcity.utils.NetworkUtils;
 import com.smartcity.utils.SessionManager;
 
 import javafx.application.Application;
@@ -23,7 +24,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Point d'entrée principal de l'application SmartCity Déchets.
+ * Point d'entree principal de l'application SmartCity Dechets.
  */
 public class MainApp extends Application {
 
@@ -34,15 +35,17 @@ public class MainApp extends Application {
     private static com.smartcity.websocket.WebSocketServer webSocketServer;
     private static boolean webSocketServerRunning = false;
 
-    public static boolean isWebSocketServerRunning() { return webSocketServerRunning; }
+    public static boolean isWebSocketServerRunning() {
+        return webSocketServerRunning;
+    }
 
     private CitizenDashboardController activeCitizenController;
-    private AgentDashboardController   activeAgentController;
+    private AgentDashboardController activeAgentController;
 
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
-        primaryStage.setTitle("SmartCity - Gestion des Déchets");
+        primaryStage.setTitle("SmartCity - Gestion des Dechets");
         primaryStage.setWidth(1100);
         primaryStage.setHeight(650);
 
@@ -52,15 +55,15 @@ public class MainApp extends Application {
 
         if (!com.smartcity.utils.DatabaseConnection.testConnection()) {
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                    javafx.scene.control.Alert.AlertType.ERROR);
+                javafx.scene.control.Alert.AlertType.ERROR);
             alert.setTitle("Erreur de connexion");
-            alert.setHeaderText("Base de données inaccessible");
+            alert.setHeaderText("Base de donnees inaccessible");
             alert.setContentText(
-                    "Impossible de se connecter à MySQL.\n\n"
-                    + "Vérifiez que :\n"
-                    + "  - MySQL est démarré\n"
-                    + "  - Les paramètres dans config.properties sont corrects\n"
-                    + "  - La base db_smartcity existe");
+                "Impossible de se connecter a MySQL.\n\n"
+                + "Verifiez que :\n"
+                + "  - MySQL est demarre\n"
+                + "  - Les parametres dans config.properties sont corrects\n"
+                + "  - La base db_smartcity existe");
             alert.showAndWait();
             Platform.exit();
             return;
@@ -70,67 +73,45 @@ public class MainApp extends Application {
     }
 
     private void startGpsServer() {
-        // ✅ Vérifier que les ports sont libres avant démarrage
         if (!isPortAvailable(GpsApiServer.PORT) || !isPortAvailable(GpsApiServer.HTTPS_PORT)) {
-            logger.error("❌ Ports {} ou {} déjà occupés. Un autre processus les utilise.", 
+            logger.error("Ports {} ou {} deja occupes. Un autre processus les utilise.",
                 GpsApiServer.PORT, GpsApiServer.HTTPS_PORT);
             java.awt.Toolkit.getDefaultToolkit().beep();
             return;
         }
-        
+
         gpsApiServer = new GpsApiServer();
         try {
-            gpsApiServer.start(0); // defaultAgentId=0 : tokens crees a la demande par chaque agent
-            logger.info("✅ GPS API Server démarré sur les ports {} et {}", GpsApiServer.PORT, GpsApiServer.HTTPS_PORT);
+            gpsApiServer.start(0);
+            logger.info("GPS API Server demarre sur les ports {} et {}", GpsApiServer.PORT, GpsApiServer.HTTPS_PORT);
         } catch (IOException e) {
-            logger.error("❌ Impossible de démarrer le GPS API Server (ports {} / {} occupés ?): {}",
-                    GpsApiServer.PORT, GpsApiServer.HTTPS_PORT, e.getMessage());
+            logger.error("Impossible de demarrer le GPS API Server (ports {} / {} occupes ?): {}",
+                GpsApiServer.PORT, GpsApiServer.HTTPS_PORT, e.getMessage());
         }
     }
 
     private void startWebSocketServer() {
-        // ✅ Vérifier que le port est libre avant démarrage
         int wsPort = com.smartcity.config.GeoConfig.getWebSocketPort();
         if (!isPortAvailable(wsPort)) {
-            logger.error("❌ Port {} (WebSocket) déjà occupé.", wsPort);
+            logger.error("Port {} (WebSocket) deja occupe.", wsPort);
             return;
         }
-        
+
         webSocketServer = new com.smartcity.websocket.WebSocketServer();
         try {
             webSocketServer.start();
             webSocketServerRunning = true;
-            logger.info("✅ WebSocket Server démarré sur le port {}", wsPort);
+            logger.info("WebSocket Server demarre sur le port {}", wsPort);
         } catch (Exception e) {
-            logger.error("❌ Impossible de démarrer le WebSocket Server (port {} occupé ?): {}", wsPort, e.getMessage());
-        }
-    }
-    
-    /** ✅ Vérifier si un port est disponible */
-    private static boolean isPortAvailable(int port) {
-        try (java.net.ServerSocket socket = new java.net.ServerSocket(port)) {
-            return true;
-        } catch (java.io.IOException e) {
-            return false;
+            logger.error("Impossible de demarrer le WebSocket Server: {}", e.getMessage(), e);
         }
     }
 
-    private void shutdown() {
-        if (gpsApiServer != null)    gpsApiServer.stop();
-        if (webSocketServer != null) webSocketServer.stop();
-        SessionManager.shutdown();
-        com.smartcity.utils.DatabaseConnection.closeDataSource();
+    private boolean isPortAvailable(int port) {
+        return NetworkUtils.isPortAvailable(port);
     }
 
     public void showLoginScreen() {
-        if (activeCitizenController != null) {
-            activeCitizenController.cleanup();
-            activeCitizenController = null;
-        }
-        if (activeAgentController != null) {
-            activeAgentController.cleanup();
-            activeAgentController = null;
-        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
             Parent root = loader.load();
@@ -140,7 +121,7 @@ public class MainApp extends Application {
             primaryStage.show();
         } catch (IOException e) {
             logger.error("Erreur chargement login.fxml", e);
-            showAlert("Erreur critique", "Impossible d'afficher l'écran de connexion.");
+            showAlert("Erreur critique", "Impossible d'afficher l'ecran de connexion.");
         }
     }
 
@@ -154,7 +135,7 @@ public class MainApp extends Application {
             primaryStage.show();
         } catch (IOException e) {
             logger.error("Erreur chargement forgot_password.fxml", e);
-            showAlert("Erreur", "Impossible d'afficher l'écran de réinitialisation.");
+            showAlert("Erreur", "Impossible d'afficher l'ecran de reinitialisation.");
         }
     }
 
@@ -168,7 +149,7 @@ public class MainApp extends Application {
             primaryStage.show();
         } catch (IOException e) {
             logger.error("Erreur chargement register.fxml", e);
-            showAlert("Erreur", "Impossible d'afficher l'écran d'inscription.");
+            showAlert("Erreur", "Impossible d'afficher l'ecran d'inscription.");
         }
     }
 
@@ -184,7 +165,7 @@ public class MainApp extends Application {
             primaryStage.show();
         } catch (IOException e) {
             logger.error("Erreur chargement reports_dashboard.fxml", e);
-            showAlert("Erreur", "Impossible d'afficher l'écran des rapports.");
+            showAlert("Erreur", "Impossible d'afficher l'ecran des rapports.");
         }
     }
 
@@ -193,9 +174,15 @@ public class MainApp extends Application {
             String normalizedRole = role == null ? "" : role.trim();
             String fxmlFile;
             switch (normalizedRole) {
-                case "Administrateur": fxmlFile = "/fxml/admin_dashboard.fxml";   break;
-                case "Agent":          fxmlFile = "/fxml/agent_dashboard.fxml";   break;
-                default:               fxmlFile = "/fxml/citizen_dashboard.fxml"; break;
+                case "Administrateur":
+                    fxmlFile = "/fxml/admin_dashboard.fxml";
+                    break;
+                case "Agent":
+                    fxmlFile = "/fxml/agent_dashboard.fxml";
+                    break;
+                default:
+                    fxmlFile = "/fxml/citizen_dashboard.fxml";
+                    break;
             }
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFile));
@@ -215,24 +202,49 @@ public class MainApp extends Application {
                 activeCitizenController = citizenCtrl;
             }
         } catch (Exception e) {
-            logger.error("Erreur chargement dashboard pour le rôle {}", role, e);
+            logger.error("Erreur chargement dashboard pour le role {}", role, e);
             showAlert("Erreur de navigation",
-                    "La connexion a réussi, mais le dashboard n'a pas pu s'ouvrir.\n"
-                    + "Vérifiez le rôle utilisateur et les fichiers FXML.");
+                "La connexion a reussi, mais le dashboard n'a pas pu s'ouvrir.\n"
+                + "Verifiez le role utilisateur et les fichiers FXML.");
             showLoginScreen();
         }
     }
 
+    private void shutdown() {
+        try {
+            if (gpsApiServer != null) {
+                gpsApiServer.stop();
+            }
+        } catch (Exception e) {
+            logger.warn("Erreur a l'arret du GPS API Server: {}", e.getMessage());
+        }
+
+        try {
+            if (webSocketServer != null) {
+                webSocketServer.stop();
+            }
+        } catch (Exception e) {
+            logger.warn("Erreur a l'arret du WebSocket Server: {}", e.getMessage());
+        }
+
+        webSocketServerRunning = false;
+        SessionManager.shutdown();
+    }
+
     private void showAlert(String title, String msg) {
         javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.INFORMATION);
+            javafx.scene.control.Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(msg);
         alert.showAndWait();
     }
 
-    public static Stage getPrimaryStage() { return primaryStage; }
+    public static Stage getPrimaryStage() {
+        return primaryStage;
+    }
 
-    public static void main(String[] args) { launch(); }
+    public static void main(String[] args) {
+        launch();
+    }
 }

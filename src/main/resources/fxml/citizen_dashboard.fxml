@@ -45,7 +45,7 @@
             <StackPane styleClass="header-avatar" alignment="CENTER">
                 <Label fx:id="citizenAvatarLabel" text="C" styleClass="header-avatar-text"/>
             </StackPane>
-            <Label fx:id="citizenNameLabel" styleClass="header-user" text="Citoyen"/>
+            <Label fx:id="citizenNameLabel" styleClass="header-user" text=""/>
             <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
             <Button text="Déconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
         </HBox>
@@ -136,7 +136,7 @@
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardEnCours" text="0" styleClass="stat-card-number"/>
-                                    <Label text="En cours / Affecté" styleClass="stat-card-label"/>
+                                    <Label text="En cours de traitement" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
@@ -365,3 +365,4 @@
     </center>
 
 </BorderPane>
+

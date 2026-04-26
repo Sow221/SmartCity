@@ -26,6 +26,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.ScaleTransition;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -350,13 +351,13 @@ public class AgentDashboardController {
     @FXML
 
 
-    @FXML private Label profilStatMissionsLabel;
+    private Label profilStatMissionsLabel;
 
 
     @FXML
 
 
-    @FXML private Label profilStatScoreLabel;
+    private Label profilStatScoreLabel;
 
     @FXML private javafx.scene.control.TextArea mapCommentaireField;
     @FXML private Label histStatTerminees;
@@ -396,7 +397,7 @@ public class AgentDashboardController {
 
 
 
-    // ========================= DONNÉES =========================
+    // ========================= DONNAAaAAAasAAAES =========================
 
 
     private ObservableList<Signalement> missions = FXCollections.observableArrayList();
@@ -428,7 +429,7 @@ public class AgentDashboardController {
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AgentDashboardController.class);
     
-    // ✅ Contenu embarqué des ressources JS statiques
+    // AAAAaAaAAAAasAAA Contenu embarquAAaAasAA des ressources JS statiques
     private static String SMART_GPS_MAP_JS = null;
     
     static {
@@ -437,20 +438,35 @@ public class AgentDashboardController {
     
     private static void loadEmbeddedResources() {
         try {
-            // Charger smart-gps-map.js une seule fois au démarrage
+            // Charger smart-gps-map.js une seule fois au dAAaAasAAmarrage
             try (var is = AgentDashboardController.class.getClassLoader().getResourceAsStream("js/smart-gps-map.js")) {
                 if (is != null) {
                     SMART_GPS_MAP_JS = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                    logger.info("✅ smart-gps-map.js chargé en mémoire ({} bytes)", SMART_GPS_MAP_JS.length());
+                    logger.info("AAAAaAaAAAAasAAA smart-gps-map.js chargAAaAasAA en mAAaAasAAmoire ({} bytes)", SMART_GPS_MAP_JS.length());
                 } else {
-                    logger.error("❌ smart-gps-map.js not found in classpath");
+                    logger.error("AAAAasAAAaAaa smart-gps-map.js not found in classpath");
                     SMART_GPS_MAP_JS = "";
                 }
             }
         } catch (Exception e) {
-            logger.error("❌ Erreur chargement ressources embarquées", e);
+            logger.error("AAAAasAAAaAaa Erreur chargement ressources embarquAAaAasAAes", e);
             SMART_GPS_MAP_JS = "";
         }
+    }
+
+    private String displayAgentName(Utilisateur user) {
+        if (user == null) return "";
+        String prenom = user.getPrenom() != null ? user.getPrenom().trim() : "";
+        String nom = user.getNom() != null ? user.getNom().trim() : "";
+        if (!prenom.isEmpty() && !nom.isEmpty()) return prenom + " " + nom;
+        if (!nom.isEmpty()) return nom;
+        if (!prenom.isEmpty()) return prenom;
+        return user.getEmail() != null ? user.getEmail() : "";
+    }
+
+    private String agentInitial(Utilisateur user) {
+        String displayName = displayAgentName(user).trim();
+        return displayName.isEmpty() ? "A" : displayName.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
     }
 
 
@@ -474,7 +490,7 @@ public class AgentDashboardController {
 
 
 
-    // ========================= MÉTHODES PUBLIQUES =========================
+    // ========================= MAAaAAAasAAATHODES PUBLIQUES =========================
 
 
     public void setMainApp(MainApp mainApp) {
@@ -550,19 +566,19 @@ public class AgentDashboardController {
         Utilisateur agentInit = SessionManager.getUtilisateurConnecte();
         if (agentInit != null) {
             if (agentNameLabel != null)
-                agentNameLabel.setText(agentInit.getNom());
+                agentNameLabel.setText(displayAgentName(agentInit));
             if (agentAvatarLabel != null)
-                agentAvatarLabel.setText(agentInit.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+                agentAvatarLabel.setText(agentInitial(agentInit));
             if (agentProfilAvatarLabel != null)
-                agentProfilAvatarLabel.setText(agentInit.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+                agentProfilAvatarLabel.setText(agentInitial(agentInit));
             if (agentProfilNomDisplay != null)
-                agentProfilNomDisplay.setText(agentInit.getNom());
+                agentProfilNomDisplay.setText(displayAgentName(agentInit));
         }
 
         tableMesMissions.setItems(missions);
         if (filterMissionsStatutCombo != null) {
             filterMissionsStatutCombo.setItems(javafx.collections.FXCollections.observableArrayList(
-                "Tous", "En attente", "Affecté", "En cours", "Terminé"));
+                "Tous", "Affecte", "En cours", "Termine"));
             filterMissionsStatutCombo.setValue("Tous");
             filterMissionsStatutCombo.valueProperty().addListener((obs, old, val) -> {
                 if (val == null || "Tous".equals(val)) {
@@ -608,7 +624,7 @@ public class AgentDashboardController {
         
 
 
-        // Initialisation visibilité pages
+        // Initialisation visibilitAAaAasAA pages
 
 
         javafx.scene.Node[] pages = { pageAgentDashboard, pageMesMissions, pageCarteZonesScroll, pageHistorique, pageMonProfil };
@@ -650,7 +666,7 @@ public class AgentDashboardController {
     private void initRealTimeGPS() {
 
 
-        // Son notification proximité avec null-check
+        // Son notification proximitAAaAasAA avec null-check
 
 
         java.net.URL beepUrl = getClass().getResource("/sounds/beep.mp3");
@@ -665,7 +681,7 @@ public class AgentDashboardController {
         } else {
 
 
-            logger.warn("🔊 Son beep.mp3 non trouvé - notifications silencieuses");
+            logger.warn("AAAAaAAAAAasAAAAaAA Son beep.mp3 non trouvAAaAasAA - notifications silencieuses");
 
 
         }
@@ -674,11 +690,11 @@ public class AgentDashboardController {
 
 
 
-        // Démarrer GPS tracking
+        // DAAaAasAAmarrer GPS tracking
 
 
         gpsService.startRealTimeTracking();
-        if (lblPositionActuelle != null) lblPositionActuelle.setText("\uD83D\uDCCD Position par defaut (Pikine) - scannez le QR code");
+        if (lblPositionActuelle != null) lblPositionActuelle.setText("Position par defaut (Pikine) - scannez le QR code");
         if (lblGpsStatus != null) lblGpsStatus.setText("GPS en attente \u23F3");
 
 
@@ -721,7 +737,7 @@ public class AgentDashboardController {
 
 
 
-        logger.info("-️ GPS RealTime initialisé");
+        logger.info("GPS RealTime initialise");
 
 
     }
@@ -745,7 +761,7 @@ public class AgentDashboardController {
         autoRefreshTimeline.play();
 
 
-        logger.info("🔄 Auto-refresh 30s démarré");
+        logger.info("Auto-refresh 30s demarre");
 
 
     }
@@ -763,13 +779,13 @@ public class AgentDashboardController {
             if (lblPositionActuelle != null)
 
 
-                lblPositionActuelle.setText(String.format("📍 %.4f, %.4f (Live)", pos.lat, pos.lon));
+                lblPositionActuelle.setText(String.format("Position live: %.4f, %.4f", pos.lat, pos.lon));
 
 
             if (lblGpsStatus != null)
 
 
-                lblGpsStatus.setText("GPS actif 📍");
+                lblGpsStatus.setText("GPS actif");
 
 
         });
@@ -806,7 +822,7 @@ public class AgentDashboardController {
 
 
 
-                // Update mission sélectionnée si correspond
+                // Update mission sAAaAasAAlectionnAAaAasAAe si correspond
 
 
                 Signalement selected = tableMesMissions.getSelectionModel().getSelectedItem();
@@ -854,7 +870,7 @@ public class AgentDashboardController {
             nearbyBeep.play();
 
 
-            showAgentMessage("🚨 MISSION À PROXIMITÉ! Vérifiez la carte", true);
+            showAgentMessage("MISSION A PROXIMITE ! Verifiez la carte.", true);
 
 
         }
@@ -890,7 +906,7 @@ public class AgentDashboardController {
         if (current == null) return;
 
 
-        if (agentNameLabel != null) agentNameLabel.setText(current.getNom());
+        if (agentNameLabel != null) agentNameLabel.setText(displayAgentName(current));
 
 
         int idAgent = current.getIdUser();
@@ -956,7 +972,7 @@ public class AgentDashboardController {
                 if (nouvelles > 0) {
 
 
-                    showAgentMessage(nouvelles + " nouvelle" + (nouvelles > 1 ? "s" : "") + " mission" + (nouvelles > 1 ? "s" : "") + " assignée" + (nouvelles > 1 ? "s" : "") + " !", true);
+                    showAgentMessage(nouvelles + " nouvelle" + (nouvelles > 1 ? "s" : "") + " mission" + (nouvelles > 1 ? "s" : "") + " assignAAaAasAAe" + (nouvelles > 1 ? "s" : "") + " !", true);
 
 
                     if (nearbyBeep != null) nearbyBeep.play();
@@ -999,14 +1015,7 @@ public class AgentDashboardController {
 
 
             refreshCards();
-            if (missionsSnapshot.isEmpty()) {
-                Utilisateur agentW = SessionManager.getUtilisateurConnecte();
-                if (agentW != null) {
-                    long nb = missionList.stream().filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut())).count();
-                    showAgentMessage("Bonjour " + agentW.getNom() + " ! Vous avez " + nb + " mission" + (nb > 1 ? "s" : "") + " affect\u00e9e" + (nb > 1 ? "s" : "") + " aujourd'hui.", true);
-                }
-            }
-            // Rappliquer le filtre apres rechargement
+            // Reapply filter after refresh
             if (!"Tous".equals(currentFilter) && filterMissionsStatutCombo != null) filterMissionsStatutCombo.setValue(currentFilter);
 
 
@@ -1124,9 +1133,24 @@ public class AgentDashboardController {
     private void handleShowMesMissions() {
 
 
+        if (filterMissionsStatutCombo != null) {
+            filterMissionsStatutCombo.setItems(javafx.collections.FXCollections.observableArrayList(
+                    "Tous", "Affecte", "En cours", "Termine"));
+            if (filterMissionsStatutCombo.getValue() == null
+                    || "En attente".equalsIgnoreCase(filterMissionsStatutCombo.getValue())) {
+                filterMissionsStatutCombo.setValue("Tous");
+            }
+        }
         showPage(pageMesMissions, btnMesMissions);
 
 
+    }
+
+
+    @FXML
+    private void handleActualiserDashboard() {
+        java.time.LocalDate date = dashboardDatePicker != null ? dashboardDatePicker.getValue() : null;
+        chargerDonneesFiltrees(date);
     }
 
 
@@ -1318,7 +1342,7 @@ public class AgentDashboardController {
         if (selectedMissions.isEmpty()) {
 
 
-            showAgentMessage("Aucune mission active pour optimiser l'itinéraire.", false);
+            showAgentMessage("Aucune mission active pour optimiser l'itinAAaAasAAraire.", false);
 
 
             return;
@@ -1348,7 +1372,7 @@ public class AgentDashboardController {
         StringBuilder routeInfo = new StringBuilder();
 
 
-        routeInfo.append("📍 ITINÉRAIRE OPTIMISÉ (").append(optimizedRoute.size()).append(" missions)\n\n");
+        routeInfo.append("ITINERAIRE OPTIMISE (").append(optimizedRoute.size()).append(" missions)\n\n");
 
 
         double totalDistance = 0;
@@ -1381,10 +1405,8 @@ public class AgentDashboardController {
                             mission.getCategorie()))
 
 
-                    .append(String.format("   📍 Distance: %.2f km\n", distance))
-
-
-                    .append(String.format("   -️ Zone: %s\n\n", mission.getZoneNom()));
+                    .append(String.format("   Distance: %.2f km\n", distance))
+                    .append(String.format("   Zone: %s\n\n", mission.getZoneNom()));
 
 
             currentPos = new GeolocationService.Coordinates(mission.getLatitude(), mission.getLongitude());
@@ -1393,13 +1415,9 @@ public class AgentDashboardController {
         }
 
 
-        routeInfo.append(String.format("- Distance totale estimée: %.2f km\n", totalDistance))
-
-
-                .append(String.format("⏱️ Temps estimé: %.0f minutes\n\n", totalDistance * 3))
-
-
-                .append("- Lien Google Maps:\n").append(routeUrl);
+        routeInfo.append(String.format("Distance totale estimee: %.2f km\n", totalDistance))
+                .append(String.format("Temps estime: %.0f minutes\n\n", totalDistance * 3))
+                .append("Lien Google Maps:\n").append(routeUrl);
 
 
 
@@ -1408,10 +1426,10 @@ public class AgentDashboardController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
 
 
-        alert.setTitle("Itinéraire Optimisé");
+        alert.setTitle("Itineraire optimise");
 
 
-        alert.setHeaderText("Itinéraire de collecte optimisé");
+        alert.setHeaderText("Itineraire de collecte optimise");
 
 
         TextArea textArea = new TextArea(routeInfo.toString());
@@ -1438,7 +1456,7 @@ public class AgentDashboardController {
 
 
 
-        showAgentMessage(String.format("Itinéraire optimisé pour %d missions (%.1f km total).", optimizedRoute.size(),
+        showAgentMessage(String.format("ItinAAaAasAAraire optimisAAaAasAA pour %d missions (%.1f km total).", optimizedRoute.size(),
 
 
                 totalDistance), true);
@@ -1459,7 +1477,7 @@ public class AgentDashboardController {
         refreshHistorique();
 
 
-        showAgentMessage("Historique filtré appliqué.", true);
+        showAgentMessage("Historique filtrAAaAasAA appliquAAaAasAA.", true);
 
 
     }
@@ -1486,7 +1504,7 @@ public class AgentDashboardController {
         refreshHistorique();
 
 
-        showAgentMessage("Historique réinitialisé.", true);
+        showAgentMessage("Historique rAAaAasAAinitialisAAaAasAA.", true);
 
 
     }
@@ -1537,7 +1555,7 @@ public class AgentDashboardController {
         if (!newEmail.equalsIgnoreCase(current.getEmail()) && utilisateurService.emailExiste(newEmail)) {
 
 
-            showAgentMessage("Cet email est déjà utilisé par un autre compte.", false);
+            showAgentMessage("Cet email est dAAaAasAAjAAaAasAA utilisAAaAasAA par un autre compte.", false);
 
 
             return;
@@ -1603,34 +1621,34 @@ public class AgentDashboardController {
                 current.setEmail(newEmail);
 
 
-                agentNameLabel.setText(newNom);
+                agentNameLabel.setText(displayAgentName(current));
 
 
                 if (agentAvatarLabel != null)
 
 
-                    agentAvatarLabel.setText(newNom.substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+                    agentAvatarLabel.setText(agentInitial(current));
 
 
                 if (agentProfilAvatarLabel != null)
 
 
-                    agentProfilAvatarLabel.setText(newNom.substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+                    agentProfilAvatarLabel.setText(agentInitial(current));
 
 
                 if (agentProfilNomDisplay != null)
 
 
-                    agentProfilNomDisplay.setText(newNom);
+                    agentProfilNomDisplay.setText(displayAgentName(current));
 
 
-                showAgentMessage("Profil mis à jour.", true);
+                showAgentMessage("Profil mis AAaAasAA jour.", true);
 
 
             } else {
 
 
-                showAgentMessage("Échec de mise à jour du profil.", false);
+                showAgentMessage("AAaAAAasAAAchec de mise AAaAasAA jour du profil.", false);
 
 
             }
@@ -1639,7 +1657,7 @@ public class AgentDashboardController {
         });
 
 
-        task.setOnFailed(e -> showAgentMessage("Échec de mise à jour du profil.", false));
+        task.setOnFailed(e -> showAgentMessage("AAaAAAasAAAchec de mise AAaAasAA jour du profil.", false));
 
 
         Thread t = new Thread(task, "profil-update"); t.setDaemon(true); t.start();
@@ -1762,13 +1780,13 @@ public class AgentDashboardController {
         if (utilisateurService.updateMotDePasse(current.getIdUser(), result.get())) {
 
 
-            showAgentMessage("Mot de passe mis à jour.", true);
+            showAgentMessage("Mot de passe mis AAaAasAA jour.", true);
 
 
         } else {
 
 
-            showAgentMessage("Échec de mise à jour du mot de passe.", false);
+            showAgentMessage("AAaAAAasAAAchec de mise AAaAasAA jour du mot de passe.", false);
 
 
         }
@@ -1780,7 +1798,7 @@ public class AgentDashboardController {
 
 
 
-    // ========================= MÉTHODES PRIVÉES =========================
+    // ========================= MAAaAAAasAAATHODES PRIVAAaAAAasAAAES =========================
 
 
     private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
@@ -1885,25 +1903,29 @@ public class AgentDashboardController {
         int total    = missions.size();
 
 
-        int attente  = (int) missions.stream().filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut())).count();
+        int attente  = (int) missions.stream()
+            .filter(s -> SignalementStatut.AFFECTE.matches(s.getStatut()))
+            .count();
 
 
-        int enCours  = (int) missions.stream().filter(s -> "En cours".equalsIgnoreCase(s.getStatut())).count();
+        int enCours  = (int) missions.stream()
+            .filter(s -> SignalementStatut.EN_COURS.matches(s.getStatut()))
+            .count();
 
 
         int terminees = (int) missions.stream().filter(this::isTermine).count();
 
 
-        agentCardTotal.setText(String.valueOf(total));
+        if (agentCardTotal != null) agentCardTotal.setText(String.valueOf(total));
 
 
-        agentCardEnAttente.setText(String.valueOf(attente));
+        if (agentCardEnAttente != null) agentCardEnAttente.setText(String.valueOf(attente));
 
 
-        agentCardEnCours.setText(String.valueOf(enCours));
+        if (agentCardEnCours != null) agentCardEnCours.setText(String.valueOf(enCours));
 
 
-        agentCardTerminees.setText(String.valueOf(terminees));
+        if (agentCardTerminees != null) agentCardTerminees.setText(String.valueOf(terminees));
 
 
         // Score de performance agent
@@ -1912,7 +1934,7 @@ public class AgentDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
 
 
-        // Score affiché uniquement dans les cards, pas dans le message flottant
+        // Score affichAAaAasAA uniquement dans les cards, pas dans le message flottant
 
 
         updateMissionsCount();
@@ -1993,7 +2015,7 @@ public class AgentDashboardController {
         if (tourneeProchaineLabel != null) {
 
 
-            tourneeProchaineLabel.setText(next.mission.getZoneNom() + " #" + next.mission.getIdSignalement());
+            tourneeProchaineLabel.setText("#" + next.mission.getIdSignalement());
 
 
         }
@@ -2107,13 +2129,13 @@ public class AgentDashboardController {
         if (agentProfilAvatarLabel != null)
 
 
-            agentProfilAvatarLabel.setText(current.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
+            agentProfilAvatarLabel.setText(agentInitial(current));
 
 
         if (agentProfilNomDisplay != null)
 
 
-            agentProfilNomDisplay.setText(current.getNom());
+            agentProfilNomDisplay.setText(displayAgentName(current));
 
 
         try {
@@ -2211,6 +2233,11 @@ public class AgentDashboardController {
 
     private void configureDashboardTable() {
 
+        if (tableMissionsUrgentes != null) {
+            // Evite la colonne vide visuelle a droite en occupant toute la largeur.
+            tableMissionsUrgentes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        }
+
 
         colUrgId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
 
@@ -2289,6 +2316,10 @@ public class AgentDashboardController {
 
     private void configureMissionsTable() {
 
+        if (tableMesMissions != null) {
+            tableMesMissions.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        }
+
 
         colMissionId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
 
@@ -2311,7 +2342,7 @@ public class AgentDashboardController {
                 .setCellValueFactory(cell -> new SimpleStringProperty(getDisplayStatut(cell.getValue().getStatut())));
 
 
-        // Colonne distance GPS : calculée en temps réel depuis la position agent
+        // Colonne distance GPS : calculAAaAasAAe en temps rAAaAasAAel depuis la position agent
 
 
         colMissionDistance.setCellValueFactory(cell -> {
@@ -2320,10 +2351,12 @@ public class AgentDashboardController {
             RealTimeGPSService.Coordinates pos = gpsService.getCurrentPosition();
 
 
-            if (pos == null || (cell.getValue().getLatitude() == 0.0 && cell.getValue().getLongitude() == 0.0))
-
-
-                return new SimpleStringProperty("-");
+            if (pos == null) {
+                return new SimpleStringProperty("GPS requis");
+            }
+            if (cell.getValue().getLatitude() == 0.0 && cell.getValue().getLongitude() == 0.0) {
+                return new SimpleStringProperty("Coord. manquantes");
+            }
 
 
             double d = geolocationService.calculateDistance(pos.lat, pos.lon,
@@ -2368,13 +2401,14 @@ public class AgentDashboardController {
 
 
 
+        colMissionAction.setCellValueFactory(cell -> new SimpleObjectProperty<>(null));
         colMissionAction.setCellFactory(col -> new TableCell<Signalement, Void>() {
 
 
-            private final Button startButton = new Button("🚀 Démarrer");
+            private final Button startButton = new Button("Demarrer");
 
 
-            private final Button doneButton = new Button("✅ Terminé");
+            private final Button doneButton = new Button("Terminer");
 
 
             private final HBox box = new HBox(5, startButton, doneButton);
@@ -2470,7 +2504,7 @@ public class AgentDashboardController {
                 if (terminee) {
 
 
-                    startButton.setText("✓ Fini");
+                    startButton.setText("Fini");
 
 
                     startButton
@@ -2479,7 +2513,7 @@ public class AgentDashboardController {
                             .setStyle("-fx-background-color: #9E9E9E; -fx-text-fill: white; -fx-background-radius: 8;");
 
 
-                    doneButton.setText("✅ FAIT");
+                    doneButton.setText("FAIT");
 
 
                     doneButton
@@ -2491,7 +2525,7 @@ public class AgentDashboardController {
                 } else if (enCours) {
 
 
-                    startButton.setText("⏳ En cours");
+                    startButton.setText("En cours");
 
 
                     startButton
@@ -2500,7 +2534,7 @@ public class AgentDashboardController {
                             .setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-background-radius: 8;");
 
 
-                    doneButton.setText("✅ FINIR");
+                    doneButton.setText("FINIR");
 
 
                     doneButton.setStyle(
@@ -2512,7 +2546,7 @@ public class AgentDashboardController {
                 } else {
 
 
-                    startButton.setText("🚀 Démarrer");
+                    startButton.setText("Demarrer");
 
 
                     startButton
@@ -2521,7 +2555,7 @@ public class AgentDashboardController {
                             .setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;");
 
 
-                    doneButton.setText("⏸ Attendre");
+                    doneButton.setText("Attendre");
 
 
                     doneButton
@@ -2559,6 +2593,10 @@ public class AgentDashboardController {
 
     private void configureHistoriqueTable() {
 
+        if (tableHistorique != null) {
+            tableHistorique.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        }
+
 
         colHistId.setCellValueFactory(new PropertyValueFactory<>("idSignalement"));
 
@@ -2578,7 +2616,7 @@ public class AgentDashboardController {
         colHistStatut.setCellValueFactory(cell -> new SimpleStringProperty(getDisplayStatut(cell.getValue().getStatut())));
 
 
-        // Colonne Durée : dateSignalement → dateCollecte
+        // Colonne DurAAaAasAAe : dateSignalement AAAAAAasAAAAAAasAAazA dateCollecte
 
 
         if (colHistDuree != null) {
@@ -2726,7 +2764,7 @@ public class AgentDashboardController {
         animateButton(button, 1.2, true);
 
 
-        button.setText("Démarrage...");
+        button.setText("DAAaAasAAmarrage...");
 
 
         button.setDisable(true);
@@ -2756,7 +2794,7 @@ public class AgentDashboardController {
             if (Boolean.TRUE.equals(task.getValue())) {
 
 
-                showAgentMessage("Mission #" + idMission + " démarrée !", true);
+                showAgentMessage("Mission #" + idMission + " demarree !", true);
 
 
                 rechargerEtReselectionner(idMission);
@@ -2765,7 +2803,7 @@ public class AgentDashboardController {
             } else {
 
 
-                button.setText("🚀 Démarrer");
+                button.setText("Demarrer");
 
 
                 button.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;");
@@ -2774,7 +2812,7 @@ public class AgentDashboardController {
                 button.setDisable(false);
 
 
-                showAgentMessage("Erreur lors du démarrage.", false);
+                showAgentMessage("Erreur lors du demarrage.", false);
 
 
             }
@@ -2786,7 +2824,7 @@ public class AgentDashboardController {
         task.setOnFailed(e -> {
 
 
-            button.setText("🚀 Démarrer");
+            button.setText("Demarrer");
 
 
             button.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;");
@@ -2795,7 +2833,7 @@ public class AgentDashboardController {
             button.setDisable(false);
 
 
-            showAgentMessage("Erreur lors du démarrage.", false);
+            showAgentMessage("Erreur lors du demarrage.", false);
 
 
         });
@@ -2819,13 +2857,13 @@ public class AgentDashboardController {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
 
 
-        alert.setTitle("Confirmer Mission Terminée");
+        alert.setTitle("Confirmer mission terminee");
 
 
         alert.setHeaderText("Mission #" + mission.getIdSignalement());
 
 
-        alert.setContentText("Confirmer que cette mission est TERMINÉE ?\nZone: " + mission.getZoneNom()
+        alert.setContentText("Confirmer que cette mission est TERMINEE ?\nZone: " + mission.getZoneNom()
 
 
                 + "\nType: " + mission.getCategorie());
@@ -2834,7 +2872,7 @@ public class AgentDashboardController {
         alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.CANCEL);
 
 
-        ((Button) alert.getDialogPane().lookupButton(ButtonType.YES)).setText("✅ TERMINÉ");
+        ((Button) alert.getDialogPane().lookupButton(ButtonType.YES)).setText("TERMINER");
 
 
         Optional<ButtonType> result = alert.showAndWait();
@@ -2846,7 +2884,7 @@ public class AgentDashboardController {
         animateButton(button, 1.3, true);
 
 
-        button.setText("⏳ Finalisation...");
+        button.setText("Finalisation...");
 
 
         button.setDisable(true);
@@ -2861,7 +2899,7 @@ public class AgentDashboardController {
             @Override protected Boolean call() {
 
 
-                return signalementService.updateStatut(idMission, "Terminé");
+                return signalementService.updateStatut(idMission, "Termine");
 
 
             }
@@ -2876,7 +2914,7 @@ public class AgentDashboardController {
             if (Boolean.TRUE.equals(task.getValue())) {
 
 
-                showAgentMessage("🎉 Mission #" + idMission + " terminée ! Excellent travail !", true);
+                showAgentMessage("Mission #" + idMission + " terminee ! Excellent travail !", true);
 
 
                 rechargerEtReselectionnerEtHistorique(idMission);
@@ -2885,7 +2923,7 @@ public class AgentDashboardController {
             } else {
 
 
-                button.setText("✅ Terminer");
+                button.setText("Terminer");
 
 
                 button.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 8;");
@@ -2906,7 +2944,7 @@ public class AgentDashboardController {
         task.setOnFailed(e -> {
 
 
-            button.setText("✅ Terminer");
+            button.setText("Terminer");
 
 
             button.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 8;");
@@ -2930,7 +2968,7 @@ public class AgentDashboardController {
 
 
 
-    /** Recharge les missions et resélectionne la ligne par id après une action. */
+    /** Recharge les missions et resAAaAasAAlectionne la ligne par id aprAAaAasAAs une action. */
 
 
     private void rechargerEtReselectionner(int idMission) {
@@ -3063,7 +3101,7 @@ public class AgentDashboardController {
     private void afficherDetailMissionTerminee(Signalement mission) {
         javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
         dialog.setTitle("Detail mission #" + mission.getIdSignalement());
-        dialog.setHeaderText(mission.getCategorie() + " â€” " + mission.getZoneNom());
+        dialog.setHeaderText(mission.getCategorie() + " Aaa " + mission.getZoneNom());
         dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
 
         javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10);
@@ -3223,7 +3261,7 @@ public class AgentDashboardController {
             if (signalementService.updateStatut(mission.getIdSignalement(), "En cours")) {
 
 
-                showAgentMessage("🚀 Mission #" + mission.getIdSignalement() + " démarrée automatiquement!", true);
+                showAgentMessage("Mission #" + mission.getIdSignalement() + " demarree automatiquement.", true);
 
 
                 chargerDonnees();
@@ -3241,7 +3279,7 @@ public class AgentDashboardController {
             } else {
 
 
-                showAgentMessage("❌ Erreur lors du démarrage automatique.", false);
+                showAgentMessage("Erreur lors du demarrage automatique.", false);
 
 
             }
@@ -3250,7 +3288,7 @@ public class AgentDashboardController {
         } else {
 
 
-            showAgentMessage("ℹ️ Aucune mission en attente à démarrer.", false);
+            showAgentMessage("Aucune mission en attente a demarrer.", false);
 
 
         }
@@ -3268,8 +3306,7 @@ public class AgentDashboardController {
     private void handleVoirMissionsEnCours() {
 
 
-        List<Signalement> enCours = missions.stream().filter(s -> "En cours".equalsIgnoreCase(s.getStatut())
-                || SignalementStatut.AFFECTE.matches(s.getStatut()))
+        List<Signalement> enCours = missions.stream().filter(s -> SignalementStatut.EN_COURS.matches(s.getStatut()))
 
 
                 .collect(Collectors.toList());
@@ -3278,19 +3315,21 @@ public class AgentDashboardController {
         if (enCours.isEmpty()) {
 
 
-            showAgentMessage("ℹ️ Aucune mission actuellement en cours.", false);
+            showAgentMessage("Aucune mission actuellement en cours.", false);
 
 
         } else {
 
 
             showPage(pageMesMissions, btnMesMissions);
-
-
+            tableMesMissions.setItems(javafx.collections.FXCollections.observableArrayList(enCours));
+            if (filterMissionsStatutCombo != null) {
+                filterMissionsStatutCombo.setValue("En cours");
+            }
             tableMesMissions.getSelectionModel().select(enCours.get(0));
 
 
-            showAgentMessage("📋 " + enCours.size() + " mission(s) en cours affichée(s).", true);
+            showAgentMessage(enCours.size() + " mission(s) en cours affichee(s).", true);
 
 
         }
@@ -3383,7 +3422,9 @@ public class AgentDashboardController {
             mapMissionZoneLabel.setText("-");
 
 
-            mapMissionAdresseLabel.setText("-");
+            if (mapMissionAdresseLabel != null) {
+                mapMissionAdresseLabel.setText("-");
+            }
 
 
             mapMissionStatutLabel.setText("-");
@@ -3401,7 +3442,9 @@ public class AgentDashboardController {
         mapMissionZoneLabel.setText(mission.getZoneNom());
 
 
-        mapMissionAdresseLabel.setText(getAdresse(mission));
+        if (mapMissionAdresseLabel != null) {
+            mapMissionAdresseLabel.setText(getAdresse(mission));
+        }
 
 
         mapMissionStatutLabel.setText(getDisplayStatut(mission.getStatut()));
@@ -3422,34 +3465,35 @@ public class AgentDashboardController {
 
     private void refreshMap(Signalement selectedMission, boolean showRoute) {
         if (mapWebView == null) return;
-        installMapFallbackHandlers(mapWebView.getEngine(), "Carte agent indisponible.");
-        // Installer le bridge JSBridgeAgent une seule fois
+        WebEngine engine = mapWebView.getEngine();
+        installMapFallbackHandlers(engine, "Carte agent indisponible.");
+
+        // Installer une seule fois le listener de cycle de chargement.
         if (!mapBridgeInstalled) {
-            mapBridgeInstalled = true;
-            mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
                 if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
                     try {
-                        netscape.javascript.JSObject win = (netscape.javascript.JSObject)
-                            mapWebView.getEngine().executeScript("window");
+                        netscape.javascript.JSObject win =
+                                (netscape.javascript.JSObject) engine.executeScript("window");
                         win.setMember("javaAgent", new JSBridgeAgent());
                     } catch (Exception e) {
                         logger.warn("Erreur bridge carte GPS", e);
                     }
                 }
+                if (newState == javafx.concurrent.Worker.State.SUCCEEDED
+                        || newState == javafx.concurrent.Worker.State.FAILED) {
+                    javafx.application.Platform.runLater(() -> {
+                        agentMessageLabel.setVisible(false);
+                        agentMessageLabel.setManaged(false);
+                        agentMessageLabel.setText("");
+                    });
+                }
             });
+            mapBridgeInstalled = true;
         }
-        // Feedback chargement carte
-        showAgentMessage("\uD83D\uDDFA\uFE0F Chargement de la carte...", true);
-        mapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs2, os2, ns2) -> {
-            if (ns2 == javafx.concurrent.Worker.State.SUCCEEDED || ns2 == javafx.concurrent.Worker.State.FAILED) {
-                javafx.application.Platform.runLater(() -> {
-                    agentMessageLabel.setVisible(false);
-                    agentMessageLabel.setManaged(false);
-                    agentMessageLabel.setText("");
-                });
-            }
-        });
-        mapWebView.getEngine().loadContent(buildLeafletHtml(selectedMission, showRoute));
+
+        showAgentMessage("Chargement de la carte...", true);
+        engine.loadContent(buildLeafletHtml(selectedMission, showRoute));
     }
 
 
@@ -3460,24 +3504,7 @@ public class AgentDashboardController {
 
 
     private void handleDefinirMaPosition() {
-
-
-        if (mapWebView == null)
-
-
-            return;
-
-
-        showPage(pageCarteZonesScroll, btnCarteZones);
-
-
-        showAgentMessage("📍 Cliquez sur la carte pour définir votre position exacte", true);
-
-
-        // Activer le mode sélection de position dans la carte
-
-
-        mapWebView.getEngine().executeScript("if(typeof activerModePosition==='function')activerModePosition()");
+        showAgentMessage("Position manuelle desactivee. Utilisez le GPS.", false);
 
 
     }
@@ -3496,7 +3523,7 @@ public class AgentDashboardController {
     private void handleSauvegarderCommentaire() {
         Signalement selected = tableMesMissions.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAgentMessage("Sélectionnez une mission d'abord.", false);
+            showAgentMessage("Selectionnez une mission d'abord.", false);
             return;
         }
         if (mapCommentaireField == null) return;
@@ -3504,9 +3531,9 @@ public class AgentDashboardController {
         if (affectationService.sauvegarderCommentaire(selected.getIdSignalement(), commentaire)) {
             if (mapCommentaireLabel != null)
                 mapCommentaireLabel.setText(commentaire.isBlank() ? "-" : commentaire);
-            showAgentMessage("✅ Commentaire sauvegardé.", true);
+            showAgentMessage("Commentaire sauvegarde.", true);
         } else {
-            showAgentMessage("❌ Erreur lors de la sauvegarde du commentaire.", false);
+            showAgentMessage("Erreur lors de la sauvegarde du commentaire.", false);
         }
     }
 
@@ -3514,7 +3541,7 @@ public class AgentDashboardController {
 
 
 
-    /** Pont JavaScript → Java pour recevoir la position cliquée sur la carte */
+    /** Pont JavaScript AAAAAAasAAAAAAasAAazA Java pour recevoir la position cliquAAaAasAAe sur la carte */
 
 
     public class JSBridgeAgent {
@@ -3532,13 +3559,13 @@ public class AgentDashboardController {
                 if (lblPositionActuelle != null) {
 
 
-                    lblPositionActuelle.setText(String.format("📍 %.5f, %.5f (Manuel)", lat, lon));
+                    lblPositionActuelle.setText(String.format("Position manuelle: %.5f, %.5f", lat, lon));
 
 
                 }
 
 
-                showAgentMessage(String.format("✅ Position définie: %.4f, %.4f", lat, lon), true);
+                showAgentMessage(String.format("Position definie: %.4f, %.4f", lat, lon), true);
 
 
                 updateDistanceAndTime();
@@ -3570,11 +3597,58 @@ public class AgentDashboardController {
 
 
     private void refreshMapWithOptimizedRoute(List<Signalement> optimizedRoute) {
-        if (mapWebView == null) return;
-        // Toujours recharger avec la route optimisée complète
-        installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
-        String html = buildLeafletHtml(null, false);
-        mapWebView.getEngine().loadContent(html);
+
+
+        if (mapWebView == null)
+
+
+            return;
+
+        // AAAAaAaAAAAasAAA SI PREMIAAaAaAaARE FOIS: charger l'HTML complet
+        if (mapWebView.getEngine().getLocation() == null || mapWebView.getEngine().getLocation().isEmpty()) {
+            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible. Les donnees restent accessibles dans la liste des missions.");
+            String html = buildLeafletHtml(null, false);
+            mapWebView.getEngine().loadContent(html);
+            return; // Attendre que la carte soit chargAAaAasAAe
+        }
+
+        // AAAAaAaAAAAasAAA MISE AAaAAAaAAA JOUR DYNAMIQUE VIA executeScript (pas de clignotement)
+        try {
+            // Nettoyer anciens marqueurs
+            mapWebView.getEngine().executeScript("if (typeof window.clearMissions === 'function') window.clearMissions();");
+
+            // Ajouter nouvelles missions
+            for (Signalement m : optimizedRoute) {
+                Point p = missionPoint(m, indexOfMission(m));
+                String markerColor = statusColorHex(getDisplayStatut(m.getStatut()));
+                String popup = "Mission #" + m.getIdSignalement() + " - " + getDisplayStatut(m.getStatut());
+                String jsAddMarker = "L.circleMarker([" + fmt(p.lat) + "," + fmt(p.lon) + "],{radius:9,color:'" + markerColor + 
+                    "',fillColor:'" + markerColor + "',fillOpacity:0.88}).addTo(map).bindPopup('" + popup.replace("'", "\\'") + "');";
+                mapWebView.getEngine().executeScript(jsAddMarker);
+            }
+
+            // Tracer la route dynamiquement
+            if (!optimizedRoute.isEmpty()) {
+                GeolocationService.Coordinates startPoint = getTourneeStartPoint();
+                StringBuilder routePoints = new StringBuilder("[");
+                routePoints.append(String.format("[%.6f,%.6f]", startPoint.lat, startPoint.lon));
+                for (Signalement m : optimizedRoute) {
+                    Point p = missionPoint(m, indexOfMission(m));
+                    routePoints.append(String.format(",[%.6f,%.6f]", p.lat, p.lon));
+                }
+                routePoints.append("]");
+                String routeLine = "L.polyline(" + routePoints + ",{color:'#FF5722',weight:4,dashArray:'10 5',opacity:0.8}).addTo(map);";
+                mapWebView.getEngine().executeScript(routeLine);
+            }
+        } catch (Exception e) {
+            logger.error("AAAAasAAAaAaa Erreur mise AAaAasAA jour carte temps-rAAaAasAAel", e);
+            // Fallback: recharger complAAaAasAAtement si executeScript AAaAasAAchoue
+            installMapFallbackHandlers(mapWebView.getEngine(), "Itineraire indisponible.");
+            String html = buildLeafletHtml(null, false);
+            mapWebView.getEngine().loadContent(html);
+        }
+
+
     }
 
 
@@ -3671,15 +3745,15 @@ public class AgentDashboardController {
 
 
 
-    /** ✅ INJECTER LE JS EMBARQUÉ AU LIEU D'UNE URL EXTERNE */
+    /** AAAAaAaAAAAasAAA INJECTER LE JS EMBARQUAAaAAAasAAA AU LIEU D'UNE URL EXTERNE */
     private static String getSmartGpsMapJsInline() {
         return SMART_GPS_MAP_JS != null ? SMART_GPS_MAP_JS : "";
     }
 
-    /** ✅ CRÉER LE CLIENT WEBSOCKET POUR MISES À JOUR TEMPS RÉEL */
+    /** AAAAaAaAAAAasAAA CRAAaAAAasAAAER LE CLIENT WEBSOCKET POUR MISES AAaAAAaAAA JOUR TEMPS RAAaAAAasAAAEL */
     private static String getWebSocketClientJs() {
         return """
-            // 🔌 WebSocket Client - Mises à jour temps réel des missions et positions
+            // AAAAaAAAAAasAAAAaAaa WebSocket Client - Mises AAaAasAA jour temps rAAaAasAAel des missions et positions
             let ws = null;
             let wsConnectAttempts = 0;
             
@@ -3690,7 +3764,7 @@ public class AgentDashboardController {
                     ws = new WebSocket(wsUrl);
                     
                     ws.onopen = function() {
-                        console.log('✅ WebSocket connecté pour mises à jour temps réel');
+                        console.log('AAAAaAaAAAAasAAA WebSocket connectAAaAasAA pour mises AAaAasAA jour temps rAAaAasAAel');
                         wsConnectAttempts = 0; // Reset counter on success
                     };
                     
@@ -3698,9 +3772,9 @@ public class AgentDashboardController {
                         try {
                             let data = JSON.parse(event.data);
                             
-                            // Position d'agent en temps réel
+                            // Position d'agent en temps rAAaAasAAel
                             if (data.type === 'position' && data.lat && data.lon) {
-                                console.log('📍 Position agent reçue:', data.lat, data.lon);
+                                console.log('AAAAaAAAAAasAAaAasAA Position agent reAAaAasAAue:', data.lat, data.lon);
                                 if (typeof updateAgentPosition === 'function') {
                                     updateAgentPosition(data.lat, data.lon);
                                 }
@@ -3711,7 +3785,7 @@ public class AgentDashboardController {
                             
                             // Nouvelle mission
                             if (data.type === 'mission') {
-                                console.log('🎯 Nouvelle mission reçue');
+                                console.log('AAAAaAAAaAAAasAA Nouvelle mission reAAaAasAAue');
                                 if (window.parent.refreshAgentMissions) {
                                     window.parent.refreshAgentMissions();
                                 }
@@ -3722,15 +3796,15 @@ public class AgentDashboardController {
                     };
                     
                     ws.onerror = function(err) {
-                        console.error('❌ WebSocket error:', err);
+                        console.error('AAAAasAAAaAaa WebSocket error:', err);
                     };
                     
                     ws.onclose = function() {
-                        console.warn('⚠️ WebSocket fermé');
-                        // Reconnexion après délai
+                        console.warn('AAAAaAAAasAAAAAAasAAAasAA WebSocket fermAAaAasAA');
+                        // Reconnexion aprAAaAasAAs dAAaAasAAlai
                         wsConnectAttempts++;
                         let delay = Math.min(300000, 5000 * Math.pow(1.5, wsConnectAttempts));
-                        console.log('🔄 Reconnexion dans', Math.round(delay/1000), 's');
+                        console.log('AAAAaAAAAAasAAAAAAasAAA Reconnexion dans', Math.round(delay/1000), 's');
                         setTimeout(connectWebSocket, delay);
                     };
                 } catch(err) {
@@ -3817,7 +3891,7 @@ public class AgentDashboardController {
 
 
 
-        // Marqueur position agent actuelle - sera ajouté via agentPosJs plus bas
+        // Marqueur position agent actuelle - sera ajoutAAaAasAA via agentPosJs plus bas
 
 
         com.smartcity.service.RealTimeGPSService.Coordinates agentPos = gpsService.getCurrentPosition();
@@ -3865,88 +3939,7 @@ public class AgentDashboardController {
 
 
 
-        // Bouton "Ma Position" + mode clic sur carte
-
-
-        String positionModeJs = "var positionMode = false;" +
-
-
-                "var myPositionMarker = null;" +
-
-
-                "function activerModePosition() {" +
-
-
-                "  positionMode = true;" +
-
-
-                "  map.getContainer().style.cursor = 'crosshair';" +
-
-
-                "  document.getElementById('btnMaPosition').style.background = '#F44336';" +
-
-
-                "  document.getElementById('btnMaPosition').innerText = 'Annuler';" +
-
-
-                "}" +
-
-
-                "function desactiverModePosition() {" +
-
-
-                "  positionMode = false;" +
-
-
-                "  map.getContainer().style.cursor = '';" +
-
-
-                "  document.getElementById('btnMaPosition').style.background = '#2196F3';" +
-
-
-                "  document.getElementById('btnMaPosition').innerText = 'Ma Position';" +
-
-
-                "}" +
-
-
-                "document.getElementById('btnMaPosition').addEventListener('click', function() {" +
-
-
-                "  if (positionMode) { desactiverModePosition(); }" +
-
-
-                "  else { activerModePosition(); }" +
-
-
-                "});" +
-
-
-                "map.on('click', function(e) {" +
-
-
-                "  if (!positionMode) return;" +
-
-
-                "  var lat = e.latlng.lat; var lon = e.latlng.lng;" +
-
-
-                "  if (myPositionMarker) map.removeLayer(myPositionMarker);" +
-
-
-                "  myPositionMarker = L.circleMarker([lat,lon],{radius:12,color:'#2196F3',fillColor:'#2196F3',fillOpacity:0.9,weight:3}).addTo(map).bindPopup('<b>Votre position</b>').openPopup();"
-
-
-                +
-
-
-                "  if (window.javaAgent) { window.javaAgent.setAgentPosition(lat, lon); }" +
-
-
-                "  desactiverModePosition();" +
-
-
-                "});";
+        String positionModeJs = "";
 
 
 
@@ -3973,7 +3966,7 @@ public class AgentDashboardController {
 
 
 
-        String btnHtml = "<button id='btnMaPosition' style='position:absolute;top:10px;left:50px;z-index:1000;background:#2196F3;color:white;border:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);'>Ma Position</button>";
+        String btnHtml = "";
 
 
 
@@ -4053,14 +4046,14 @@ public class AgentDashboardController {
 
 
     private Point missionPoint(Signalement mission, int index) {
-        // 🎯 UTILISER D'ABORD LES VRAIES COORDONNÉES GPS SI DISPONIBLES
+        // AAAAaAAAaAAAasAA UTILISER D'ABORD LES VRAIES COORDONNAAaAAAasAAAES GPS SI DISPONIBLES
         if (mission.getLatitude() != 0.0 || mission.getLongitude() != 0.0) {
             return new Point(mission.getLatitude(), mission.getLongitude());
         }
         
-        // SINON: Placer autour du centre de zone avec offset pour éviter superposition
+        // SINON: Placer autour du centre de zone avec offset pour AAaAasAAviter superposition
         Point base = zoneCenter(mission.getZoneNom());
-        double latOffset = (index % 5) * 0.004 + 0.001;  // ±0.004° = ~400m
+        double latOffset = (index % 5) * 0.004 + 0.001;  // AAaAAasAA0.004AAaAAasAA = ~400m
         double lonOffset = ((index / 5) % 5) * 0.004 + 0.001;
         return new Point(base.lat + latOffset, base.lon + lonOffset);
     }
@@ -4070,7 +4063,7 @@ public class AgentDashboardController {
 
 
     private Point zoneCenter(String zone) {
-        // ✅ DÉLÉGUER ENTIÈREMENT AU SERVICE (Pas de hardcode)
+        // AAAAaAaAAAAasAAA DAAaAAAasAAALAAaAAAasAAAGUER ENTIAAaAaAaAREMENT AU SERVICE (Pas de hardcode)
         GeolocationService.Coordinates c = zoneService.getCenter(zone);
         return new Point(c.lat, c.lon);
     }
@@ -4228,7 +4221,7 @@ public class AgentDashboardController {
             return "#1E88E5";
 
 
-        if (com.smartcity.model.SignalementStatut.TERMINE.matches(statut))
+        if ("Termine".equalsIgnoreCase(statut))
 
 
             return "#43A047";
@@ -4246,12 +4239,26 @@ public class AgentDashboardController {
     private String getAdresse(Signalement signalement) {
 
 
-        return (signalement.getDescription() == null || signalement.getDescription().isBlank()) ? "Adresse non précisée"
+        return (signalement.getDescription() == null || signalement.getDescription().isBlank()) ? "Commentaire non precise"
 
 
                 : signalement.getDescription();
 
 
+    }
+
+    private String formatLocalisation(Signalement signalement) {
+        if (signalement == null) {
+            return "-";
+        }
+        String zone = signalement.getZoneNom() == null || signalement.getZoneNom().isBlank()
+            ? "Zone inconnue"
+            : signalement.getZoneNom();
+        if (signalement.getLatitude() == 0.0 && signalement.getLongitude() == 0.0) {
+            return zone;
+        }
+        return String.format(java.util.Locale.US, "%s (%.5f, %.5f)",
+            zone, signalement.getLatitude(), signalement.getLongitude());
     }
 
 
@@ -4333,13 +4340,13 @@ public class AgentDashboardController {
         btnAgentDashboard.setTooltip(new Tooltip("Vue globale des missions du jour"));
 
 
-        btnMesMissions.setTooltip(new Tooltip("Missions assignées et actions"));
+        btnMesMissions.setTooltip(new Tooltip("Missions assignAAaAasAAes et actions"));
 
 
         btnCarteZones.setTooltip(new Tooltip("Carte interactive des zones"));
 
 
-        btnHistorique.setTooltip(new Tooltip("Historique des missions terminées"));
+        btnHistorique.setTooltip(new Tooltip("Historique des missions terminAAaAasAAes"));
 
 
         btnMonProfil.setTooltip(new Tooltip("Informations du compte agent"));
@@ -4354,7 +4361,7 @@ public class AgentDashboardController {
     private void showAgentMessage(String message, boolean success) {
 
 
-        String emoji = success ? "🎉" : "⚠️";
+        String emoji = success ? "OK" : "ERREUR";
 
 
         String fullMessage = emoji + " " + message;
@@ -4501,13 +4508,13 @@ public class AgentDashboardController {
         if (pos != null) {
 
 
-            showAgentMessage(String.format("\ud83d\udccd GPS actif — position : %.4f, %.4f", pos.lat, pos.lon), true);
+            showAgentMessage(String.format("GPS actif - position: %.4f, %.4f", pos.lat, pos.lon), true);
 
 
         } else {
 
 
-            showAgentMessage("\ud83d\udccd GPS actif — en attente de position...", true);
+            showAgentMessage("GPS actif - en attente de position...", true);
 
 
         }
@@ -4537,7 +4544,7 @@ public class AgentDashboardController {
         if (qrUrlLabel == null || qrUrlLabel.getText() == null || qrUrlLabel.getText().isEmpty()) {
 
 
-            showAgentMessage("❌ URL GPS non disponible", false);
+            showAgentMessage("URL GPS non disponible", false);
 
 
             return;
@@ -4567,12 +4574,14 @@ public class AgentDashboardController {
         
 
 
-        showAgentMessage("✅ URL GPS copiée dans le presse-papiers: " + urlGps, true);
+        showAgentMessage("URL GPS copiee dans le presse-papiers: " + urlGps, true);
 
 
     }
 
 
 }
+
+
 
 

@@ -48,13 +48,13 @@ public enum SignalementStatut {
         }
 
         String n = normalize(value);
-        if (n.equals(normalize(EN_ATTENTE.dbValue)) || n.equals(normalize(EN_ATTENTE.label))) {
+        if (n.equals(normalize(EN_ATTENTE.dbValue)) || n.equals(normalize(EN_ATTENTE.label)) || n.startsWith("en attente")) {
             return EN_ATTENTE;
         }
         if (n.startsWith("affect")) {
             return AFFECTE;
         }
-        if (n.equals(normalize(EN_COURS.dbValue)) || n.equals(normalize(EN_COURS.label))) {
+        if (n.equals(normalize(EN_COURS.dbValue)) || n.equals(normalize(EN_COURS.label)) || n.startsWith("en cours")) {
             return EN_COURS;
         }
         if (n.startsWith("termine") || n.startsWith("resolu") || n.startsWith("collect")) {

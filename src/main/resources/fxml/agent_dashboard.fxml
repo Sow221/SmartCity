@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
@@ -8,7 +8,9 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -39,7 +41,7 @@
             <StackPane styleClass="header-avatar header-avatar-agent" alignment="CENTER">
                 <Label fx:id="agentAvatarLabel" text="A" styleClass="header-avatar-text"/>
             </StackPane>
-            <Label fx:id="agentNameLabel" styleClass="header-user" text="Agent"/>
+            <Label fx:id="agentNameLabel" styleClass="header-user" text=""/>
             <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
             <Button text="Déconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
         </HBox>
@@ -70,7 +72,7 @@
                 <Button fx:id="btnActionVoirEnCours" text="⏳ Voir en cours" styleClass="action-rapid-btn-agent" onAction="#handleVoirMissionsEnCours"/>
                 <Button fx:id="btnActionItineraireRapide" text="🗺️ Optimiser tournée" styleClass="action-rapid-btn-agent" onAction="#handleItineraireRapide"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="btn-outline-sm" onAction="#chargerDonnees"/>
+                <Button fx:id="btnActionActualiser" text="Actualiser" styleClass="btn-outline-sm" onAction="#handleActualiserDashboard"/>
                 <Button fx:id="btnGpsActiver" text="GPS" styleClass="btn-outline-sm" onAction="#handleToggleGps"/>
                 <Label fx:id="lblPositionActuelle" text="Position..." styleClass="missions-count-badge" wrapText="false"/>
                 <Label fx:id="lblGpsStatus" text="GPS inactif ⚠️" styleClass="missions-count-badge" wrapText="false"/>
@@ -88,7 +90,7 @@
                         <VBox spacing="3">
                             <Label text="Tableau de bord — Missions urgentes" styleClass="page-title-agent"/>
                             <Label text="Missions urgentes" styleClass="page-subtitle"/>
-                            <Label text="(missions affectées depuis plus de 24h sans action)" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
+                            <Label text="(missions affectees depuis plus de 24h sans action)" style="-fx-font-size:11px;-fx-text-fill:#9CA3AF;"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <HBox spacing="8" alignment="CENTER_RIGHT">
@@ -186,7 +188,7 @@
                         <columns>
                             <TableColumn fx:id="colUrgId" text="ID" prefWidth="70"/>
                             <TableColumn fx:id="colUrgZone" text="Zone" prefWidth="130"/>
-                            <TableColumn fx:id="colUrgAdresse" text="Adresse" prefWidth="280"/>
+                            <TableColumn fx:id="colUrgAdresse" text="Commentaire" prefWidth="280"/>
                             <TableColumn fx:id="colUrgType" text="Type déchet" prefWidth="140"/>
                             <TableColumn fx:id="colUrgDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colUrgStatut" text="Statut" prefWidth="130"/>
@@ -221,7 +223,7 @@
                         <columns>
                             <TableColumn fx:id="colMissionId" text="ID" prefWidth="60"/>
                             <TableColumn fx:id="colMissionZone" text="Zone" prefWidth="110"/>
-                            <TableColumn fx:id="colMissionAdresse" text="Description" prefWidth="180"/>
+                            <TableColumn fx:id="colMissionAdresse" text="Commentaire" prefWidth="180"/>
                             <TableColumn fx:id="colMissionType" text="Type déchet" prefWidth="130"/>
                             <TableColumn fx:id="colMissionDate" text="Date" prefWidth="140"/>
                             <TableColumn fx:id="colMissionStatut" text="Statut" prefWidth="120"/>
@@ -266,7 +268,7 @@
                                     <Label fx:id="mapMissionZoneLabel" text="-" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
-                                    <Label text="Adresse" styleClass="map-detail-label"/>
+                                    <Label text="Description" styleClass="map-detail-label"/>
                                     <Label fx:id="mapMissionAdresseLabel" text="-" wrapText="true" styleClass="map-detail-value"/>
                                 </VBox>
                                 <VBox spacing="4">
@@ -373,7 +375,7 @@
                         <columns>
                             <TableColumn fx:id="colHistId" text="ID" prefWidth="60"/>
                             <TableColumn fx:id="colHistZone" text="Zone" prefWidth="120"/>
-                            <TableColumn fx:id="colHistAdresse" text="Description" prefWidth="220"/>
+                            <TableColumn fx:id="colHistAdresse" text="Commentaire" prefWidth="220"/>
                             <TableColumn fx:id="colHistType" text="Type déchet" prefWidth="130"/>
                             <TableColumn fx:id="colHistDate" text="Date collecte" prefWidth="140"/>
                             <TableColumn fx:id="colHistStatut" text="Statut" prefWidth="110"/>
@@ -463,3 +465,4 @@
     </center>
 
 </BorderPane>
+

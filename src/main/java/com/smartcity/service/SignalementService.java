@@ -201,6 +201,9 @@ public class SignalementService {
                 pstmt.setInt(2, idSignalement);
                 result = pstmt.executeUpdate() > 0;
             }
+            if (result && SignalementStatut.isCompleted(statutDb)) {
+                ensureDateCollecteForCompleted(idSignalement);
+            }
             if (result) {
                 Signalement sig = getSignalementById(idSignalement);
                 if (sig != null) {
@@ -212,6 +215,24 @@ public class SignalementService {
             logger.error("Erreur lors de la mise à jour: " + e.getMessage(), e);
         }
         return result;
+    }
+
+    /**
+     * Garantit la cohérence des délais: lorsqu'un signalement passe à l'état
+     * terminé, on renseigne la date de collecte si elle n'existe pas encore.
+     */
+    private void ensureDateCollecteForCompleted(int idSignalement) {
+        String query = "UPDATE Affectation "
+            + "SET dateCollecte = COALESCE(dateCollecte, ?) "
+            + "WHERE idSignalement = ?";
+        try (Connection conn = getConn();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setInt(2, idSignalement);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.warn("Impossible de renseigner dateCollecte pour le signalement #{}: {}", idSignalement, e.getMessage());
+        }
     }
 
     private Signalement getSignalementById(int id) {

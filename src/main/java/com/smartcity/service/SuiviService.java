@@ -55,57 +55,55 @@ public class SuiviService {
                     )
                     """);
                 // Créer les vues seulement si elles n'existent pas encore
-                if (!viewExists(conn, "vue_suivi_signalement")) {
-                    st.execute("""
-                        CREATE VIEW vue_suivi_signalement AS
-                        SELECT
-                            s.idSignalement,
-                            s.description,
-                            s.categorie,
-                            s.statut,
-                            s.dateSignalement,
-                            z.nomZone,
-                            u_citoyen.nom AS nomCitoyen,
-                            u_citoyen.email AS emailCitoyen,
-                            u_agent.nom AS nomAgent,
-                            a.dateAffectation,
-                            a.dateCollecte,
-                            TIMESTAMPDIFF(HOUR, s.dateSignalement, IFNULL(a.dateCollecte, NOW())) AS heuresEcoules,
-                            CASE
-                                WHEN s.statut = 'Termine' AND a.dateCollecte IS NOT NULL
-                                    THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)
-                                ELSE NULL
-                            END AS heuresResolution,
-                            e.note AS noteEvaluation,
-                            e.commentaire AS commentaireEvaluation
-                        FROM Signalement s
-                        LEFT JOIN Zone z ON s.idZone = z.idZone
-                        LEFT JOIN Utilisateur u_citoyen ON s.idUser = u_citoyen.idUser
-                        LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
-                        LEFT JOIN Utilisateur u_agent ON a.idAgent = u_agent.idUser
-                        LEFT JOIN EvaluationCollecte e ON s.idSignalement = e.idSignalement
-                        """);
-                }
-                if (!viewExists(conn, "vue_kpi_zone")) {
-                    st.execute("""
-                        CREATE VIEW vue_kpi_zone AS
-                        SELECT
-                            z.nomZone,
-                            COUNT(s.idSignalement) AS total,
-                            SUM(s.statut = 'En attente') AS enAttente,
-                            SUM(s.statut IN ('En cours','Affecte')) AS enCours,
-                            SUM(s.statut = 'Termine') AS termines,
-                            ROUND(SUM(s.statut = 'Termine') * 100.0 / NULLIF(COUNT(*), 0), 1) AS tauxResolution,
-                            ROUND(AVG(CASE WHEN s.statut = 'Termine' AND a.dateCollecte IS NOT NULL
-                                      THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte) END), 1) AS tempsResolutionMoyenH,
-                            SUM(s.statut = 'En attente' AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS urgents
-                        FROM Signalement s
-                        LEFT JOIN Zone z ON s.idZone = z.idZone
-                        LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
-                        GROUP BY z.idZone, z.nomZone
-                        """);
-                }
-                schemaReady = true;
+                                // Recreer les vues a chaque demarrage pour garantir la coherence des calculs.
+                st.execute("""
+                    CREATE OR REPLACE VIEW vue_suivi_signalement AS
+                    SELECT
+                        s.idSignalement,
+                        s.description,
+                        s.categorie,
+                        s.statut,
+                        s.dateSignalement,
+                        z.nomZone,
+                        u_citoyen.nom AS nomCitoyen,
+                        u_citoyen.email AS emailCitoyen,
+                        u_agent.nom AS nomAgent,
+                        a.dateAffectation,
+                        a.dateCollecte,
+                        TIMESTAMPDIFF(HOUR, s.dateSignalement, IFNULL(a.dateCollecte, NOW())) AS heuresEcoules,
+                        CASE
+                            WHEN s.statut IN ('Terminé', 'Termine') AND a.dateCollecte IS NOT NULL
+                                THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte)
+                            ELSE NULL
+                        END AS heuresResolution,
+                        e.note AS noteEvaluation,
+                        e.commentaire AS commentaireEvaluation
+                    FROM Signalement s
+                    LEFT JOIN Zone z ON s.idZone = z.idZone
+                    LEFT JOIN Utilisateur u_citoyen ON s.idUser = u_citoyen.idUser
+                    LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
+                    LEFT JOIN Utilisateur u_agent ON a.idAgent = u_agent.idUser
+                    LEFT JOIN EvaluationCollecte e ON s.idSignalement = e.idSignalement
+                    """);
+
+                st.execute("""
+                    CREATE OR REPLACE VIEW vue_kpi_zone AS
+                    SELECT
+                        z.nomZone,
+                        COUNT(s.idSignalement) AS total,
+                        SUM(s.statut = 'En attente') AS enAttente,
+                        SUM(s.statut IN ('En cours', 'Affecté', 'Affecte')) AS enCours,
+                        SUM(s.statut IN ('Terminé', 'Termine')) AS termines,
+                        ROUND(SUM(s.statut IN ('Terminé', 'Termine')) * 100.0 / NULLIF(COUNT(*), 0), 1) AS tauxResolution,
+                        ROUND(AVG(CASE WHEN s.statut IN ('Terminé', 'Termine') AND a.dateCollecte IS NOT NULL
+                                  THEN TIMESTAMPDIFF(HOUR, s.dateSignalement, a.dateCollecte) END), 1) AS tempsResolutionMoyenH,
+                        SUM(s.statut = 'En attente' AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS urgents
+                    FROM Signalement s
+                    LEFT JOIN Zone z ON s.idZone = z.idZone
+                    LEFT JOIN Affectation a ON s.idSignalement = a.idSignalement
+                    GROUP BY z.idZone, z.nomZone
+                    """);
+schemaReady = true;
             } catch (SQLException e) {
                 logger.warn("Schéma Suivi incomplet: {}", e.getMessage());
                 // Ne pas marquer schemaReady=true : on retentera au prochain appel

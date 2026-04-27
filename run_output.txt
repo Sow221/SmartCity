@@ -1,0 +1,142 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.smartcity:smartcity-dechets >-------------------
+[INFO] Building SmartCity Dechets 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> javafx-maven-plugin:0.0.8:run (default-cli) > process-classes @ smartcity-dechets >>>
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ smartcity-dechets ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 26 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ smartcity-dechets ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] <<< javafx-maven-plugin:0.0.8:run (default-cli) < process-classes @ smartcity-dechets <<<
+[INFO] 
+[INFO] 
+[INFO] --- javafx-maven-plugin:0.0.8:run (default-cli) @ smartcity-dechets ---
+18:14:13.176 [JavaFX Application Thread] INFO  com.smartcity.config.GeoConfig - GeoConfig OK - GPS port: 3001, WS port: 8888, IP: 10.156.185.200
+18:14:13.184 [JavaFX Application Thread] INFO  c.smartcity.utils.DatabaseConnection - ? Configuration DB chargée depuis config.properties (externe): db.url
+18:14:13.185 [JavaFX Application Thread] INFO  c.smartcity.utils.DatabaseConnection - ? Configuration DB chargée depuis config.properties (externe): db.user
+18:14:13.186 [JavaFX Application Thread] INFO  c.smartcity.utils.DatabaseConnection - ? Configuration DB chargée depuis config.properties (externe): db.password
+18:14:13.213 [JavaFX Application Thread] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+18:14:13.723 [JavaFX Application Thread] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@11b24313
+18:14:13.727 [JavaFX Application Thread] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+18:14:13.811 [JavaFX Application Thread] INFO  com.smartcity.service.GpsApiServer - 7 tokens GPS recharges depuis la base
+18:14:15.295 [JavaFX Application Thread] INFO  com.smartcity.service.GpsApiServer - GPS API Server demarre sur http://10.156.185.200:3001
+18:14:15.296 [JavaFX Application Thread] INFO  com.smartcity.app.MainApp - GPS API Server demarre sur les ports 3001 et 3002
+avr. 27, 2026 6:14:15 PM org.glassfish.grizzly.http.server.NetworkListener start
+INFOS: Started listener bound to [0.0.0.0:8888]
+avr. 27, 2026 6:14:15 PM org.glassfish.grizzly.http.server.HttpServer start
+INFOS: [HttpServer] Started.
+avr. 27, 2026 6:14:15 PM org.glassfish.tyrus.server.Server start
+INFOS: WebSocket Registered apps: URLs all start with ws://10.156.185.200:8888
+avr. 27, 2026 6:14:15 PM org.glassfish.tyrus.server.Server start
+INFOS: WebSocket server started.
+18:14:15.624 [JavaFX Application Thread] INFO  c.s.websocket.WebSocketServer - ? WebSocket Server démarré sur ws://10.156.185.200:8888/ws/agent-missions
+18:14:15.624 [JavaFX Application Thread] INFO  com.smartcity.app.MainApp - WebSocket Server demarre sur le port 8888
+18:14:44.481 [login-task] INFO  c.s.service.UtilisateurService - ? Connexion réussie pour: admin@smartcity.sn
+18:14:44.490 [JavaFX Application Thread] INFO  com.smartcity.utils.SessionManager - ? Nouvelle session créée pour: ad***@smartcity.sn (ID: be5d40ce)
+18:14:57.411 [JavaFX Application Thread] ERROR com.smartcity.app.MainApp - Erreur chargement reports_dashboard.fxml
+javafx.fxml.LoadException: 
+/C:/Users/MS/Desktop/SC/SmartCity/target/classes/fxml/reports_dashboard.fxml
+
+	at javafx.fxml/javafx.fxml.FXMLLoader.constructLoadException(FXMLLoader.java:2727)
+	at javafx.fxml/javafx.fxml.FXMLLoader.loadImpl(FXMLLoader.java:2697)
+	at javafx.fxml/javafx.fxml.FXMLLoader.loadImpl(FXMLLoader.java:2568)
+	at javafx.fxml/javafx.fxml.FXMLLoader.load(FXMLLoader.java:2536)
+	at com.smartcity.app.MainApp.showReportsScreen(MainApp.java:159)
+	at com.smartcity.controller.AdminDashboardController.handleShowRapports(AdminDashboardController.java:630)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at com.sun.javafx.reflect.Trampoline.invoke(MethodUtil.java:72)
+	at jdk.internal.reflect.GeneratedMethodAccessor2.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at javafx.base/com.sun.javafx.reflect.MethodUtil.invoke(MethodUtil.java:270)
+	at javafx.fxml/com.sun.javafx.fxml.MethodHelper.invoke(MethodHelper.java:84)
+	at javafx.fxml/javafx.fxml.FXMLLoader$MethodHandler.invoke(FXMLLoader.java:1860)
+	at javafx.fxml/javafx.fxml.FXMLLoader$ControllerMethodEventHandler.handle(FXMLLoader.java:1731)
+	at javafx.base/com.sun.javafx.event.CompositeEventHandler.dispatchBubblingEvent(CompositeEventHandler.java:86)
+	at javafx.base/com.sun.javafx.event.EventHandlerManager.dispatchBubblingEvent(EventHandlerManager.java:232)
+	at javafx.base/com.sun.javafx.event.EventHandlerManager.dispatchBubblingEvent(EventHandlerManager.java:189)
+	at javafx.base/com.sun.javafx.event.CompositeEventDispatcher.dispatchBubblingEvent(CompositeEventDispatcher.java:59)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:58)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.EventUtil.fireEventImpl(EventUtil.java:74)
+	at javafx.base/com.sun.javafx.event.EventUtil.fireEvent(EventUtil.java:49)
+	at javafx.base/javafx.event.Event.fireEvent(Event.java:199)
+	at javafx.graphics/javafx.scene.Node.fireEvent(Node.java:8917)
+	at javafx.controls/javafx.scene.control.Button.fire(Button.java:203)
+	at javafx.controls/com.sun.javafx.scene.control.behavior.ButtonBehavior.mouseReleased(ButtonBehavior.java:207)
+	at javafx.controls/com.sun.javafx.scene.control.inputmap.InputMap.handle(InputMap.java:274)
+	at javafx.base/com.sun.javafx.event.CompositeEventHandler$NormalEventHandlerRecord.handleBubblingEvent(CompositeEventHandler.java:247)
+	at javafx.base/com.sun.javafx.event.CompositeEventHandler.dispatchBubblingEvent(CompositeEventHandler.java:80)
+	at javafx.base/com.sun.javafx.event.EventHandlerManager.dispatchBubblingEvent(EventHandlerManager.java:232)
+	at javafx.base/com.sun.javafx.event.EventHandlerManager.dispatchBubblingEvent(EventHandlerManager.java:189)
+	at javafx.base/com.sun.javafx.event.CompositeEventDispatcher.dispatchBubblingEvent(CompositeEventDispatcher.java:59)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:58)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.BasicEventDispatcher.dispatchEvent(BasicEventDispatcher.java:56)
+	at javafx.base/com.sun.javafx.event.EventDispatchChainImpl.dispatchEvent(EventDispatchChainImpl.java:114)
+	at javafx.base/com.sun.javafx.event.EventUtil.fireEventImpl(EventUtil.java:74)
+	at javafx.base/com.sun.javafx.event.EventUtil.fireEvent(EventUtil.java:54)
+	at javafx.base/javafx.event.Event.fireEvent(Event.java:199)
+	at javafx.graphics/javafx.scene.Scene$MouseHandler.process(Scene.java:3985)
+	at javafx.graphics/javafx.scene.Scene.processMouseEvent(Scene.java:1891)
+	at javafx.graphics/javafx.scene.Scene$ScenePeerListener.mouseEvent(Scene.java:2709)
+	at javafx.graphics/com.sun.javafx.tk.quantum.GlassViewEventHandler$MouseEventNotification.run(GlassViewEventHandler.java:411)
+	at javafx.graphics/com.sun.javafx.tk.quantum.GlassViewEventHandler$MouseEventNotification.run(GlassViewEventHandler.java:301)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
+	at javafx.graphics/com.sun.javafx.tk.quantum.GlassViewEventHandler.lambda$handleMouseEvent$2(GlassViewEventHandler.java:450)
+	at javafx.graphics/com.sun.javafx.tk.quantum.QuantumToolkit.runWithoutRenderLock(QuantumToolkit.java:430)
+	at javafx.graphics/com.sun.javafx.tk.quantum.GlassViewEventHandler.handleMouseEvent(GlassViewEventHandler.java:449)
+	at javafx.graphics/com.sun.glass.ui.View.handleMouseEvent(View.java:551)
+	at javafx.graphics/com.sun.glass.ui.View.notifyMouse(View.java:937)
+	at javafx.graphics/com.sun.glass.ui.win.WinApplication._runLoop(Native Method)
+	at javafx.graphics/com.sun.glass.ui.win.WinApplication.lambda$runLoop$3(WinApplication.java:189)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.lang.reflect.InvocationTargetException: null
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at com.sun.javafx.reflect.Trampoline.invoke(MethodUtil.java:72)
+	at jdk.internal.reflect.GeneratedMethodAccessor2.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at javafx.base/com.sun.javafx.reflect.MethodUtil.invoke(MethodUtil.java:270)
+	at javafx.fxml/com.sun.javafx.fxml.MethodHelper.invoke(MethodHelper.java:84)
+	at javafx.fxml/javafx.fxml.FXMLLoader.loadImpl(FXMLLoader.java:2693)
+	... 65 common frames omitted
+Caused by: java.lang.NullPointerException: Cannot invoke "javafx.scene.chart.LineChart.setTitle(String)" because "this.trendLineChart" is null
+	at com.smartcity.controller.ReportsController.setupControls(ReportsController.java:307)
+	at com.smartcity.controller.ReportsController.initialize(ReportsController.java:278)
+	... 76 common frames omitted
+18:15:02.069 [JavaFX Application Thread] INFO  com.smartcity.service.GpsApiServer - GPS API Server arrete
+avr. 27, 2026 6:15:02 PM org.glassfish.grizzly.http.server.NetworkListener shutdownNow
+INFOS: Stopped listener bound to [0.0.0.0:8888]
+avr. 27, 2026 6:15:02 PM org.glassfish.tyrus.server.Server stop
+INFOS: Websocket Server stopped.
+18:15:02.107 [JavaFX Application Thread] INFO  c.s.websocket.WebSocketServer - ? WebSocket Server arrêté
+18:15:02.107 [JavaFX Application Thread] INFO  com.smartcity.utils.SessionManager - ? Arrêt du gestionnaire de session...
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  55.384 s
+[INFO] Finished at: 2026-04-27T18:15:02Z
+[INFO] ------------------------------------------------------------------------

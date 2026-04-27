@@ -159,9 +159,7 @@ public class MainApp extends Application {
             Parent root = loader.load();
             ReportsController controller = loader.getController();
             controller.setMainApp(this);
-            primaryStage.setScene(new Scene(root, 1100, 680));
-            primaryStage.setWidth(1100);
-            primaryStage.setHeight(680);
+            primaryStage.setScene(new Scene(root));
             primaryStage.show();
         } catch (IOException e) {
             logger.error("Erreur chargement reports_dashboard.fxml", e);

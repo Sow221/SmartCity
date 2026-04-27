@@ -342,141 +342,50 @@
                 </VBox>
                 </ScrollPane>
                 <ScrollPane fx:id="pageStatistiques" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
-                    <VBox spacing="24" styleClass="page-box" VBox.vgrow="ALWAYS">
+                    <VBox spacing="18" styleClass="page-box" VBox.vgrow="ALWAYS">
                         <HBox alignment="CENTER_LEFT" spacing="12">
                             <VBox spacing="3">
-                                <Label text="Vue generale" styleClass="page-title"/>
-                                <Label text="Indicateurs de performance de la plateforme" styleClass="page-subtitle"/>
+                                <Label text="Analyse temps reel" styleClass="page-title"/>
+                                <Label text="Supervision terrain : carte live, KPI prioritaires, alertes" styleClass="page-subtitle"/>
                             </VBox>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Button text="Exporter CSV" onAction="#handleExporterCSVStats" styleClass="btn-outline-sm">
-                            <tooltip><Tooltip text="Exporter les statistiques en fichier CSV"/></tooltip>
-                        </Button>
+                            <Button text="Actualiser" onAction="#chargerDonnees" styleClass="btn-outline-sm"/>
                         </HBox>
-                        <!-- Ligne 1 KPIs -->
+
                         <HBox spacing="12">
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="?" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardTauxResolution" text="0%" styleClass="stat-card-number"/><Label text="Taux resolution" styleClass="stat-card-label"/></VBox>
-                                </HBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label fx:id="statCardTourneesActives" text="0" styleClass="stat-card-number"/>
+                                <Label text="Charge operationnelle active" styleClass="stat-card-label"/>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="P" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardTauxPikine" text="0%" styleClass="stat-card-number"/><Label text="Taux Pikine" styleClass="stat-card-label"/></VBox>
-                                </HBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label fx:id="statCardCritiques72h" text="0" styleClass="stat-card-number"/>
+                                <Label text="Retards critiques globaux (>72h)" styleClass="stat-card-label"/>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER"><Label text="G" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardTauxGuediawaye" text="0%" styleClass="stat-card-number"/><Label text="Taux Guediawaye" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER"><Label text="~" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardMoyenneJour" text="0" styleClass="stat-card-number"/><Label text="Moy. / jour" styleClass="stat-card-label"/></VBox>
-                                </HBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label fx:id="statCardTauxResolution" text="0%" styleClass="stat-card-number"/>
+                                <Label text="Taux de traitement global" styleClass="stat-card-label"/>
                             </VBox>
                         </HBox>
-                        <!-- Ligne 2 KPIs -->
-                        <HBox spacing="12">
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-red" alignment="CENTER"><Label text="!" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardCritiques72h" text="0" styleClass="stat-card-number"/><Label text="Critiques &gt;72h" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="?" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardNonAssignes" text="0" styleClass="stat-card-number"/><Label text="Non assignes" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="G" style="-fx-font-size:14px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardAgentsGps" text="0" styleClass="stat-card-number"/><Label text="Agents GPS live" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER"><Label text="?" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardTourneesActives" text="0" styleClass="stat-card-number"/><Label text="Tournees actives" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                        </HBox>
-                        <!-- Ligne 3 KPIs -->
-                        <HBox spacing="12">
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER"><Label text="&#x23F1;" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardTempsResolution" text="-" styleClass="stat-card-number"/><Label text="Temps moyen" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER"><Label text="&#x2605;" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardSatisfaction" text="-" styleClass="stat-card-number"/><Label text="Satisfaction" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-teal" alignment="CENTER"><Label text="&#x1F4C5;" style="-fx-font-size:14px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardAujourdhui" text="0" styleClass="stat-card-number"/><Label text="Aujourd'hui" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="120">
-                                <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER"><Label text="&#x0394;" style="-fx-font-size:16px;"/></StackPane>
-                                    <VBox spacing="2"><Label fx:id="statCardDelta7j" text="0" styleClass="stat-card-number"/><Label text="Delta 7 jours" styleClass="stat-card-label"/></VBox>
-                                </HBox>
-                            </VBox>
-                        </HBox>
-                        <HBox spacing="20">
-                            <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                                <Label text="Signalements par categorie" styleClass="chart-card-title"/>
-                                <PieChart fx:id="statPieCategorie" prefHeight="260"/>
-                            </VBox>
-                            <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                                <Label text="Signalements par zone" styleClass="chart-card-title"/>
-                                <BarChart fx:id="statBarZone" prefHeight="260">
-                                    <xAxis><CategoryAxis label="Zone"/></xAxis>
-                                    <yAxis><NumberAxis label="Nombre"/></yAxis>
-                                </BarChart>
-                            </VBox>
-                        </HBox>
-                        <VBox styleClass="chart-card" spacing="10">
-                            <Label text="Carte thermique des signalements" styleClass="chart-card-title"/>
-                            <WebView fx:id="heatmapWebView" prefHeight="320"/>
+
+                        <VBox styleClass="chart-card" spacing="8">
+                            <Label text="Alertes terrain prioritaires (max 5)" styleClass="chart-card-title"/>
+                            <TableView fx:id="tableAlerts" prefHeight="190" styleClass="data-table">
+                                <columns>
+                                    <TableColumn fx:id="colAlertSeverity" text="Niveau" prefWidth="110"/>
+                                    <TableColumn fx:id="colAlertTitle" text="Alerte" prefWidth="240"/>
+                                    <TableColumn fx:id="colAlertDetail" text="Detail" prefWidth="350"/>
+                                    <TableColumn fx:id="colAlertAck" text="Action" prefWidth="100"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="Aucune alerte prioritaire active"/>
+                                </placeholder>
+                            </TableView>
                         </VBox>
-                        <HBox spacing="20">
-                            <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                                <Label text="Carte live des agents" styleClass="chart-card-title"/>
-                                <WebView fx:id="agentLiveMapWebView" prefHeight="320"/>
-                            </VBox>
-                            <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                                <Label text="Agents connectes" styleClass="chart-card-title"/>
-                                <TableView fx:id="tableLiveAgents" prefHeight="320" styleClass="data-table">
-                                    <columns>
-                                        <TableColumn fx:id="colLiveAgentNom" text="Agent" prefWidth="130"/>
-                                        <TableColumn fx:id="colLiveAgentZone" text="Zone" prefWidth="110"/>
-                                        <TableColumn fx:id="colLiveAgentMissions" text="Actives" prefWidth="70"/>
-                                        <TableColumn fx:id="colLiveAgentEnCours" text="En cours" prefWidth="80"/>
-                                        <TableColumn fx:id="colLiveAgentPosition" text="Position" prefWidth="150"/>
-                                        <TableColumn fx:id="colLiveAgentFraicheur" text="Fraicheur" prefWidth="90"/>
-                                    </columns>
-                                    <placeholder>
-                                        <VBox alignment="CENTER" spacing="8">
-                                            <Label text="GPS" style="-fx-font-size:20px;"/>
-                                            <Label text="Aucun agent en ligne" styleClass="empty-state-title"/>
-                                            <Label text="Les agents GPS actifs apparaitront ici" styleClass="empty-state-desc"/>
-                                        </VBox>
-                                    </placeholder>
-                                </TableView>
-                            </VBox>
-                        </HBox>
+
+                        <VBox styleClass="chart-card" spacing="10" VBox.vgrow="ALWAYS">
+                            <Label text="Carte live des agents" styleClass="chart-card-title"/>
+                            <WebView fx:id="agentLiveMapWebView" prefHeight="360"/>
+                        </VBox>
                     </VBox>
                 </ScrollPane>
 

@@ -4,6 +4,9 @@
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TextArea?>
 
 <BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:id="rootPane"
@@ -24,11 +27,15 @@
                 <DatePicker fx:id="startDatePicker" prefWidth="130"/>
                 <Label text="->" styleClass="text-muted"/>
                 <DatePicker fx:id="endDatePicker" prefWidth="130"/>
+                <ComboBox fx:id="zoneFilterCombo" prefWidth="150"/>
+                <ComboBox fx:id="criticalityCombo" prefWidth="140"/>
                 <ComboBox fx:id="reportTypeCombo" prefWidth="210"/>
                 <Button fx:id="generateReportButton" text="Generer" onAction="#generateReport"
                         styleClass="action-button" prefHeight="36"/>
                 <Button fx:id="exportReportButton" text="Exporter" onAction="#exportReport"
                         styleClass="btn-outline-sm" prefHeight="36"/>
+                <ToggleButton fx:id="advancedToggle" text="Vue avancee"
+                              styleClass="btn-outline-sm" prefHeight="36"/>
                 <Button text="Retour" onAction="#handleBackToAdmin"
                         styleClass="btn-outline-sm" prefHeight="36"/>
             </HBox>
@@ -71,98 +78,132 @@
                 </VBox>
 
                 <VBox styleClass="rpt-kpi-card" HBox.hgrow="ALWAYS" spacing="3">
-                    <Label text="ZONE LA PLUS ACTIVE" styleClass="rpt-kpi-label"/>
-                    <Label fx:id="kpiZone" text="-" styleClass="rpt-kpi-value-sm"/>
-                    <Label fx:id="kpiZoneSub" text="" styleClass="rpt-kpi-sub"/>
+                    <Label text="BACKLOG A TRAITER" styleClass="rpt-kpi-label"/>
+                    <Label fx:id="kpiBacklog" text="-" styleClass="rpt-kpi-value-sm"/>
+                    <Label fx:id="kpiBacklogSub" text="en attente + en cours" styleClass="rpt-kpi-sub"/>
                 </VBox>
             </HBox>
         </VBox>
     </top>
 
     <center>
-        <SplitPane dividerPositions="0.58" orientation="HORIZONTAL">
-            <VBox spacing="10" style="-fx-padding: 10 6 10 10;">
-                <HBox spacing="10" VBox.vgrow="ALWAYS">
-                    <VBox styleClass="rpt-chart-card" HBox.hgrow="ALWAYS" spacing="4">
-                        <Label text="Repartition par Statut" styleClass="reports-section-title"/>
-                        <PieChart fx:id="statusPieChart" VBox.vgrow="ALWAYS" prefHeight="230"
-                                  legendVisible="true" labelsVisible="true"/>
-                    </VBox>
+        <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="rpt-tabpane">
+            <!-- TAB 1: GRAPHIQUES & TABLEAUX -->
+            <Tab text="Graphiques &amp; Tableaux">
+                <SplitPane dividerPositions="0.58" orientation="HORIZONTAL">
+                    <VBox spacing="10" style="-fx-padding: 10 6 10 10;">
+                        <HBox spacing="10" VBox.vgrow="ALWAYS">
+                            <VBox styleClass="rpt-chart-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label text="Repartition par Statut" styleClass="reports-section-title"/>
+                                <PieChart fx:id="statusPieChart" VBox.vgrow="ALWAYS" prefHeight="230"
+                                          legendVisible="true" labelsVisible="true"/>
+                            </VBox>
 
-                    <VBox styleClass="rpt-chart-card" HBox.hgrow="ALWAYS" spacing="4">
-                        <Label text="Signalements par Zone" styleClass="reports-section-title"/>
-                        <BarChart fx:id="zoneBarChart" VBox.vgrow="ALWAYS" prefHeight="230"
-                                  animated="true" legendVisible="true">
-                            <xAxis><CategoryAxis fx:id="zoneXAxis" tickLabelRotation="-30"/></xAxis>
-                            <yAxis><NumberAxis fx:id="zoneYAxis"/></yAxis>
-                        </BarChart>
-                    </VBox>
-                </HBox>
-
-                <VBox styleClass="rpt-chart-card" VBox.vgrow="ALWAYS" spacing="4">
-                    <Label text="Evolution temporelle - periode selectionnee vs precedente" styleClass="reports-section-title"/>
-                    <LineChart fx:id="trendLineChart" VBox.vgrow="ALWAYS" prefHeight="190"
-                               animated="true" createSymbols="false">
-                        <xAxis><CategoryAxis fx:id="trendXAxis" tickLabelRotation="-30"/></xAxis>
-                        <yAxis><NumberAxis fx:id="trendYAxis"/></yAxis>
-                    </LineChart>
-                </VBox>
-            </VBox>
-
-            <VBox spacing="10" style="-fx-padding: 10 10 10 6;">
-                <VBox styleClass="rpt-chart-card" VBox.vgrow="NEVER" spacing="4">
-                    <Label text="Indicateurs cles" styleClass="reports-section-title"/>
-                    <TableView fx:id="statsTable" prefHeight="180" styleClass="data-table">
-                        <columns>
-                            <TableColumn fx:id="metricColumn" text="Indicateur" prefWidth="165"/>
-                            <TableColumn fx:id="valueColumn" text="Valeur" prefWidth="140"/>
-                        </columns>
-                        <placeholder><Label text="Generez un rapport pour voir les metriques" styleClass="text-muted"/></placeholder>
-                    </TableView>
-                </VBox>
-
-                <VBox styleClass="rpt-chart-card" VBox.vgrow="NEVER" spacing="8">
-                    <Label text="Situation operationnelle" styleClass="reports-section-title"/>
-                    <HBox spacing="8">
-                        <VBox styleClass="rpt-status-badge rpt-status-attente" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
-                            <Label fx:id="summaryAttente" text="-" styleClass="rpt-status-number"/>
-                            <Label text="En attente" styleClass="rpt-status-label"/>
-                        </VBox>
-                        <VBox styleClass="rpt-status-badge rpt-status-encours" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
-                            <Label fx:id="summaryEnCours" text="-" styleClass="rpt-status-number"/>
-                            <Label text="En cours" styleClass="rpt-status-label"/>
-                        </VBox>
-                        <VBox styleClass="rpt-status-badge rpt-status-termine" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
-                            <Label fx:id="summaryTermine" text="-" styleClass="rpt-status-number"/>
-                            <Label text="Termines" styleClass="rpt-status-label"/>
-                        </VBox>
-                    </HBox>
-
-                    <VBox spacing="4">
-                        <HBox alignment="CENTER_LEFT" spacing="6">
-                            <Label text="Taux de resolution" styleClass="rpt-prog-label"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="summaryTauxLabel" text="-" styleClass="rpt-prog-pct"/>
+                            <VBox styleClass="rpt-chart-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label text="Signalements par Zone" styleClass="reports-section-title"/>
+                                <BarChart fx:id="zoneBarChart" VBox.vgrow="ALWAYS" prefHeight="230"
+                                          animated="true" legendVisible="true">
+                                    <xAxis><CategoryAxis fx:id="zoneXAxis" tickLabelRotation="-30"/></xAxis>
+                                    <yAxis><NumberAxis fx:id="zoneYAxis"/></yAxis>
+                                </BarChart>
+                            </VBox>
                         </HBox>
-                        <ProgressBar fx:id="summaryProgressBar" progress="0" maxWidth="Infinity"
-                                     prefHeight="10" styleClass="rpt-progress-bar"/>
+
+                        <VBox styleClass="rpt-chart-card" VBox.vgrow="ALWAYS" spacing="4">
+                            <Label text="Evolution temporelle - periode selectionnee vs precedente" styleClass="reports-section-title"/>
+                            <LineChart fx:id="trendLineChart" VBox.vgrow="ALWAYS" prefHeight="190"
+                                       animated="true" createSymbols="false">
+                                <xAxis><CategoryAxis fx:id="trendXAxis" tickLabelRotation="-30"/></xAxis>
+                                <yAxis><NumberAxis fx:id="trendYAxis"/></yAxis>
+                            </LineChart>
+                        </VBox>
                     </VBox>
-                </VBox>
 
-                <VBox styleClass="rpt-chart-card rpt-reco-card" VBox.vgrow="ALWAYS" spacing="6">
-                    <Label text="Recommandations" styleClass="reports-section-title"/>
-                    <VBox fx:id="recoContainer" spacing="6" VBox.vgrow="ALWAYS"/>
-                </VBox>
+                    <VBox spacing="10" style="-fx-padding: 10 10 10 6;">
+                        <VBox styleClass="rpt-chart-card" VBox.vgrow="NEVER" spacing="4">
+                            <Label text="Indicateurs cles" styleClass="reports-section-title"/>
+                            <TableView fx:id="statsTable" prefHeight="180" styleClass="data-table">
+                                <columns>
+                                    <TableColumn fx:id="metricColumn" text="Indicateur" prefWidth="165"/>
+                                    <TableColumn fx:id="valueColumn" text="Valeur" prefWidth="140"/>
+                                </columns>
+                                <placeholder><Label text="Generez un rapport pour voir les metriques" styleClass="text-muted"/></placeholder>
+                            </TableView>
+                        </VBox>
 
-                <HBox spacing="8" alignment="CENTER_RIGHT">
-                    <Label fx:id="exportStatusLabel" text="" styleClass="rpt-export-status"/>
-                    <Button text="Exporter PDF" onAction="#exportReport"
-                            styleClass="action-button" prefHeight="36"/>
-                    <Button text="Exporter CSV" onAction="#exportCsv"
-                            styleClass="btn-outline-sm" prefHeight="36"/>
-                </HBox>
-            </VBox>
-        </SplitPane>
+                        <VBox styleClass="rpt-chart-card" VBox.vgrow="NEVER" spacing="8">
+                            <Label text="Situation operationnelle" styleClass="reports-section-title"/>
+                            <HBox spacing="8">
+                                <VBox styleClass="rpt-status-badge rpt-status-attente" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
+                                    <Label fx:id="summaryAttente" text="-" styleClass="rpt-status-number"/>
+                                    <Label text="En attente" styleClass="rpt-status-label"/>
+                                </VBox>
+                                <VBox styleClass="rpt-status-badge rpt-status-encours" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
+                                    <Label fx:id="summaryEnCours" text="-" styleClass="rpt-status-number"/>
+                                    <Label text="En cours" styleClass="rpt-status-label"/>
+                                </VBox>
+                                <VBox styleClass="rpt-status-badge rpt-status-termine" HBox.hgrow="ALWAYS" alignment="CENTER" spacing="2">
+                                    <Label fx:id="summaryTermine" text="-" styleClass="rpt-status-number"/>
+                                    <Label text="Termines" styleClass="rpt-status-label"/>
+                                </VBox>
+                            </HBox>
+
+                            <VBox spacing="4">
+                                <HBox alignment="CENTER_LEFT" spacing="6">
+                                    <Label text="Taux de resolution" styleClass="rpt-prog-label"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="summaryTauxLabel" text="-" styleClass="rpt-prog-pct"/>
+                                </HBox>
+                                <ProgressBar fx:id="summaryProgressBar" progress="0" maxWidth="Infinity"
+                                             prefHeight="10" styleClass="rpt-progress-bar"/>
+                            </VBox>
+                        </VBox>
+
+                        <VBox styleClass="rpt-chart-card" VBox.vgrow="ALWAYS" spacing="6">
+                            <Label text="Top 10 priorites d'action" styleClass="reports-section-title"/>
+                            <TableView fx:id="prioritiesTable" prefHeight="220" styleClass="data-table">
+                                <columns>
+                                    <TableColumn fx:id="priorityIdColumn" text="ID" prefWidth="55"/>
+                                    <TableColumn fx:id="priorityZoneColumn" text="Zone" prefWidth="95"/>
+                                    <TableColumn fx:id="priorityAgeColumn" text="Age (h)" prefWidth="80"/>
+                                    <TableColumn fx:id="priorityStatusColumn" text="Statut" prefWidth="95"/>
+                                    <TableColumn fx:id="priorityAgentColumn" text="Agent" prefWidth="130"/>
+                                    <TableColumn fx:id="priorityActionColumn" text="Priorite d'action" prefWidth="145"/>
+                                </columns>
+                                <placeholder><Label text="Aucune priorite pour les filtres choisis" styleClass="text-muted"/></placeholder>
+                            </TableView>
+                        </VBox>
+
+                        <VBox fx:id="advancedSection" spacing="10" visible="false" managed="false">
+                            <VBox styleClass="rpt-chart-card rpt-reco-card" VBox.vgrow="ALWAYS" spacing="6">
+                                <Label text="Recommandations et priorites" styleClass="reports-section-title"/>
+                                <VBox fx:id="recoContainer" spacing="6" VBox.vgrow="ALWAYS"/>
+                            </VBox>
+
+                            <HBox spacing="8" alignment="CENTER_RIGHT">
+                                <Label fx:id="exportStatusLabel" text="" styleClass="rpt-export-status"/>
+                                <Button text="Exporter CSV" onAction="#exportCsv"
+                                        styleClass="btn-outline-sm" prefHeight="36"/>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </SplitPane>
+            </Tab>
+
+            <!-- TAB 2: RAPPORT DÉTAILLÉ -->
+            <Tab text="Rapport détaillé">
+                <VBox spacing="10" style="-fx-padding: 12 14 12 14;">
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="Rapport textuel complet" styleClass="reports-section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Copier" onAction="#copyReportText" styleClass="btn-outline-sm" prefHeight="32"/>
+                        <Button text="Exporter TXT" onAction="#exportReportFile" styleClass="btn-outline-sm" prefHeight="32"/>
+                    </HBox>
+                    <TextArea fx:id="reportTextArea" wrapText="true" style="-fx-font-family: 'Courier New', monospace; -fx-font-size: 11;"
+                              VBox.vgrow="ALWAYS" styleClass="report-textarea" editable="false"/>
+                </VBox>
+            </Tab>
+        </TabPane>
     </center>
 
     <bottom>

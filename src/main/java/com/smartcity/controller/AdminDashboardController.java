@@ -1,12 +1,15 @@
 package com.smartcity.controller;
 
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.smartcity.app.MainApp;
 import com.smartcity.model.Signalement;
 import com.smartcity.model.Utilisateur;
+import com.smartcity.service.AnalyticsRulesService;
 import com.smartcity.service.SignalementService;
 import com.smartcity.service.UtilisateurService;
 import com.smartcity.service.ZoneService;
@@ -45,127 +48,200 @@ import javafx.scene.layout.VBox;
  */
 public class AdminDashboardController {
 
-    @FXML private BorderPane rootPane;
-    @FXML private Label adminNameLabel;
-    @FXML private Label adminAvatarLabel;
-    @FXML private Label adminMessageLabel;
-    @FXML private Button themeToggleButton;
+    @FXML
+    private BorderPane rootPane;
+    @FXML
+    private Label adminNameLabel;
+    @FXML
+    private Label adminAvatarLabel;
+    @FXML
+    private Label adminMessageLabel;
+    @FXML
+    private Button themeToggleButton;
 
-    @FXML private Button btnAdminDashboard;
-    @FXML private Button btnGestionUtilisateurs;
-    @FXML private Button btnGestionAgents;
-    @FXML private Button btnGestionSignalements;
-    @FXML private Button btnStatistiques;
-    @FXML private Button btnAdminProfil;
-    @FXML private Button btnParametres;
+    @FXML
+    private Button btnAdminDashboard;
+    @FXML
+    private Button btnGestionUtilisateurs;
+    @FXML
+    private Button btnGestionAgents;
+    @FXML
+    private Button btnGestionSignalements;
+    @FXML
+    private Button btnStatistiques;
+    @FXML
+    private Button btnAdminProfil;
+    @FXML
+    private Button btnParametres;
 
-    @FXML private javafx.scene.control.ScrollPane pageAdminDashboard;
-    @FXML private javafx.scene.control.ScrollPane pageAdminUsers;
-    @FXML private javafx.scene.control.ScrollPane pageAdminAgents;
-    @FXML private javafx.scene.control.ScrollPane pageAdminSignalements;
-    @FXML private javafx.scene.control.ScrollPane pageStatistiques;
-    @FXML private VBox pageAdminProfil;
-    @FXML private javafx.scene.control.ScrollPane pageParametres;
+    @FXML
+    private javafx.scene.control.ScrollPane pageAdminDashboard;
+    @FXML
+    private javafx.scene.control.ScrollPane pageAdminUsers;
+    @FXML
+    private javafx.scene.control.ScrollPane pageAdminAgents;
+    @FXML
+    private javafx.scene.control.ScrollPane pageAdminSignalements;
+    @FXML
+    private javafx.scene.control.ScrollPane pageStatistiques;
+    @FXML
+    private VBox pageAdminProfil;
+    @FXML
+    private javafx.scene.control.ScrollPane pageParametres;
 
-    @FXML private Label adminCardTotalSignalements;
-    @FXML private Label adminCardEnAttente;
-    @FXML private Label adminCardEnCours;
-    @FXML private Label adminCardCollectes;
-    @FXML private Label adminCardTotalUtilisateurs;
+    @FXML
+    private Label adminCardTotalSignalements;
+    @FXML
+    private Label adminCardEnAttente;
+    @FXML
+    private Label adminCardEnCours;
+    @FXML
+    private Label adminCardCollectes;
+    @FXML
+    private Label adminCardTotalUtilisateurs;
 
-    @FXML private PieChart statsPieChart;
-    @FXML private BarChart<String, Number> statsBarChart;
+    @FXML
+    private PieChart statsPieChart;
+    @FXML
+    private BarChart<String, Number> statsBarChart;
 
     // Page Statistiques
-    @FXML private Label statCardTauxResolution;
-    @FXML private Label statCardTauxPikine;
-    @FXML private Label statCardTauxGuediawaye;
-    @FXML private Label statCardMoyenneJour;
-    @FXML private Label statCardCritiques72h;
-    @FXML private Label statCardNonAssignes;
-    @FXML private Label statCardAgentsGps;
-    @FXML private Label statCardTourneesActives;
-    @FXML private Label statCardTempsResolution;
-    @FXML private Label statCardSatisfaction;
-    @FXML private Label statCardAujourdhui;
-    @FXML private Label statCardDelta7j;
-    @FXML private PieChart statPieCategorie;
-    @FXML private BarChart<String, Number> statBarZone;
-    @FXML private javafx.scene.web.WebView heatmapWebView;
-    @FXML private javafx.scene.web.WebView agentLiveMapWebView;
-    @FXML private TableView<AgentLiveRow> tableLiveAgents;
-    @FXML private TableColumn<AgentLiveRow, String> colLiveAgentNom;
-    @FXML private TableColumn<AgentLiveRow, String> colLiveAgentZone;
-    @FXML private TableColumn<AgentLiveRow, Integer> colLiveAgentMissions;
-    @FXML private TableColumn<AgentLiveRow, Integer> colLiveAgentEnCours;
-    @FXML private TableColumn<AgentLiveRow, String> colLiveAgentPosition;
-    @FXML private TableColumn<AgentLiveRow, String> colLiveAgentFraicheur;
+    @FXML
+    private Label statCardTauxResolution;
+    @FXML
+    private Label statCardCritiques72h;
+    @FXML
+    private Label statCardTourneesActives;
+    @FXML
+    private javafx.scene.web.WebView agentLiveMapWebView;
+    @FXML
+    private TableView<AlertRow> tableAlerts;
+    @FXML
+    private TableColumn<AlertRow, String> colAlertSeverity;
+    @FXML
+    private TableColumn<AlertRow, String> colAlertTitle;
+    @FXML
+    private TableColumn<AlertRow, String> colAlertDetail;
+    @FXML
+    private TableColumn<AlertRow, Void> colAlertAck;
 
-    @FXML private TableView<Utilisateur> tableUtilisateurs;
-    @FXML private TableColumn<Utilisateur, Integer> colUserId;
-    @FXML private TableColumn<Utilisateur, String> colUserNom;
-    @FXML private TableColumn<Utilisateur, String> colUserEmail;
-    @FXML private TableColumn<Utilisateur, String> colUserRole;
-    @FXML private TableColumn<Utilisateur, String> colUserZone;
-    @FXML private Button btnModifierUtilisateur;
-    @FXML private Button btnSupprimerUtilisateur;
+    @FXML
+    private TableView<Utilisateur> tableUtilisateurs;
+    @FXML
+    private TableColumn<Utilisateur, Integer> colUserId;
+    @FXML
+    private TableColumn<Utilisateur, String> colUserNom;
+    @FXML
+    private TableColumn<Utilisateur, String> colUserEmail;
+    @FXML
+    private TableColumn<Utilisateur, String> colUserRole;
+    @FXML
+    private TableColumn<Utilisateur, String> colUserZone;
+    @FXML
+    private Button btnModifierUtilisateur;
+    @FXML
+    private Button btnSupprimerUtilisateur;
 
-    @FXML private TableView<AgentStatsRow> tableAgents;
-    @FXML private TableColumn<AgentStatsRow, Integer> colAgentId;
-    @FXML private TableColumn<AgentStatsRow, String> colAgentNom;
-    @FXML private TableColumn<AgentStatsRow, String> colAgentZone;
-    @FXML private TableColumn<AgentStatsRow, Integer> colAgentTraites;
-    @FXML private TableColumn<AgentStatsRow, String> colAgentEmail;
-    @FXML private TableColumn<AgentStatsRow, Void> colAgentStatut;
-    @FXML private javafx.scene.control.TextField searchUserField;
-    @FXML private javafx.scene.control.TextField searchAgentField;
-    @FXML private javafx.scene.control.ComboBox<String> filterAgentZoneCombo;
-    @FXML private Button btnModifierAgent;
-    @FXML private Button btnSupprimerAgent;
+    @FXML
+    private TableView<AgentStatsRow> tableAgents;
+    @FXML
+    private TableColumn<AgentStatsRow, Integer> colAgentId;
+    @FXML
+    private TableColumn<AgentStatsRow, String> colAgentNom;
+    @FXML
+    private TableColumn<AgentStatsRow, String> colAgentZone;
+    @FXML
+    private TableColumn<AgentStatsRow, Integer> colAgentTraites;
+    @FXML
+    private TableColumn<AgentStatsRow, String> colAgentEmail;
+    @FXML
+    private TableColumn<AgentStatsRow, Void> colAgentStatut;
+    @FXML
+    private javafx.scene.control.TextField searchUserField;
+    @FXML
+    private javafx.scene.control.TextField searchAgentField;
+    @FXML
+    private javafx.scene.control.ComboBox<String> filterAgentZoneCombo;
+    @FXML
+    private Button btnModifierAgent;
+    @FXML
+    private Button btnSupprimerAgent;
 
-    @FXML private Button btnModifierStatutSignalement;
-    @FXML private Button btnReaffecterSignalement;
-    @FXML private Button btnSupprimerSignalement;
+    @FXML
+    private Button btnModifierStatutSignalement;
+    @FXML
+    private Button btnReaffecterSignalement;
+    @FXML
+    private Button btnSupprimerSignalement;
 
-    @FXML private ComboBox<String> filterZoneCombo;
-    @FXML private ComboBox<String> filterStatutCombo;
-    @FXML private ComboBox<String> filterPrioriteCombo;
-    @FXML private ComboBox<String> filterAffectationCombo;
-    @FXML private ComboBox<String> filterCategorieCombo;
-    @FXML private javafx.scene.control.DatePicker filterDateDebutPicker;
-    @FXML private javafx.scene.control.DatePicker filterDateFinPicker;
-    @FXML private Label adminCardUrgents;
-    @FXML private javafx.scene.control.ProgressIndicator loadingSpinner;
-    @FXML private TableView<Signalement> tableSignalements;
-    @FXML private TableColumn<Signalement, Integer> colSignalementId;
-    @FXML private TableColumn<Signalement, String> colSignalementDescription;
-    @FXML private TableColumn<Signalement, String> colSignalementCategorie;
-    @FXML private TableColumn<Signalement, String> colSignalementZone;
-    @FXML private TableColumn<Signalement, String> colSignalementDate;
-    @FXML private TableColumn<Signalement, String> colSignalementStatut;
-    @FXML private TableColumn<Signalement, String> colSignalementUtilisateur;
-    @FXML private TableColumn<Signalement, String> colSignalementCommentaire;
+    @FXML
+    private ComboBox<String> filterZoneCombo;
+    @FXML
+    private ComboBox<String> filterStatutCombo;
+    @FXML
+    private ComboBox<String> filterPrioriteCombo;
+    @FXML
+    private ComboBox<String> filterAffectationCombo;
+    @FXML
+    private ComboBox<String> filterCategorieCombo;
+    @FXML
+    private javafx.scene.control.DatePicker filterDateDebutPicker;
+    @FXML
+    private javafx.scene.control.DatePicker filterDateFinPicker;
+    @FXML
+    private Label adminCardUrgents;
+    @FXML
+    private javafx.scene.control.ProgressIndicator loadingSpinner;
+    @FXML
+    private TableView<Signalement> tableSignalements;
+    @FXML
+    private TableColumn<Signalement, Integer> colSignalementId;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementDescription;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementCategorie;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementZone;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementDate;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementStatut;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementUtilisateur;
+    @FXML
+    private TableColumn<Signalement, String> colSignalementCommentaire;
 
-    @FXML private Label adminProfilAvatarLabel;
-    @FXML private Label adminProfilNomDisplay;
-    @FXML private TextField adminProfilNomField;
-    @FXML private TextField adminProfilEmailField;
-    @FXML private Label adminProfilRoleField;
-    @FXML private Label adminProfilDateLabel;
-    @FXML private TextField nouvelleZoneField;
-    @FXML private Label zonesListLabel;
+    @FXML
+    private Label adminProfilAvatarLabel;
+    @FXML
+    private Label adminProfilNomDisplay;
+    @FXML
+    private TextField adminProfilNomField;
+    @FXML
+    private TextField adminProfilEmailField;
+    @FXML
+    private Label adminProfilRoleField;
+    @FXML
+    private Label adminProfilDateLabel;
+    @FXML
+    private TextField nouvelleZoneField;
+    @FXML
+    private Label zonesListLabel;
 
     private final UtilisateurService utilisateurService = new UtilisateurService();
     private final SignalementService signalementService = new SignalementService();
     private final ZoneService zoneService = new ZoneService();
     private final com.smartcity.service.AffectationService affectationService = new com.smartcity.service.AffectationService();
     private final com.smartcity.service.SuiviService suiviService = new com.smartcity.service.SuiviService();
+    private final AnalyticsRulesService analyticsRulesService = new AnalyticsRulesService();
     private final ObservableList<Utilisateur> utilisateurs = FXCollections.observableArrayList();
     private final ObservableList<AgentStatsRow> agents = FXCollections.observableArrayList();
     private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
-    private final ObservableList<AgentLiveRow> liveAgents = FXCollections.observableArrayList();
+    private final ObservableList<AlertRow> activeAlerts = FXCollections.observableArrayList();
+    private final Set<String> acknowledgedAlerts = new HashSet<>();
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", java.util.Locale.FRANCE);
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm",
+            java.util.Locale.FRANCE);
     private static final String ALL_ZONES = "Toutes";
     private static final String ALL_STATUTS = "Tous";
     private static final String ALL_CATEGORIES = "Toutes";
@@ -177,9 +253,10 @@ public class AdminDashboardController {
 
     private volatile boolean isLoading = false;
     private MainApp mainApp;
-    private boolean heatmapFallbackHandlersInstalled;
     private boolean liveMapFallbackHandlersInstalled;
     private javafx.animation.Timeline liveTrackingRefreshTimeline;
+    private java.util.Timer liveStatistiquesRefreshTimer;
+    private final Object timerLock = new Object();
 
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
@@ -190,7 +267,8 @@ public class AdminDashboardController {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
         if (current == null || !SessionManager.isAdmin()) {
             showAdminMessage("Acces reserve au role Administrateur.", false);
-            if (mainApp != null) javafx.application.Platform.runLater(() -> mainApp.showLoginScreen());
+            if (mainApp != null)
+                javafx.application.Platform.runLater(() -> mainApp.showLoginScreen());
             return;
         }
 
@@ -203,33 +281,42 @@ public class AdminDashboardController {
         tableSignalements.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 Signalement sel = tableSignalements.getSelectionModel().getSelectedItem();
-                if (sel != null) afficherDetailSignalement(sel);
+                if (sel != null)
+                    afficherDetailSignalement(sel);
             }
         });
-        configureLiveAgentsTable();
+        configureAlertsTable();
         configureFilters();
         refreshZoneSettings();
 
-        btnModifierUtilisateur.disableProperty().bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
-        btnSupprimerUtilisateur.disableProperty().bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
+        btnModifierUtilisateur.disableProperty()
+                .bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
+        btnSupprimerUtilisateur.disableProperty()
+                .bind(tableUtilisateurs.getSelectionModel().selectedItemProperty().isNull());
         btnModifierAgent.disableProperty().bind(tableAgents.getSelectionModel().selectedItemProperty().isNull());
         btnSupprimerAgent.disableProperty().bind(tableAgents.getSelectionModel().selectedItemProperty().isNull());
-        btnModifierStatutSignalement.disableProperty().bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
-        btnSupprimerSignalement.disableProperty().bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
+        btnModifierStatutSignalement.disableProperty()
+                .bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
+        btnSupprimerSignalement.disableProperty()
+                .bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
         if (btnReaffecterSignalement != null)
-            btnReaffecterSignalement.disableProperty().bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
+            btnReaffecterSignalement.disableProperty()
+                    .bind(tableSignalements.getSelectionModel().selectedItemProperty().isNull());
 
         tableUtilisateurs.setItems(utilisateurs);
         tableUtilisateurs.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         // Recherche temps reel utilisateurs
         if (searchUserField != null) {
             searchUserField.textProperty().addListener((obs, old, val) -> {
-                if (val == null || val.isBlank()) { tableUtilisateurs.setItems(utilisateurs); return; }
+                if (val == null || val.isBlank()) {
+                    tableUtilisateurs.setItems(utilisateurs);
+                    return;
+                }
                 String lower = val.toLowerCase(java.util.Locale.ROOT);
                 tableUtilisateurs.setItems(javafx.collections.FXCollections.observableArrayList(
-                    utilisateurs.stream().filter(u -> u.getNom().toLowerCase(java.util.Locale.ROOT).contains(lower)
-                        || u.getEmail().toLowerCase(java.util.Locale.ROOT).contains(lower))
-                    .collect(java.util.stream.Collectors.toList())));
+                        utilisateurs.stream().filter(u -> u.getNom().toLowerCase(java.util.Locale.ROOT).contains(lower)
+                                || u.getEmail().toLowerCase(java.util.Locale.ROOT).contains(lower))
+                                .collect(java.util.stream.Collectors.toList())));
             });
         }
         tableAgents.setItems(agents);
@@ -247,15 +334,19 @@ public class AdminDashboardController {
         }
         tableSignalements.setItems(signalements);
         tableSignalements.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        if (tableLiveAgents != null) tableLiveAgents.setItems(liveAgents);
+        if (tableAlerts != null)
+            tableAlerts.setItems(activeAlerts);
         // Pagination : boutons Précédent/Suivant ajoutés dynamiquement sous la table
         ajouterPagination();
 
         applyTheme();
         showAdminDashboardPage();
-        rootPane.setOnKeyPressed(e -> { if (e.getCode() == javafx.scene.input.KeyCode.F5) chargerDonnees(); });
+        rootPane.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.F5)
+                chargerDonnees();
+        });
         startLiveTrackingAutoRefresh();
-        
+
         // Delay data loading to prevent Hikari pool exhaustion
         javafx.application.Platform.runLater(() -> {
             chargerDonnees();
@@ -270,21 +361,27 @@ public class AdminDashboardController {
 
     @FXML
     public void chargerDonnees() {
-        if (isLoading) return;
+        if (isLoading)
+            return;
         isLoading = true;
-        if (loadingSpinner != null) { loadingSpinner.setVisible(true); loadingSpinner.setManaged(true); }
+        if (loadingSpinner != null) {
+            loadingSpinner.setVisible(true);
+            loadingSpinner.setManaged(true);
+        }
         final javafx.scene.Node btnActualiser = rootPane != null ? rootPane.lookup("#btnActualiser") : null;
-        if (btnActualiser != null) btnActualiser.setDisable(true);
+        if (btnActualiser != null)
+            btnActualiser.setDisable(true);
         javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<>() {
             @Override
             protected Void call() {
-                int total      = signalementService.countAll();
-                int attente    = signalementService.countByStatut("En attente");
-                int encours    = signalementService.countByStatut("En cours") + signalementService.countByStatut("Affect\u00e9");
-                int collectes  = signalementService.countByStatut("Termin\u00e9");
-                int urgents    = signalementService.countUrgents();
+                int total = signalementService.countAll();
+                int attente = signalementService.countByStatut("En attente");
+                int encours = signalementService.countByStatut("En cours")
+                        + signalementService.countByStatut("Affect\u00e9");
+                int collectes = signalementService.countByStatut("Termin\u00e9");
+                int urgents = signalementService.countUrgents();
                 List<Utilisateur> users = utilisateurService.getUtilisateursByRole("Citoyen");
-                List<Signalement> sigs  = signalementService.getAllSignalements();
+                List<Signalement> sigs = signalementService.getAllSignalements();
                 // Fix N+1 agents : 1 seule requête SQL avec JOIN
                 List<UtilisateurService.AgentStats> agentStats = utilisateurService.getAgentsWithStats();
                 // Fix N+1 colonne agent : 1 seule requête JOIN
@@ -299,21 +396,23 @@ public class AdminDashboardController {
                         if (adminCardUrgents != null) {
                             adminCardUrgents.setText(String.valueOf(urgents));
                             adminCardUrgents.setStyle(urgents > 0
-                                ? "-fx-text-fill: #D32F2F; -fx-font-weight: bold;"
-                                : "-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                                    ? "-fx-text-fill: #D32F2F; -fx-font-weight: bold;"
+                                    : "-fx-text-fill: #2E7D32; -fx-font-weight: bold;");
                         }
                         utilisateurs.setAll(users);
                         signalements.setAll(sigs);
                         agents.clear();
-                        agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.email(), a.zoneNom(), a.traites(), a.actif())));
+                        agentStats.forEach(a -> agents.add(new AgentStatsRow(a.idUser(), a.nom(), a.email(),
+                                a.zoneNom(), a.traites(), a.actif())));
                         // Appliquer la map agent sans requetes supplementaires
                         if (colSignalementCommentaire != null) {
-                            colSignalementCommentaire.setCellValueFactory(cell ->
-                                new SimpleStringProperty(agentParSig.getOrDefault(cell.getValue().getIdSignalement(), "-")));
+                            colSignalementCommentaire.setCellValueFactory(cell -> new SimpleStringProperty(
+                                    agentParSig.getOrDefault(cell.getValue().getIdSignalement(), "-")));
                         }
                         refreshLiveTracking();
                         refreshDashboardCharts();
-                        if (pageStatistiques != null && pageStatistiques.isVisible()) refreshCharts();
+                        if (pageStatistiques != null && pageStatistiques.isVisible())
+                            refreshAnalysisCompactMetrics();
                     } catch (Exception ex) {
                         showAdminMessage("Erreur lors de la mise a jour de l'interface.", false);
                     } finally {
@@ -321,7 +420,8 @@ public class AdminDashboardController {
                             loadingSpinner.setVisible(false);
                             loadingSpinner.setManaged(false);
                         }
-                        if (btnActualiser != null) btnActualiser.setDisable(false);
+                        if (btnActualiser != null)
+                            btnActualiser.setDisable(false);
                         isLoading = false;
                     }
                 });
@@ -330,8 +430,12 @@ public class AdminDashboardController {
         };
         task.setOnFailed(e -> javafx.application.Platform.runLater(() -> {
             isLoading = false;
-            if (loadingSpinner != null) { loadingSpinner.setVisible(false); loadingSpinner.setManaged(false); }
-            if (btnActualiser != null) btnActualiser.setDisable(false);
+            if (loadingSpinner != null) {
+                loadingSpinner.setVisible(false);
+                loadingSpinner.setManaged(false);
+            }
+            if (btnActualiser != null)
+                btnActualiser.setDisable(false);
             showAdminMessage("Erreur lors du chargement des donn\u00e9es.", false);
         }));
         Thread t = new Thread(task);
@@ -341,7 +445,8 @@ public class AdminDashboardController {
 
     @FXML
     private void handleDeconnexion() {
-        if (!confirm("Déconnexion", "Voulez-vous vraiment vous déconnecter ?")) return;
+        if (!confirm("Déconnexion", "Voulez-vous vraiment vous déconnecter ?"))
+            return;
         stopLiveTrackingAutoRefresh();
         SessionManager.logout();
         if (mainApp != null) {
@@ -372,11 +477,41 @@ public class AdminDashboardController {
     @FXML
     private void handleShowStatistiques() {
         showPage(pageStatistiques, btnStatistiques);
-        try {
-            refreshChartsAnimated();
-        } catch (Exception ex) {
-            showAdminMessage("Erreur affichage statistiques. Rechargement...", false);
-            javafx.application.Platform.runLater(this::refreshCharts);
+        refreshAnalysisCompactMetrics();
+        refreshLiveTracking();
+        // Auto-refresh toutes les 30 secondes
+        startLiveStatistiquesAutoRefresh();
+    }
+
+    private void startLiveStatistiquesAutoRefresh() {
+        synchronized (timerLock) {
+            // Arreter le timer precedent s'il existe
+            if (liveStatistiquesRefreshTimer != null) {
+                liveStatistiquesRefreshTimer.cancel();
+                liveStatistiquesRefreshTimer = null;
+            }
+            // Demarrer un nouveau timer
+            liveStatistiquesRefreshTimer = new java.util.Timer("AdminStatistiquesAutoRefresh", true);
+            liveStatistiquesRefreshTimer.scheduleAtFixedRate(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    if (pageStatistiques != null && pageStatistiques.isVisible()) {
+                        javafx.application.Platform.runLater(() -> {
+                            refreshAnalysisCompactMetrics();
+                            refreshLiveTracking();
+                        });
+                    }
+                }
+            }, 30000, 30000); // Refresh apres 30s et puis tous les 30s
+        }
+    }
+
+    private void stopLiveStatistiquesAutoRefresh() {
+        synchronized (timerLock) {
+            if (liveStatistiquesRefreshTimer != null) {
+                liveStatistiquesRefreshTimer.cancel();
+                liveStatistiquesRefreshTimer = null;
+            }
         }
     }
 
@@ -388,7 +523,8 @@ public class AdminDashboardController {
             adminProfilEmailField.setText(current.getEmail());
             adminProfilRoleField.setText(current.getRole());
             if (adminProfilDateLabel != null && current.getDateInscription() != null)
-                adminProfilDateLabel.setText(current.getDateInscription().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                adminProfilDateLabel.setText(current.getDateInscription()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             if (adminProfilAvatarLabel != null)
                 adminProfilAvatarLabel.setText(current.getNom().substring(0, 1).toUpperCase(java.util.Locale.ROOT));
             if (adminProfilNomDisplay != null)
@@ -400,7 +536,8 @@ public class AdminDashboardController {
     @FXML
     private void handleModifierAdminProfil() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        if (current == null) return;
+        if (current == null)
+            return;
         if (adminProfilNomField.getText().isBlank() || adminProfilEmailField.getText().isBlank()) {
             showAdminMessage("Nom et email obligatoires.", false);
             return;
@@ -431,7 +568,8 @@ public class AdminDashboardController {
     @FXML
     private void handleModifierAdminMotPasse() {
         Utilisateur current = SessionManager.getUtilisateurConnecte();
-        if (current == null) return;
+        if (current == null)
+            return;
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Mot de passe");
         dialog.setHeaderText(null);
@@ -442,9 +580,10 @@ public class AdminDashboardController {
         dialog.getDialogPane().setContent(pwField);
         dialog.setResultConverter(bt -> bt == saveType ? pwField.getText() : null);
         Optional<String> result = dialog.showAndWait();
-        if (result.isEmpty() || result.get().isBlank()) return;
-        com.smartcity.utils.ValidationUtils.ValidationResult check =
-            com.smartcity.utils.ValidationUtils.validatePassword(result.get());
+        if (result.isEmpty() || result.get().isBlank())
+            return;
+        com.smartcity.utils.ValidationUtils.ValidationResult check = com.smartcity.utils.ValidationUtils
+                .validatePassword(result.get());
         if (!check.isValid()) {
             showAdminMessage(check.getMessage(), false);
             return;
@@ -495,8 +634,7 @@ public class AdminDashboardController {
         }
         com.smartcity.model.Zone zone = new com.smartcity.model.Zone();
         zone.setNomZone(zoneName);
-        com.smartcity.service.GeolocationService.Coordinates fallbackCenter =
-            zoneService.getCenterById(1);
+        com.smartcity.service.GeolocationService.Coordinates fallbackCenter = zoneService.getCenterById(1);
         zone.setLatitude(fallbackCenter.lat);
         zone.setLongitude(fallbackCenter.lon);
         if (zoneService.ajouterZone(zone)) {
@@ -516,7 +654,8 @@ public class AdminDashboardController {
         chooser.setInitialFileName("statistiques.csv");
         chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("CSV", "*.csv"));
         java.io.File file = chooser.showSaveDialog(rootPane.getScene().getWindow());
-        if (file == null) return;
+        if (file == null)
+            return;
         try (java.io.OutputStreamWriter fw = new java.io.OutputStreamWriter(
                 new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
             fw.write('\uFEFF');
@@ -524,12 +663,12 @@ public class AdminDashboardController {
             for (com.smartcity.service.SuiviService.KpiZone k : suiviService.getKpiParZone()) {
                 String taux = String.format(java.util.Locale.US, "%.1f%%", k.tauxResolution);
                 writeCsvLine(fw,
-                    k.nomZone,
-                    String.valueOf(k.total),
-                    String.valueOf(k.enAttente),
-                    String.valueOf(k.enCours),
-                    String.valueOf(k.termines),
-                    taux);
+                        k.nomZone,
+                        String.valueOf(k.total),
+                        String.valueOf(k.enAttente),
+                        String.valueOf(k.enCours),
+                        String.valueOf(k.termines),
+                        taux);
             }
             showAdminMessage("Export statistiques reussi : " + file.getName(), true);
         } catch (java.io.IOException e) {
@@ -544,7 +683,8 @@ public class AdminDashboardController {
         chooser.setInitialFileName("signalements.csv");
         chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("CSV", "*.csv"));
         java.io.File file = chooser.showSaveDialog(rootPane.getScene().getWindow());
-        if (file == null) return;
+        if (file == null)
+            return;
         try (java.io.OutputStreamWriter fw = new java.io.OutputStreamWriter(
                 new java.io.FileOutputStream(file), java.nio.charset.StandardCharsets.UTF_8)) {
             fw.write('\uFEFF');
@@ -552,13 +692,13 @@ public class AdminDashboardController {
             List<Signalement> source = tousLesSignalements.isEmpty() ? signalements : tousLesSignalements;
             for (Signalement s : source) {
                 writeCsvLine(fw,
-                    String.valueOf(s.getIdSignalement()),
-                    s.getDescription(),
-                    s.getCategorie(),
-                    s.getZoneNom(),
-                    s.getDateSignalement() != null ? s.getDateSignalement().format(DATE_FORMATTER) : "",
-                    s.getStatut(),
-                    valueOrDash(s.getUtilisateurNom()));
+                        String.valueOf(s.getIdSignalement()),
+                        s.getDescription(),
+                        s.getCategorie(),
+                        s.getZoneNom(),
+                        s.getDateSignalement() != null ? s.getDateSignalement().format(DATE_FORMATTER) : "",
+                        s.getStatut(),
+                        valueOrDash(s.getUtilisateurNom()));
             }
             showAdminMessage("Export CSV reussi : " + file.getName() + " (" + source.size() + " lignes)", true);
         } catch (java.io.IOException e) {
@@ -687,8 +827,10 @@ public class AdminDashboardController {
     @FXML
     private void handleModifierStatutSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        // Seule action manuelle pertinente : clôturer (Terminé) un signalement déjà affecté
+        if (selected == null)
+            return;
+        // Seule action manuelle pertinente : clôturer (Terminé) un signalement déjà
+        // affecté
         if (!affectationService.estDejaAffecte(selected.getIdSignalement())) {
             showAdminMessage("Ce signalement n'est pas encore affecté à un agent.", false);
             return;
@@ -697,8 +839,10 @@ public class AdminDashboardController {
             showAdminMessage("Ce signalement est déjà terminé.", false);
             return;
         }
-        if (!confirm("Clôturer", "Marquer le signalement #" + selected.getIdSignalement() + " comme Terminé ?")) return;
-        if (signalementService.updateStatut(selected.getIdSignalement(), com.smartcity.model.SignalementStatut.TERMINE.label())) {
+        if (!confirm("Clôturer", "Marquer le signalement #" + selected.getIdSignalement() + " comme Terminé ?"))
+            return;
+        if (signalementService.updateStatut(selected.getIdSignalement(),
+                com.smartcity.model.SignalementStatut.TERMINE.label())) {
             showAdminMessage("Signalement clôturé.", true);
             chargerDonnees();
         } else {
@@ -709,8 +853,11 @@ public class AdminDashboardController {
     @FXML
     private void handleReaffecterSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
-        if (!confirm("R\u00e9affecter", "R\u00e9affecter le signalement #" + selected.getIdSignalement() + " \u00e0 un autre agent ?")) return;
+        if (selected == null)
+            return;
+        if (!confirm("R\u00e9affecter",
+                "R\u00e9affecter le signalement #" + selected.getIdSignalement() + " \u00e0 un autre agent ?"))
+            return;
         affectationService.supprimerAffectationParSignalement(selected.getIdSignalement());
         if (signalementService.updateStatut(selected.getIdSignalement(), "En attente")) {
             affectationService.affecterAgentParZone(selected.getIdSignalement(), selected.getIdZone());
@@ -724,12 +871,14 @@ public class AdminDashboardController {
     @FXML
     private void handleSupprimerSignalement() {
         Signalement selected = tableSignalements.getSelectionModel().getSelectedItem();
-        if (selected == null) return;
+        if (selected == null)
+            return;
         if ("En cours".equalsIgnoreCase(selected.getStatut())) {
             showAdminMessage("Impossible de supprimer un signalement en cours de traitement.", false);
             return;
         }
-        if (!confirm("Confirmer", "Supprimer le signalement #" + selected.getIdSignalement() + " ?")) return;
+        if (!confirm("Confirmer", "Supprimer le signalement #" + selected.getIdSignalement() + " ?"))
+            return;
         if (signalementService.supprimerSignalement(selected.getIdSignalement())) {
             showAdminMessage("Signalement supprimé.", true);
             chargerDonnees();
@@ -740,39 +889,47 @@ public class AdminDashboardController {
 
     @FXML
     private void handleResetFiltresSignalements() {
-        if (filterZoneCombo != null) filterZoneCombo.setValue(ALL_ZONES);
-        if (filterStatutCombo != null) filterStatutCombo.setValue(ALL_STATUTS);
-        if (filterCategorieCombo != null) filterCategorieCombo.setValue(ALL_CATEGORIES);
-        if (filterPrioriteCombo != null) filterPrioriteCombo.setValue("Toutes");
-        if (filterDateDebutPicker != null) filterDateDebutPicker.setValue(null);
-        if (filterDateFinPicker != null) filterDateFinPicker.setValue(null);
+        if (filterZoneCombo != null)
+            filterZoneCombo.setValue(ALL_ZONES);
+        if (filterStatutCombo != null)
+            filterStatutCombo.setValue(ALL_STATUTS);
+        if (filterCategorieCombo != null)
+            filterCategorieCombo.setValue(ALL_CATEGORIES);
+        if (filterPrioriteCombo != null)
+            filterPrioriteCombo.setValue("Toutes");
+        if (filterDateDebutPicker != null)
+            filterDateDebutPicker.setValue(null);
+        if (filterDateFinPicker != null)
+            filterDateFinPicker.setValue(null);
         signalements.setAll(signalementService.getAllSignalements());
         showAdminMessage("Filtres réinitialisés.", true);
     }
 
     @FXML
     private void handleFiltrerSignalements() {
-        String zone      = getFilterValue(filterZoneCombo, ALL_ZONES);
-        String statut    = getFilterValue(filterStatutCombo, ALL_STATUTS);
+        String zone = getFilterValue(filterZoneCombo, ALL_ZONES);
+        String statut = getFilterValue(filterStatutCombo, ALL_STATUTS);
         String categorie = getFilterValue(filterCategorieCombo, ALL_CATEGORIES);
-        String priorite  = getFilterValue(filterPrioriteCombo, "Toutes");
+        String priorite = getFilterValue(filterPrioriteCombo, "Toutes");
         String affectation = null;
         java.time.LocalDate dateDebut = filterDateDebutPicker != null ? filterDateDebutPicker.getValue() : null;
-        java.time.LocalDate dateFin   = filterDateFinPicker   != null ? filterDateFinPicker.getValue()   : null;
-        signalements.setAll(signalementService.getSignalementsFiltres(zone, statut, categorie, dateDebut, dateFin, priorite, affectation));
+        java.time.LocalDate dateFin = filterDateFinPicker != null ? filterDateFinPicker.getValue() : null;
+        signalements.setAll(signalementService.getSignalementsFiltres(zone, statut, categorie, dateDebut, dateFin,
+                priorite, affectation));
         showAdminMessage("Filtres appliqu\u00e9s.", true);
     }
 
     private void refreshDashboardCharts() {
-        if (statsPieChart == null && statsBarChart == null) return;
+        if (statsPieChart == null && statsBarChart == null)
+            return;
         javafx.concurrent.Task<int[]> task = new javafx.concurrent.Task<>() {
             @Override
             protected int[] call() {
-                return new int[]{
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_ATTENTE.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.AFFECTE.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_COURS.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.TERMINE.label())
+                return new int[] {
+                        signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_ATTENTE.label()),
+                        signalementService.countByStatut(com.smartcity.model.SignalementStatut.AFFECTE.label()),
+                        signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_COURS.label()),
+                        signalementService.countByStatut(com.smartcity.model.SignalementStatut.TERMINE.label())
                 };
             }
         };
@@ -781,11 +938,10 @@ public class AdminDashboardController {
             int enAttente = d[0], affecte = d[1], enCours = d[2], termines = d[3];
             if (statsPieChart != null) {
                 ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
-                    new PieChart.Data("En attente (" + enAttente + ")", Math.max(enAttente, 0.01)),
-                    new PieChart.Data("Affect\u00e9 (" + affecte + ")",   Math.max(affecte, 0.01)),
-                    new PieChart.Data("En cours (" + enCours + ")",   Math.max(enCours, 0.01)),
-                    new PieChart.Data("Termin\u00e9 (" + termines + ")",   Math.max(termines, 0.01))
-                );
+                        new PieChart.Data("En attente (" + enAttente + ")", Math.max(enAttente, 0.01)),
+                        new PieChart.Data("Affect\u00e9 (" + affecte + ")", Math.max(affecte, 0.01)),
+                        new PieChart.Data("En cours (" + enCours + ")", Math.max(enCours, 0.01)),
+                        new PieChart.Data("Termin\u00e9 (" + termines + ")", Math.max(termines, 0.01)));
                 statsPieChart.setData(pieData);
                 statsPieChart.setLabelsVisible(true);
                 statsPieChart.setLegendVisible(true);
@@ -793,244 +949,52 @@ public class AdminDashboardController {
             if (statsBarChart != null) {
                 XYChart.Series<String, Number> series = new XYChart.Series<>();
                 series.setName("Signalements");
-                zoneService.getAllZones().forEach(z ->
-                    series.getData().add(new XYChart.Data<>(z.getNomZone(), signalementService.countByZone(z.getNomZone()))));
+                zoneService.getAllZones().forEach(z -> series.getData()
+                        .add(new XYChart.Data<>(z.getNomZone(), signalementService.countByZone(z.getNomZone()))));
                 statsBarChart.getData().clear();
                 statsBarChart.getData().add(series);
                 statsBarChart.setLegendVisible(true);
             }
         });
-        Thread t = new Thread(task); t.setDaemon(true); t.start();
-    }
-
-    private void refreshChartsAnimated() {
-        if (pageStatistiques != null) {
-            try {
-                com.smartcity.utils.AnimationUtils.fadeSlideIn(pageStatistiques).play();
-            } catch (Exception ignored) {
-                // Fallback silencieux: l'animation ne doit pas casser l'ouverture de page.
-            }
-        }
-        refreshCharts();
-    }
-
-    private void refreshCharts() {
-        javafx.concurrent.Task<int[]> task = new javafx.concurrent.Task<>() {
-            @Override
-            protected int[] call() {
-                return new int[]{
-                    signalementService.countAll(),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.TERMINE.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_ATTENTE.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.AFFECTE.label()),
-                    signalementService.countByStatut(com.smartcity.model.SignalementStatut.EN_COURS.label()),
-                    signalementService.countMoyenneParJour(),
-                    signalementService.countCritiques72h(),
-                    signalementService.countNonAssignes(),
-                    signalementService.countTourneesActives(),
-                    signalementService.countAujourdhui(),
-                    signalementService.countDeltaSemaine()
-                };
-            }
-        };
-        task.setOnSucceeded(e -> {
-            int[] d = task.getValue();
-            int total = d[0], termines = d[1], enAttente = d[2], affecte = d[3], enCours = d[4];
-            double tempsResolution = signalementService.getTempsResolutionMoyenH();
-            double satisfaction = suiviService.getNoteMoyenneGlobale();
-            renderCharts(total, termines, enAttente, affecte, enCours, d[5], d[6], d[7], d[8], d[9], d[10], tempsResolution, satisfaction);
-        });
-        task.setOnFailed(e -> showAdminMessage("Erreur chargement statistiques.", false));
-        Thread t = new Thread(task); t.setDaemon(true); t.start();
-    }
-
-    private void renderCharts(int total, int termines, int enAttente, int affecte, int enCours,
-                               int moyJour, int critiques72h, int nonAssignes, int tourneesActives,
-                               int aujourdhui, int delta7j, double tempsResolutionH, double satisfaction) {
-        // --- Dashboard charts (setData AVANT setLegendVisible) ---
-        int enCoursTraitement = affecte + enCours;
-        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
-                new PieChart.Data("En attente (" + enAttente + ")", Math.max(enAttente, 0.01)),
-                new PieChart.Data("En cours de traitement (" + enCoursTraitement + ")", Math.max(enCoursTraitement, 0.01)),
-                new PieChart.Data("Termin\u00e9 (" + termines + ")", Math.max(termines, 0.01))
-        );
-        if (statsPieChart != null) {
-            statsPieChart.setData(pieData);
-            statsPieChart.setLabelsVisible(true);
-            statsPieChart.setLegendVisible(true);
-        }
-
-        XYChart.Series<String, Number> zoneSeries = new XYChart.Series<>();
-        zoneSeries.setName("Signalements");
-        zoneService.getAllZones().forEach(z ->
-            zoneSeries.getData().add(new XYChart.Data<>(z.getNomZone(), signalementService.countByZone(z.getNomZone()))));
-        if (statsBarChart != null) {
-            statsBarChart.getData().clear();
-            statsBarChart.getData().add(zoneSeries);
-            statsBarChart.setLegendVisible(true);
-        }
-
-        // --- Page Statistiques ---
-        if (statCardTauxResolution != null) {
-            int pct = total == 0 ? 0 : (int) Math.round(termines * 100.0 / total);
-            animatePercent(statCardTauxResolution, pct);
-        }
-        if (statCardTauxPikine != null) {
-            int totalPikine = signalementService.countByZone("Pikine");
-            int terminesPikine = signalementService.countByStatutAndZone("Termin\u00e9", "Pikine");
-            int pctP = totalPikine == 0 ? 0 : (int) Math.round(terminesPikine * 100.0 / totalPikine);
-            animatePercent(statCardTauxPikine, pctP);
-        }
-        if (statCardTauxGuediawaye != null) {
-            int totalG = signalementService.countByZone("Gu\u00e9diawaye");
-            int terminesG = signalementService.countByStatutAndZone("Termin\u00e9", "Gu\u00e9diawaye");
-            int pctG = totalG == 0 ? 0 : (int) Math.round(terminesG * 100.0 / totalG);
-            animatePercent(statCardTauxGuediawaye, pctG);
-        }
-        if (statCardMoyenneJour != null)
-            com.smartcity.utils.AnimationUtils.animateCounter(statCardMoyenneJour, 0, moyJour).play();
-        if (statCardCritiques72h != null)
-            statCardCritiques72h.setText(String.valueOf(critiques72h));
-        if (statCardNonAssignes != null)
-            statCardNonAssignes.setText(String.valueOf(nonAssignes));
-        if (statCardTourneesActives != null)
-            statCardTourneesActives.setText(String.valueOf(tourneesActives));
-        if (statCardTempsResolution != null)
-            statCardTempsResolution.setText(tempsResolutionH > 0
-                ? String.format(java.util.Locale.US, "%.1fh", tempsResolutionH) : "-");
-        if (statCardSatisfaction != null)
-            statCardSatisfaction.setText(satisfaction > 0
-                ? String.format(java.util.Locale.US, "%.1f/5", satisfaction) : "-");
-        if (statCardAujourdhui != null)
-            com.smartcity.utils.AnimationUtils.animateCounter(statCardAujourdhui, 0, aujourdhui).play();
-        if (statCardDelta7j != null) {
-            String deltaText = delta7j > 0 ? "+" + delta7j : String.valueOf(delta7j);
-            statCardDelta7j.setText(deltaText);
-            statCardDelta7j.setStyle("-fx-text-fill: #1565C0; -fx-font-weight: bold;");
-        }
-
-        if (statPieCategorie != null) {
-            ObservableList<PieChart.Data> catData = FXCollections.observableArrayList();
-            for (String cat : com.smartcity.model.SignalementStatut.CATEGORIES) {
-                int n = signalementService.countByCategorie(cat);
-                if (n > 0) catData.add(new PieChart.Data(cat + " (" + n + ")", n));
-            }
-            statPieCategorie.setData(catData);
-            statPieCategorie.setLabelsVisible(true);
-            statPieCategorie.setLegendVisible(true);
-            statPieCategorie.setOpacity(0);
-            com.smartcity.utils.AnimationUtils.fadeIn(statPieCategorie, javafx.util.Duration.millis(600)).play();
-        }
-        if (statBarZone != null) {
-            statBarZone.getData().clear();
-            for (String statut : new String[]{"En attente", "En cours", "Termin\u00e9"}) {
-                XYChart.Series<String, Number> s = new XYChart.Series<>();
-                if ("En cours".equals(statut)) {
-                    s.setName("En cours de traitement");
-                    zoneService.getAllZones().forEach(z -> {
-                        int count = signalementService.countByStatutAndZone("En cours", z.getNomZone())
-                                + signalementService.countByStatutAndZone("Affect\u00e9", z.getNomZone());
-                        s.getData().add(new XYChart.Data<>(z.getNomZone(), count));
-                    });
-                } else {
-                    s.setName(statut);
-                    zoneService.getAllZones().forEach(z ->
-                        s.getData().add(new XYChart.Data<>(z.getNomZone(),
-                            signalementService.countByStatutAndZone(statut, z.getNomZone()))));
-                }
-                statBarZone.getData().add(s);
-            }
-            statBarZone.setLegendVisible(true);
-            statBarZone.setOpacity(0);
-            com.smartcity.utils.AnimationUtils.fadeIn(statBarZone, javafx.util.Duration.millis(700)).play();
-        }
-        if (heatmapWebView != null) refreshHeatmap();
-        refreshLiveTracking();
-
-        // KPIs suivi politique
-        java.util.List<com.smartcity.service.SuiviService.KpiZone> kpis = suiviService.getKpiParZone();
-        double noteMoyenne = suiviService.getNoteMoyenneGlobale();
-        if (!kpis.isEmpty()) {
-            StringBuilder kpiMsg = new StringBuilder();
-            kpis.forEach(k -> kpiMsg
-                .append(k.nomZone).append(" : ")
-                .append(String.format("%.0f%%", k.tauxResolution)).append(" r\u00e9solution, ")
-                .append(String.format("%.1fh", k.tempsResolutionMoyenH)).append(" moy., ")
-                .append(k.urgents).append(" urgents | "));
-            if (noteMoyenne > 0)
-                kpiMsg.append(String.format(" | Satisfaction : %.1f/5 \u2605", noteMoyenne));
-            String kpiStr = kpiMsg.toString().replaceAll(" \\| $", ""); if (kpiStr.length() > 120) kpiStr = kpiStr.substring(0, 117) + "..."; showAdminMessage(kpiStr, true);
-        }
-    }
-
-    private void refreshHeatmap() {
-        List<Signalement> all = signalementService.getAllSignalements();
-        StringBuilder points = new StringBuilder();
-        for (Signalement s : all) {
-            if (s.getLatitude() != 0.0 || s.getLongitude() != 0.0) {
-                if (points.length() > 0) points.append(",");
-                points.append(String.format(java.util.Locale.US, "[%.6f,%.6f,1]", s.getLatitude(), s.getLongitude()));
-            }
-        }
-        String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
-            + com.smartcity.utils.MapResourceUtils.leafletHeadWithHeat()
-            + "<style>html,body,#map{height:100%;margin:0;}</style></head><body>"
-            + "<div id='map'></div><script>"
-            + "var map=L.map('map').setView([14.7646,-17.3920],12);"
-            + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);"
-            + "var pts=[" + points + "];"
-            + "if(pts.length>0)L.heatLayer(pts,{radius:25,blur:15,maxZoom:17}).addTo(map);"
-            + "</script></body></html>";
-        installHeatmapFallbackHandlers("Heatmap indisponible. Les statistiques tabulaires restent disponibles.");
-        heatmapWebView.getEngine().loadContent(html);
-    }
-
-    private void installHeatmapFallbackHandlers(String message) {
-        if (heatmapWebView == null || heatmapFallbackHandlersInstalled) {
-            return;
-        }
-        heatmapFallbackHandlersInstalled = true;
-        heatmapWebView.getEngine().getLoadWorker().exceptionProperty().addListener((obs, oldValue, error) -> {
-            if (error != null) {
-                showAdminMessage(message, false);
-                heatmapWebView.getEngine().loadContent(buildHeatmapFallbackHtml(message));
-            }
-        });
-        heatmapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == javafx.concurrent.Worker.State.FAILED) {
-                showAdminMessage(message, false);
-                heatmapWebView.getEngine().loadContent(buildHeatmapFallbackHtml(message));
-            }
-        });
-    }
-
-    private String buildHeatmapFallbackHtml(String message) {
-        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
-            + "body{font-family:Arial,sans-serif;background:#f6f8fb;color:#1f2937;display:flex;"
-            + "align-items:center;justify-content:center;height:100%;margin:0;padding:24px;text-align:center;}"
-            + ".card{max-width:440px;background:white;border-radius:16px;padding:24px;"
-            + "box-shadow:0 8px 24px rgba(15,23,42,0.12);}"
-            + ".title{font-size:18px;font-weight:700;margin-bottom:8px;color:#b45309;}"
-            + "</style></head><body><div class='card'><div class='title'>Heatmap indisponible</div><div>"
-            + message + "</div></div></body></html>";
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        t.start();
     }
 
     private void refreshLiveTracking() {
-        if (tableLiveAgents == null && agentLiveMapWebView == null) {
+        if (agentLiveMapWebView == null) {
+            refreshAnalysisCompactMetrics();
             return;
         }
 
-        List<com.smartcity.service.AffectationService.AgentLiveStatus> statuses = affectationService.getAgentLiveStatuses();
-        long gpsFreshCount = statuses.stream().filter(this::isGpsFresh).count();
-        if (statCardAgentsGps != null) {
-            statCardAgentsGps.setText(String.valueOf(gpsFreshCount));
-        }
-
-        liveAgents.setAll(statuses.stream().map(this::toLiveRow).collect(java.util.stream.Collectors.toList()));
+        List<com.smartcity.service.AffectationService.AgentLiveStatus> statuses = affectationService
+                .getAgentLiveStatuses();
 
         if (agentLiveMapWebView != null) {
             installLiveMapFallbackHandlers("Carte live agents indisponible. Le tableau reste disponible.");
             agentLiveMapWebView.getEngine().loadContent(buildLiveTrackingMapHtml(statuses));
+        }
+        refreshAnalysisCompactMetrics();
+    }
+
+    private void refreshAnalysisCompactMetrics() {
+        AnalyticsRulesService.AnalysisSnapshot snapshot = analyticsRulesService.computeAnalysisSnapshot();
+        if (statCardTourneesActives != null) {
+            statCardTourneesActives.setText(String.valueOf(snapshot.chargeOperationnelleActive));
+        }
+        if (statCardCritiques72h != null) {
+            statCardCritiques72h.setText(String.valueOf(snapshot.retardsCritiquesGlobaux));
+        }
+        if (statCardTauxResolution != null) {
+            statCardTauxResolution.setText(String.format(java.util.Locale.US, "%.1f%%", snapshot.tauxTraitementGlobal));
+        }
+        if (tableAlerts != null) {
+            List<AlertRow> rows = snapshot.alerts.stream()
+                    .filter(a -> !acknowledgedAlerts.contains(a.key))
+                    .limit(5)
+                    .map(a -> new AlertRow(a.key, a.severity.name(), a.title, a.detail))
+                    .collect(java.util.stream.Collectors.toList());
+            activeAlerts.setAll(rows);
         }
     }
 
@@ -1055,41 +1019,26 @@ public class AdminDashboardController {
 
     private String buildLiveMapFallbackHtml(String message) {
         return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
-            + "body{font-family:Arial,sans-serif;background:#f6f8fb;color:#1f2937;display:flex;"
-            + "align-items:center;justify-content:center;height:100%;margin:0;padding:24px;text-align:center;}"
-            + ".card{max-width:440px;background:white;border-radius:16px;padding:24px;"
-            + "box-shadow:0 8px 24px rgba(15,23,42,0.12);}"
-            + ".title{font-size:18px;font-weight:700;margin-bottom:8px;color:#b45309;}"
-            + "</style></head><body><div class='card'><div class='title'>Carte live indisponible</div><div>"
-            + message + "</div></div></body></html>";
-    }
-
-    private AgentLiveRow toLiveRow(com.smartcity.service.AffectationService.AgentLiveStatus status) {
-        String position = (status.latitude != null && status.longitude != null)
-            ? String.format(java.util.Locale.US, "%.4f, %.4f", status.latitude, status.longitude)
-            : "Aucune";
-        String fraicheur = status.dernierePosition == null
-            ? "Hors ligne"
-            : formatFraicheur(status.dernierePosition);
-        return new AgentLiveRow(
-            status.nomAgent != null ? status.nomAgent : "Agent #" + status.idAgent,
-            valueOrDash(status.zoneNom),
-            status.missionsActives != null ? status.missionsActives : 0,
-            status.missionsEnCours != null ? status.missionsEnCours : 0,
-            position,
-            fraicheur
-        );
+                + "body{font-family:Arial,sans-serif;background:#f6f8fb;color:#1f2937;display:flex;"
+                + "align-items:center;justify-content:center;height:100%;margin:0;padding:24px;text-align:center;}"
+                + ".card{max-width:440px;background:white;border-radius:16px;padding:24px;"
+                + "box-shadow:0 8px 24px rgba(15,23,42,0.12);}"
+                + ".title{font-size:18px;font-weight:700;margin-bottom:8px;color:#b45309;}"
+                + "</style></head><body><div class='card'><div class='title'>Carte live indisponible</div><div>"
+                + message + "</div></div></body></html>";
     }
 
     private boolean isGpsFresh(com.smartcity.service.AffectationService.AgentLiveStatus status) {
         return status.dernierePosition != null
-            && status.dernierePosition.isAfter(java.time.LocalDateTime.now().minusMinutes(15));
+                && status.dernierePosition.isAfter(java.time.LocalDateTime.now().minusMinutes(15));
     }
 
     private String formatFraicheur(java.time.LocalDateTime updatedAt) {
         long minutes = java.time.Duration.between(updatedAt, java.time.LocalDateTime.now()).toMinutes();
-        if (minutes <= 1) return "Live";
-        if (minutes < 60) return minutes + " min";
+        if (minutes <= 1)
+            return "Live";
+        if (minutes < 60)
+            return minutes + " min";
         long hours = Math.max(1, minutes / 60);
         return hours + " h";
     }
@@ -1102,22 +1051,23 @@ public class AdminDashboardController {
             }
             String color = isGpsFresh(status) ? "#16A34A" : "#9CA3AF";
             String popup = (status.nomAgent == null ? "Agent" : status.nomAgent)
-                + "<br/>Zone: " + valueOrDash(status.zoneNom)
-                + "<br/>Actives: " + (status.missionsActives == null ? 0 : status.missionsActives)
-                + "<br/>En cours: " + (status.missionsEnCours == null ? 0 : status.missionsEnCours)
-                + "<br/>GPS: " + (status.dernierePosition == null ? "Hors ligne" : formatFraicheur(status.dernierePosition));
+                    + "<br/>Zone: " + valueOrDash(status.zoneNom)
+                    + "<br/>Actives: " + (status.missionsActives == null ? 0 : status.missionsActives)
+                    + "<br/>En cours: " + (status.missionsEnCours == null ? 0 : status.missionsEnCours)
+                    + "<br/>GPS: "
+                    + (status.dernierePosition == null ? "Hors ligne" : formatFraicheur(status.dernierePosition));
             markers.append(String.format(java.util.Locale.US,
-                "L.circleMarker([%.6f,%.6f],{radius:10,color:'%s',fillColor:'%s',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('%s');",
-                status.latitude, status.longitude, color, color, popup.replace("'", "\\'")));
+                    "L.circleMarker([%.6f,%.6f],{radius:10,color:'%s',fillColor:'%s',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('%s');",
+                    status.latitude, status.longitude, color, color, popup.replace("'", "\\'")));
         }
         return "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
-            + com.smartcity.utils.MapResourceUtils.leafletHead()
-            + "<style>html,body,#map{height:100%;margin:0;}</style></head><body>"
-            + "<div id='map'></div><script>"
-            + "var map=L.map('map').setView([14.7700,-17.3980],12);"
-            + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);"
-            + markers
-            + "</script></body></html>";
+                + com.smartcity.utils.MapResourceUtils.leafletHead()
+                + "<style>html,body,#map{height:100%;margin:0;}</style></head><body>"
+                + "<div id='map'></div><script>"
+                + "var map=L.map('map').setView([14.7700,-17.3980],12);"
+                + "L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);"
+                + markers
+                + "</script></body></html>";
     }
 
     private Optional<Utilisateur> openUtilisateurDialog(String title, Utilisateur initial, String forcedRole) {
@@ -1126,8 +1076,6 @@ public class AdminDashboardController {
         dialog.setHeaderText(null);
         dialog.getDialogPane().getStylesheets().add(getClass().getResource("/css/design-system.css").toExternalForm());
 
-
-
         ButtonType saveType = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
 
@@ -1135,14 +1083,16 @@ public class AdminDashboardController {
         TextField emailField = new TextField(initial != null ? initial.getEmail() : "");
         PasswordField motPasseField = new PasswordField();
         motPasseField.setPromptText(initial != null
-            ? "Laisser vide pour conserver"
-            : "Mot de passe requis");
-        ComboBox<String> roleCombo = new ComboBox<>(FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur"));
+                ? "Laisser vide pour conserver"
+                : "Mot de passe requis");
+        ComboBox<String> roleCombo = new ComboBox<>(
+                FXCollections.observableArrayList("Citoyen", "Agent", "Administrateur"));
         roleCombo.setValue(initial != null ? valueOrDash(initial.getRole()) : "Citoyen");
         ComboBox<String> zoneCombo = new ComboBox<>();
         zoneService.getAllZones().forEach(z -> zoneCombo.getItems().add(z.getNomZone()));
         com.smartcity.model.Zone zoneInitial = initial != null ? zoneService.getZoneById(initial.getIdZone()) : null;
-        zoneCombo.setValue(zoneInitial != null ? zoneInitial.getNomZone() : (zoneCombo.getItems().isEmpty() ? "Pikine" : zoneCombo.getItems().get(0)));
+        zoneCombo.setValue(zoneInitial != null ? zoneInitial.getNomZone()
+                : (zoneCombo.getItems().isEmpty() ? "Pikine" : zoneCombo.getItems().get(0)));
 
         if (forcedRole != null && !forcedRole.isBlank()) {
             roleCombo.setValue(forcedRole);
@@ -1192,9 +1142,9 @@ public class AdminDashboardController {
             }
             u.setRole(roleCombo.getValue());
             int idZone = zoneService.getAllZones().stream()
-                .filter(z -> z.getNomZone().equals(zoneCombo.getValue()))
-                .mapToInt(com.smartcity.model.Zone::getIdZone)
-                .findFirst().orElse(1);
+                    .filter(z -> z.getNomZone().equals(zoneCombo.getValue()))
+                    .mapToInt(com.smartcity.model.Zone::getIdZone)
+                    .findFirst().orElse(1);
             u.setIdZone(idZone);
             return u;
         });
@@ -1207,14 +1157,16 @@ public class AdminDashboardController {
         String search = searchAgentField != null ? searchAgentField.getText() : null;
         boolean allZones = zone == null || "Toutes les zones".equals(zone);
         boolean noSearch = search == null || search.isBlank();
-        if (allZones && noSearch) { tableAgents.setItems(agents); return; }
+        if (allZones && noSearch) {
+            tableAgents.setItems(agents);
+            return;
+        }
         String lowerSearch = noSearch ? "" : search.toLowerCase(java.util.Locale.ROOT);
         tableAgents.setItems(javafx.collections.FXCollections.observableArrayList(
-            agents.stream().filter(a ->
-                (allZones || zone.equals(a.zone())) &&
-                (noSearch || a.nom().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)
-                    || a.email().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)))
-            .collect(java.util.stream.Collectors.toList())));
+                agents.stream().filter(a -> (allZones || zone.equals(a.zone())) &&
+                        (noSearch || a.nom().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)
+                                || a.email().toLowerCase(java.util.Locale.ROOT).contains(lowerSearch)))
+                        .collect(java.util.stream.Collectors.toList())));
     }
 
     private void configureUsersTable() {
@@ -1229,8 +1181,8 @@ public class AdminDashboardController {
         // Pré-charger toutes les zones en une seule requête pour éviter N+1
         java.util.Map<Integer, String> zonesCache = new java.util.HashMap<>();
         zoneService.getAllZones().forEach(z -> zonesCache.put(z.getIdZone(), z.getNomZone()));
-        colUserZone.setCellValueFactory(cell ->
-            new SimpleStringProperty(zonesCache.getOrDefault(cell.getValue().getIdZone(), "Zone inconnue")));
+        colUserZone.setCellValueFactory(cell -> new SimpleStringProperty(
+                zonesCache.getOrDefault(cell.getValue().getIdZone(), "Zone inconnue")));
 
         centerColumn(colUserId);
         centerColumn(colUserNom);
@@ -1242,23 +1194,31 @@ public class AdminDashboardController {
     private void configureAgentsTable() {
         colAgentId.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().id()).asObject());
         colAgentNom.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
-        if (colAgentEmail != null) colAgentEmail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().email()));
+        if (colAgentEmail != null)
+            colAgentEmail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().email()));
         colAgentZone.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
-        colAgentTraites.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().nombreTraites()).asObject());
+        colAgentTraites
+                .setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().nombreTraites()).asObject());
         if (colAgentStatut != null) {
             // Required for a custom status cell on a Void column.
             colAgentStatut.setCellValueFactory(cell -> new javafx.beans.property.SimpleObjectProperty<>(null));
             colAgentStatut.setCellFactory(col -> new javafx.scene.control.TableCell<AgentStatsRow, Void>() {
-            @Override protected void updateItem(Void v, boolean empty) {
-                super.updateItem(v, empty);
-                if (empty) { setGraphic(null); return; }
-                AgentStatsRow row = getTableView().getItems().get(getIndex());
-                boolean actif = row.actif();
-                javafx.scene.control.Label lbl = new javafx.scene.control.Label(actif ? "\u2705 Actif" : "\u274c Inactif");
-                lbl.setStyle(actif ? "-fx-text-fill:#2E7D32;-fx-font-weight:bold;" : "-fx-text-fill:#C62828;-fx-font-weight:bold;");
-                setGraphic(lbl);
-            }
-        });
+                @Override
+                protected void updateItem(Void v, boolean empty) {
+                    super.updateItem(v, empty);
+                    if (empty) {
+                        setGraphic(null);
+                        return;
+                    }
+                    AgentStatsRow row = getTableView().getItems().get(getIndex());
+                    boolean actif = row.actif();
+                    javafx.scene.control.Label lbl = new javafx.scene.control.Label(
+                            actif ? "\u2705 Actif" : "\u274c Inactif");
+                    lbl.setStyle(actif ? "-fx-text-fill:#2E7D32;-fx-font-weight:bold;"
+                            : "-fx-text-fill:#C62828;-fx-font-weight:bold;");
+                    setGraphic(lbl);
+                }
+            });
         }
 
         centerColumn(colAgentId);
@@ -1267,23 +1227,31 @@ public class AdminDashboardController {
         centerColumn(colAgentTraites);
     }
 
-    private void configureLiveAgentsTable() {
-        if (tableLiveAgents == null) {
+    private void configureAlertsTable() {
+        if (tableAlerts == null) {
             return;
         }
-        colLiveAgentNom.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
-        colLiveAgentZone.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
-        colLiveAgentMissions.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().missionsActives()).asObject());
-        colLiveAgentEnCours.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().missionsEnCours()).asObject());
-        colLiveAgentPosition.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().position()));
-        colLiveAgentFraicheur.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().fraicheur()));
+        colAlertSeverity.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().severity()));
+        colAlertTitle.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().title()));
+        colAlertDetail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().detail()));
+        colAlertAck.setCellValueFactory(cell -> new javafx.beans.property.SimpleObjectProperty<>(null));
+        colAlertAck.setCellFactory(col -> new TableCell<>() {
+            private final Button btn = new Button("Acquitter");
+            {
+                btn.getStyleClass().add("btn-outline-sm");
+                btn.setOnAction(e -> {
+                    AlertRow row = getTableView().getItems().get(getIndex());
+                    acknowledgedAlerts.add(row.key());
+                    refreshAnalysisCompactMetrics();
+                });
+            }
 
-        centerColumn(colLiveAgentNom);
-        centerColumn(colLiveAgentZone);
-        centerColumn(colLiveAgentMissions);
-        centerColumn(colLiveAgentEnCours);
-        centerColumn(colLiveAgentPosition);
-        centerColumn(colLiveAgentFraicheur);
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
     }
 
     private void configureSignalementsTable() {
@@ -1293,7 +1261,11 @@ public class AdminDashboardController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setTooltip(null); return; }
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                    return;
+                }
                 setText(item);
                 setStyle("-fx-alignment: CENTER;");
                 setTooltip(new Tooltip(item));
@@ -1302,7 +1274,8 @@ public class AdminDashboardController {
         colSignalementCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
         colSignalementZone.setCellValueFactory(new PropertyValueFactory<>("zoneNom"));
         colSignalementDate.setCellValueFactory(cell -> new SimpleStringProperty(
-                cell.getValue().getDateSignalement() == null ? "" : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
+                cell.getValue().getDateSignalement() == null ? ""
+                        : cell.getValue().getDateSignalement().format(DATE_FORMATTER)));
         colSignalementStatut.setCellValueFactory(new PropertyValueFactory<>("statut"));
         colSignalementUtilisateur.setCellValueFactory(cell -> new SimpleStringProperty(
                 valueOrDash(cell.getValue().getUtilisateurNom())));
@@ -1324,7 +1297,8 @@ public class AdminDashboardController {
         colSignalementCategorie.setSortable(true);
         colSignalementId.setSortable(true);
         colSignalementDescription.setSortable(false);
-        if (colSignalementCommentaire != null) colSignalementCommentaire.setSortable(false);
+        if (colSignalementCommentaire != null)
+            colSignalementCommentaire.setSortable(false);
 
         colSignalementStatut.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -1337,26 +1311,37 @@ public class AdminDashboardController {
                 }
                 setText(item);
                 setStyle("-fx-alignment: CENTER; -fx-font-weight: bold; -fx-text-fill: "
-                    + com.smartcity.model.SignalementStatut.couleur(item) + ";");
+                        + com.smartcity.model.SignalementStatut.couleur(item) + ";");
             }
         });
     }
 
     private void ajouterPagination() {
-        if (!(tableSignalements.getParent() instanceof VBox vbox)) return;
+        if (!(tableSignalements.getParent() instanceof VBox vbox))
+            return;
         int idx = vbox.getChildren().indexOf(tableSignalements);
-        if (idx < 0) return;
+        if (idx < 0)
+            return;
         Label pageLabel = new Label("Page 1 / 1  (0 total)");
         pageLabel.setStyle("-fx-font-size:12px; -fx-text-fill:#555;");
         Button btnPrev = new Button("\u25c4 Pr\u00e9c.");
         Button btnNext = new Button("Suiv. \u25ba");
         String btnStyle = "-fx-background-color:#1565C0;-fx-text-fill:white;-fx-background-radius:6;-fx-padding:4 10;";
-        btnPrev.setStyle(btnStyle); btnNext.setStyle(btnStyle);
+        btnPrev.setStyle(btnStyle);
+        btnNext.setStyle(btnStyle);
         btnPrev.setDisable(true);
-        btnPrev.setOnAction(e -> { if (currentPage > 0) { currentPage--; afficherPage(pageLabel, btnPrev, btnNext); } });
+        btnPrev.setOnAction(e -> {
+            if (currentPage > 0) {
+                currentPage--;
+                afficherPage(pageLabel, btnPrev, btnNext);
+            }
+        });
         btnNext.setOnAction(e -> {
             int maxPage = (int) Math.ceil((double) tousLesSignalements.size() / PAGE_SIZE) - 1;
-            if (currentPage < maxPage) { currentPage++; afficherPage(pageLabel, btnPrev, btnNext); }
+            if (currentPage < maxPage) {
+                currentPage++;
+                afficherPage(pageLabel, btnPrev, btnNext);
+            }
         });
         javafx.scene.layout.HBox bar = new javafx.scene.layout.HBox(8, btnPrev, pageLabel, btnNext);
         bar.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
@@ -1375,7 +1360,7 @@ public class AdminDashboardController {
 
     private void afficherPage(Label pageLabel, Button btnPrev, Button btnNext) {
         int from = currentPage * PAGE_SIZE;
-        int to   = Math.min(from + PAGE_SIZE, tousLesSignalements.size());
+        int to = Math.min(from + PAGE_SIZE, tousLesSignalements.size());
         if (from <= to) {
             paginationUpdating = true;
             try {
@@ -1386,7 +1371,7 @@ public class AdminDashboardController {
         }
         int maxPage = Math.max(1, (int) Math.ceil((double) tousLesSignalements.size() / PAGE_SIZE));
         pageLabel.setText("Page " + (currentPage + 1) + " / " + maxPage
-            + "  (" + tousLesSignalements.size() + " total)");
+                + "  (" + tousLesSignalements.size() + " total)");
         btnPrev.setDisable(currentPage == 0);
         btnNext.setDisable(currentPage >= maxPage - 1);
     }
@@ -1400,25 +1385,27 @@ public class AdminDashboardController {
 
         // Configuration canonique ci-dessous avec labels issus de SignalementStatut
         filterStatutCombo.setItems(FXCollections.observableArrayList(
-            java.util.stream.Stream.concat(
-                java.util.stream.Stream.of(ALL_STATUTS),
-                java.util.Arrays.stream(com.smartcity.model.SignalementStatut.values())
-                    .map(com.smartcity.model.SignalementStatut::label)
-            ).collect(java.util.stream.Collectors.toList())));
+                java.util.stream.Stream.concat(
+                        java.util.stream.Stream.of(ALL_STATUTS),
+                        java.util.Arrays.stream(com.smartcity.model.SignalementStatut.values())
+                                .map(com.smartcity.model.SignalementStatut::label))
+                        .collect(java.util.stream.Collectors.toList())));
         filterStatutCombo.setValue(ALL_STATUTS);
 
         if (filterPrioriteCombo != null) {
-            filterPrioriteCombo.setItems(FXCollections.observableArrayList("Toutes", "A traiter aujourd'hui", "Urgent >24h", "Critique >72h"));
+            filterPrioriteCombo.setItems(FXCollections.observableArrayList("Toutes", "A traiter aujourd'hui",
+                    "Urgent >24h", "Critique >72h"));
             filterPrioriteCombo.setValue("Toutes");
         }
 
-        // Filtre affectation retire de l'interface admin (non pertinent au flux principal).
+        // Filtre affectation retire de l'interface admin (non pertinent au flux
+        // principal).
 
         filterCategorieCombo.setItems(FXCollections.observableArrayList(
                 java.util.stream.Stream.concat(
-                    java.util.stream.Stream.of(ALL_CATEGORIES),
-                    com.smartcity.model.SignalementStatut.CATEGORIES.stream()
-                ).collect(java.util.stream.Collectors.toList())));
+                        java.util.stream.Stream.of(ALL_CATEGORIES),
+                        com.smartcity.model.SignalementStatut.CATEGORIES.stream())
+                        .collect(java.util.stream.Collectors.toList())));
         filterCategorieCombo.setValue(ALL_CATEGORIES);
     }
 
@@ -1436,18 +1423,25 @@ public class AdminDashboardController {
         addAdminDetailRow(content, "Description", sig.getDescription() != null ? sig.getDescription() : "-");
         addAdminDetailRow(content, "Statut", sig.getStatut());
         addAdminDetailRow(content, "Citoyen", sig.getUtilisateurNom() != null ? sig.getUtilisateurNom() : "-");
-        addAdminDetailRow(content, "Date signalement", sig.getDateSignalement() != null ? sig.getDateSignalement().format(fmt) : "-");
-        if (sig.getDateCollecte() != null) addAdminDetailRow(content, "Date collecte", sig.getDateCollecte().format(fmt));
+        addAdminDetailRow(content, "Date signalement",
+                sig.getDateSignalement() != null ? sig.getDateSignalement().format(fmt) : "-");
+        if (sig.getDateCollecte() != null)
+            addAdminDetailRow(content, "Date collecte", sig.getDateCollecte().format(fmt));
         com.smartcity.model.Affectation aff = affectationService.getAffectationBySignalement(sig.getIdSignalement());
         if (aff != null) {
             com.smartcity.model.Utilisateur agent = utilisateurService.getUtilisateurById(aff.getIdAgent());
-            addAdminDetailRow(content, "Agent affect\u00e9", agent != null ? agent.getNom() : "Agent #" + aff.getIdAgent());
-            if (aff.getCommentaire() != null && !aff.getCommentaire().isBlank()) addAdminDetailRow(content, "Commentaire", aff.getCommentaire());
+            addAdminDetailRow(content, "Agent affect\u00e9",
+                    agent != null ? agent.getNom() : "Agent #" + aff.getIdAgent());
+            if (aff.getCommentaire() != null && !aff.getCommentaire().isBlank())
+                addAdminDetailRow(content, "Commentaire", aff.getCommentaire());
         }
-        com.smartcity.service.SuiviService.EvaluationEntry eval = suiviService.getEvaluationBySignalement(sig.getIdSignalement());
+        com.smartcity.service.SuiviService.EvaluationEntry eval = suiviService
+                .getEvaluationBySignalement(sig.getIdSignalement());
         if (eval != null) {
-            addAdminDetailRow(content, "Note citoyen", "\u2605".repeat(eval.note) + "\u2606".repeat(5-eval.note) + " (" + eval.note + "/5)");
-            if (eval.commentaire != null && !eval.commentaire.isBlank()) addAdminDetailRow(content, "Avis citoyen", eval.commentaire);
+            addAdminDetailRow(content, "Note citoyen",
+                    "\u2605".repeat(eval.note) + "\u2606".repeat(5 - eval.note) + " (" + eval.note + "/5)");
+            if (eval.commentaire != null && !eval.commentaire.isBlank())
+                addAdminDetailRow(content, "Avis citoyen", eval.commentaire);
         }
         dialog.getDialogPane().setContent(new javafx.scene.control.ScrollPane(content));
         dialog.showAndWait();
@@ -1458,7 +1452,8 @@ public class AdminDashboardController {
         javafx.scene.control.Label lbl = new javafx.scene.control.Label(label + " :");
         lbl.setStyle("-fx-font-weight:bold;-fx-min-width:150px;-fx-text-fill:#374151;");
         javafx.scene.control.Label val = new javafx.scene.control.Label(value);
-        val.setWrapText(true); val.setStyle("-fx-text-fill:#1f2937;");
+        val.setWrapText(true);
+        val.setStyle("-fx-text-fill:#1f2937;");
         row.getChildren().addAll(lbl, val);
         parent.getChildren().add(row);
     }
@@ -1468,13 +1463,18 @@ public class AdminDashboardController {
     }
 
     private void showPage(javafx.scene.Node pageToShow, Button activeButton) {
+        // Arreter le timer auto-refresh si on quitte la page Statistiques
+        if (pageToShow != pageStatistiques) {
+            stopLiveStatistiquesAutoRefresh();
+        }
         com.smartcity.utils.NavigationUtils.showPage(
-            pageToShow,
-            new javafx.scene.Node[]{pageAdminDashboard, pageAdminAgents, pageAdminUsers, pageAdminSignalements, pageStatistiques, pageAdminProfil, pageParametres},
-            activeButton,
-            new Button[]{btnAdminDashboard, btnGestionAgents, btnGestionUtilisateurs, btnGestionSignalements, btnStatistiques, btnAdminProfil, btnParametres},
-            "sidebar-button-active"
-        );
+                pageToShow,
+                new javafx.scene.Node[] { pageAdminDashboard, pageAdminAgents, pageAdminUsers, pageAdminSignalements,
+                        pageStatistiques, pageAdminProfil, pageParametres },
+                activeButton,
+                new Button[] { btnAdminDashboard, btnGestionAgents, btnGestionUtilisateurs, btnGestionSignalements,
+                        btnStatistiques, btnAdminProfil, btnParametres },
+                "sidebar-button-active");
     }
 
     private void centerColumn(TableColumn<?, ?> column) {
@@ -1515,30 +1515,19 @@ public class AdminDashboardController {
             return "\"\"";
         }
         String normalized = value
-            .replace("\r\n", "\n")
-            .replace('\r', '\n')
-            .replace("\"", "\"\"");
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .replace("\"", "\"\"");
         return "\"" + normalized + "\"";
     }
 
-    private void animatePercent(Label label, int endPct) {
-        com.smartcity.utils.AnimationUtils.animateCounter(
-            label, 0, endPct,
-            javafx.util.Duration.millis(800)
-        ).play();
-        javafx.animation.Timeline fix = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(javafx.util.Duration.millis(830),
-                e -> label.setText(endPct + "%")));
-        fix.play();
-    }
-
-    private final javafx.animation.PauseTransition adminMsgDelay =
-        new javafx.animation.PauseTransition(javafx.util.Duration.seconds(4));
+    private final javafx.animation.PauseTransition adminMsgDelay = new javafx.animation.PauseTransition(
+            javafx.util.Duration.seconds(4));
 
     private void startLiveTrackingAutoRefresh() {
         stopLiveTrackingAutoRefresh();
         liveTrackingRefreshTimeline = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(30), e -> refreshLiveTracking()));
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(30), e -> refreshLiveTracking()));
         liveTrackingRefreshTimeline.setCycleCount(javafx.animation.Timeline.INDEFINITE);
         liveTrackingRefreshTimeline.play();
     }
@@ -1551,19 +1540,21 @@ public class AdminDashboardController {
     }
 
     private void showAdminMessage(String message, boolean success) {
-        if (adminMessageLabel == null) return;
+        if (adminMessageLabel == null)
+            return;
         adminMessageLabel.setVisible(true);
         adminMessageLabel.setManaged(true);
         adminMessageLabel.setText(message);
         adminMessageLabel.setStyle(success
-            ? "-fx-background-color: rgba(67,160,71,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;"
-            : "-fx-background-color: rgba(239,83,80,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;");
+                ? "-fx-background-color: rgba(67,160,71,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;"
+                : "-fx-background-color: rgba(239,83,80,0.95); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 12; -fx-padding: 10 14 10 14;");
         adminMessageLabel.setOpacity(1);
         adminMsgDelay.stop();
         adminMsgDelay.setOnFinished(e -> {
-            javafx.animation.FadeTransition fade =
-                new javafx.animation.FadeTransition(javafx.util.Duration.millis(300), adminMessageLabel);
-            fade.setFromValue(1); fade.setToValue(0);
+            javafx.animation.FadeTransition fade = new javafx.animation.FadeTransition(javafx.util.Duration.millis(300),
+                    adminMessageLabel);
+            fade.setFromValue(1);
+            fade.setToValue(0);
             fade.setOnFinished(ev -> adminMessageLabel.setText(""));
             fade.play();
         });
@@ -1575,9 +1566,9 @@ public class AdminDashboardController {
             return;
         }
         String zones = zoneService.getAllZones().stream()
-            .map(com.smartcity.model.Zone::getNomZone)
-            .sorted(String.CASE_INSENSITIVE_ORDER)
-            .collect(java.util.stream.Collectors.joining(" | "));
+                .map(com.smartcity.model.Zone::getNomZone)
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(java.util.stream.Collectors.joining(" | "));
         zonesListLabel.setText(zones.isBlank() ? "Aucune zone configuree." : zones);
     }
 
@@ -1593,6 +1584,36 @@ public class AdminDashboardController {
             }
         } else if (themeToggleButton != null) {
             themeToggleButton.setText("Mode Sombre");
+        }
+    }
+
+    public static class AlertRow {
+        private final String key;
+        private final String severity;
+        private final String title;
+        private final String detail;
+
+        public AlertRow(String key, String severity, String title, String detail) {
+            this.key = key;
+            this.severity = severity;
+            this.title = title;
+            this.detail = detail;
+        }
+
+        public String key() {
+            return key;
+        }
+
+        public String severity() {
+            return severity;
+        }
+
+        public String title() {
+            return title;
+        }
+
+        public String detail() {
+            return detail;
         }
     }
 
@@ -1612,8 +1633,14 @@ public class AdminDashboardController {
             this.nombreTraites = nombreTraites;
             this.actif = actif;
         }
-        public String email() { return email; }
-        public boolean actif() { return actif; }
+
+        public String email() {
+            return email;
+        }
+
+        public boolean actif() {
+            return actif;
+        }
 
         public int id() {
             return id;
@@ -1632,46 +1659,4 @@ public class AdminDashboardController {
         }
     }
 
-    public static class AgentLiveRow {
-        private final String nom;
-        private final String zone;
-        private final int missionsActives;
-        private final int missionsEnCours;
-        private final String position;
-        private final String fraicheur;
-
-        public AgentLiveRow(String nom, String zone, int missionsActives, int missionsEnCours, String position, String fraicheur) {
-            this.nom = nom;
-            this.zone = zone;
-            this.missionsActives = missionsActives;
-            this.missionsEnCours = missionsEnCours;
-            this.position = position;
-            this.fraicheur = fraicheur;
-        }
-
-        public String nom() {
-            return nom;
-        }
-
-        public String zone() {
-            return zone;
-        }
-
-        public int missionsActives() {
-            return missionsActives;
-        }
-
-        public int missionsEnCours() {
-            return missionsEnCours;
-        }
-
-        public String position() {
-            return position;
-        }
-
-        public String fraicheur() {
-            return fraicheur;
-        }
-    }
 }
-

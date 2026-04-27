@@ -105,25 +105,56 @@ public class AdminDashboardController {
     @FXML
     private BarChart<String, Number> statsBarChart;
 
-    // Page Statistiques
+    // Page Statistiques - Metriques
     @FXML
-    private Label statCardTauxResolution;
+    private Label metricResolutionValue;
     @FXML
-    private Label statCardCritiques72h;
+    private Label metricResolutionTrend;
     @FXML
-    private Label statCardTourneesActives;
+    private Label metricAvgTimeValue;
     @FXML
-    private javafx.scene.web.WebView agentLiveMapWebView;
+    private Label metricAvgTimeTrend;
     @FXML
-    private TableView<AlertRow> tableAlerts;
+    private Label metricCriticalValue;
     @FXML
-    private TableColumn<AlertRow, String> colAlertSeverity;
+    private Label metricCriticalTrend;
     @FXML
-    private TableColumn<AlertRow, String> colAlertTitle;
+    private Label metricBacklogValue;
     @FXML
-    private TableColumn<AlertRow, String> colAlertDetail;
+    private Label metricBacklogTrend;
+
+    // Page Statistiques - Graphique et Alertes
     @FXML
-    private TableColumn<AlertRow, Void> colAlertAck;
+    private javafx.scene.chart.LineChart<String, Number> trend7DaysChart;
+    @FXML
+    private TableView<AlertStatistiquesRow> tableAlertsStatistiques;
+    @FXML
+    private TableColumn<AlertStatistiquesRow, String> colAlertStatSeverity;
+    @FXML
+    private TableColumn<AlertStatistiquesRow, String> colAlertStatMessage;
+
+    // Page Statistiques - Tables
+    @FXML
+    private TableView<AgentPerformanceRow> tablePerformanceAgents;
+    @FXML
+    private TableColumn<AgentPerformanceRow, String> colAgentPerf;
+    @FXML
+    private TableColumn<AgentPerformanceRow, String> colAgentZonePerf;
+    @FXML
+    private TableColumn<AgentPerformanceRow, String> colAgentPerfBar;
+    @FXML
+    private TableColumn<AgentPerformanceRow, String> colAgentPerfValue;
+
+    @FXML
+    private TableView<ZoneChargeRow> tableChargeZone;
+    @FXML
+    private TableColumn<ZoneChargeRow, String> colZoneName;
+    @FXML
+    private TableColumn<ZoneChargeRow, Integer> colZoneWaiting;
+    @FXML
+    private TableColumn<ZoneChargeRow, Integer> colZoneInProgress;
+    @FXML
+    private TableColumn<ZoneChargeRow, String> colZoneResolution;
 
     @FXML
     private TableView<Utilisateur> tableUtilisateurs;
@@ -237,7 +268,6 @@ public class AdminDashboardController {
     private final ObservableList<Utilisateur> utilisateurs = FXCollections.observableArrayList();
     private final ObservableList<AgentStatsRow> agents = FXCollections.observableArrayList();
     private final ObservableList<Signalement> signalements = FXCollections.observableArrayList();
-    private final ObservableList<AlertRow> activeAlerts = FXCollections.observableArrayList();
     private final Set<String> acknowledgedAlerts = new HashSet<>();
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm",
@@ -253,7 +283,6 @@ public class AdminDashboardController {
 
     private volatile boolean isLoading = false;
     private MainApp mainApp;
-    private boolean liveMapFallbackHandlersInstalled;
     private javafx.animation.Timeline liveTrackingRefreshTimeline;
     private java.util.Timer liveStatistiquesRefreshTimer;
     private final Object timerLock = new Object();
@@ -334,8 +363,6 @@ public class AdminDashboardController {
         }
         tableSignalements.setItems(signalements);
         tableSignalements.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        if (tableAlerts != null)
-            tableAlerts.setItems(activeAlerts);
         // Pagination : boutons Précédent/Suivant ajoutés dynamiquement sous la table
         ajouterPagination();
 
@@ -411,8 +438,10 @@ public class AdminDashboardController {
                         }
                         refreshLiveTracking();
                         refreshDashboardCharts();
-                        if (pageStatistiques != null && pageStatistiques.isVisible())
+                        if (pageStatistiques != null && pageStatistiques.isVisible()) {
                             refreshAnalysisCompactMetrics();
+                            refreshStatistiquesPickineGuediawaye();
+                        }
                     } catch (Exception ex) {
                         showAdminMessage("Erreur lors de la mise a jour de l'interface.", false);
                     } finally {
@@ -477,8 +506,8 @@ public class AdminDashboardController {
     @FXML
     private void handleShowStatistiques() {
         showPage(pageStatistiques, btnStatistiques);
-        refreshAnalysisCompactMetrics();
-        refreshLiveTracking();
+        initStatistiquesIfNeeded();
+        refreshStatistiquesPickineGuediawaye();
         // Auto-refresh toutes les 30 secondes
         startLiveStatistiquesAutoRefresh();
     }
@@ -962,70 +991,12 @@ public class AdminDashboardController {
     }
 
     private void refreshLiveTracking() {
-        if (agentLiveMapWebView == null) {
-            refreshAnalysisCompactMetrics();
-            return;
-        }
-
-        List<com.smartcity.service.AffectationService.AgentLiveStatus> statuses = affectationService
-                .getAgentLiveStatuses();
-
-        if (agentLiveMapWebView != null) {
-            installLiveMapFallbackHandlers("Carte live agents indisponible. Le tableau reste disponible.");
-            agentLiveMapWebView.getEngine().loadContent(buildLiveTrackingMapHtml(statuses));
-        }
         refreshAnalysisCompactMetrics();
     }
 
     private void refreshAnalysisCompactMetrics() {
-        AnalyticsRulesService.AnalysisSnapshot snapshot = analyticsRulesService.computeAnalysisSnapshot();
-        if (statCardTourneesActives != null) {
-            statCardTourneesActives.setText(String.valueOf(snapshot.chargeOperationnelleActive));
-        }
-        if (statCardCritiques72h != null) {
-            statCardCritiques72h.setText(String.valueOf(snapshot.retardsCritiquesGlobaux));
-        }
-        if (statCardTauxResolution != null) {
-            statCardTauxResolution.setText(String.format(java.util.Locale.US, "%.1f%%", snapshot.tauxTraitementGlobal));
-        }
-        if (tableAlerts != null) {
-            List<AlertRow> rows = snapshot.alerts.stream()
-                    .filter(a -> !acknowledgedAlerts.contains(a.key))
-                    .limit(5)
-                    .map(a -> new AlertRow(a.key, a.severity.name(), a.title, a.detail))
-                    .collect(java.util.stream.Collectors.toList());
-            activeAlerts.setAll(rows);
-        }
-    }
-
-    private void installLiveMapFallbackHandlers(String message) {
-        if (agentLiveMapWebView == null || liveMapFallbackHandlersInstalled) {
-            return;
-        }
-        liveMapFallbackHandlersInstalled = true;
-        agentLiveMapWebView.getEngine().getLoadWorker().exceptionProperty().addListener((obs, oldValue, error) -> {
-            if (error != null) {
-                showAdminMessage(message, false);
-                agentLiveMapWebView.getEngine().loadContent(buildLiveMapFallbackHtml(message));
-            }
-        });
-        agentLiveMapWebView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == javafx.concurrent.Worker.State.FAILED) {
-                showAdminMessage(message, false);
-                agentLiveMapWebView.getEngine().loadContent(buildLiveMapFallbackHtml(message));
-            }
-        });
-    }
-
-    private String buildLiveMapFallbackHtml(String message) {
-        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
-                + "body{font-family:Arial,sans-serif;background:#f6f8fb;color:#1f2937;display:flex;"
-                + "align-items:center;justify-content:center;height:100%;margin:0;padding:24px;text-align:center;}"
-                + ".card{max-width:440px;background:white;border-radius:16px;padding:24px;"
-                + "box-shadow:0 8px 24px rgba(15,23,42,0.12);}"
-                + ".title{font-size:18px;font-weight:700;margin-bottom:8px;color:#b45309;}"
-                + "</style></head><body><div class='card'><div class='title'>Carte live indisponible</div><div>"
-                + message + "</div></div></body></html>";
+        // Les cards statCardTourneesActives/statCardCritiques72h/statCardTauxResolution
+        // et tableAlerts sont absents du FXML — rien a faire ici pour l'instant.
     }
 
     private boolean isGpsFresh(com.smartcity.service.AffectationService.AgentLiveStatus status) {
@@ -1228,30 +1199,7 @@ public class AdminDashboardController {
     }
 
     private void configureAlertsTable() {
-        if (tableAlerts == null) {
-            return;
-        }
-        colAlertSeverity.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().severity()));
-        colAlertTitle.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().title()));
-        colAlertDetail.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().detail()));
-        colAlertAck.setCellValueFactory(cell -> new javafx.beans.property.SimpleObjectProperty<>(null));
-        colAlertAck.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("Acquitter");
-            {
-                btn.getStyleClass().add("btn-outline-sm");
-                btn.setOnAction(e -> {
-                    AlertRow row = getTableView().getItems().get(getIndex());
-                    acknowledgedAlerts.add(row.key());
-                    refreshAnalysisCompactMetrics();
-                });
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : btn);
-            }
-        });
+        // tableAlerts absent du FXML — rien a configurer
     }
 
     private void configureSignalementsTable() {
@@ -1572,6 +1520,234 @@ public class AdminDashboardController {
         zonesListLabel.setText(zones.isBlank() ? "Aucune zone configuree." : zones);
     }
 
+    private void initStatistiquesIfNeeded() {
+        if (colAgentPerf != null && colAgentPerf.getCellValueFactory() == null) {
+            colAgentPerf.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
+            colAgentZonePerf.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().zone()));
+             colAgentPerfBar.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().tauxResolution() + "%"));
+            colAgentPerfValue.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().tauxResolution() + "%"));
+        }
+        if (colZoneName != null && colZoneName.getCellValueFactory() == null) {
+            colZoneName.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().nom()));
+            colZoneWaiting.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().enAttente()).asObject());
+            colZoneInProgress.setCellValueFactory(cell -> new javafx.beans.property.SimpleIntegerProperty(cell.getValue().enCours()).asObject());
+            colZoneResolution.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().tauxResolution() + "%"));
+        }
+        if (colAlertStatSeverity != null && colAlertStatSeverity.getCellValueFactory() == null) {
+            colAlertStatSeverity.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().severity()));
+            colAlertStatMessage.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().message()));
+        }
+    }
+
+    private void refreshStatistiquesPickineGuediawaye() {
+        javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected Void call() {
+                List<String> zones = java.util.Arrays.asList("Pikine", "Guediawaye");
+                int totalCritiques = 0;
+                int totalBacklog = 0;
+                double tauxResolutionGlobal = 0;
+                double tempsAbsoluMoyen = 0;
+                List<Integer> tauxParZone = new java.util.ArrayList<>();
+
+                for (String zone : zones) {
+                    int zoneTotal = signalementService.countByZone(zone);
+                    int zoneTermines = signalementService.countByZone(zone, "Termin\u00e9");
+                    int zoneCritiques = signalementService.countCritiquesByZone(zone);
+                    int zoneBacklog = zoneTotal - zoneTermines;
+                    
+                    totalCritiques += zoneCritiques;
+                    totalBacklog += zoneBacklog;
+                    
+                    if (zoneTotal > 0) {
+                        int taux = (int) ((100.0 * zoneTermines) / zoneTotal);
+                        tauxParZone.add(taux);
+                        tauxResolutionGlobal += taux;
+                    }
+                }
+                
+                if (!tauxParZone.isEmpty()) {
+                    tauxResolutionGlobal = tauxResolutionGlobal / tauxParZone.size();
+                }
+
+                // Temps moyen réel depuis vue_kpi_zone
+                double tempsMoyenH = 0;
+                int nbZonesAvecTemps = 0;
+                for (com.smartcity.service.SuiviService.KpiZone kpi : suiviService.getKpiParZone()) {
+                    if (zones.contains(kpi.nomZone) && kpi.tempsResolutionMoyenH > 0) {
+                        tempsMoyenH += kpi.tempsResolutionMoyenH;
+                        nbZonesAvecTemps++;
+                    }
+                }
+                final double finalTempsMoyen = nbZonesAvecTemps > 0 ? tempsMoyenH / nbZonesAvecTemps : -1;
+                
+                // Récupérer les données pour les tables
+                // Taux mois précédent pour tendance résolution
+                double tauxMoisPrecedent = 0;
+                int nbZonesMoisPrec = 0;
+                for (String zone : zones) {
+                    int totalMoisPrec = signalementService.countByZoneAndMonth(zone, java.time.LocalDate.now().minusMonths(1));
+                    int terminesMoisPrec = signalementService.countByZoneMonthStatut(zone, java.time.LocalDate.now().minusMonths(1), "Termin\u00e9");
+                    if (totalMoisPrec > 0) { tauxMoisPrecedent += (100.0 * terminesMoisPrec) / totalMoisPrec; nbZonesMoisPrec++; }
+                }
+                final double finalTauxMoisPrec = nbZonesMoisPrec > 0 ? tauxMoisPrecedent / nbZonesMoisPrec : -1;
+                final int finalCritiques72h = signalementService.countCritiques72h();
+                final int backlogSemainePrec = signalementService.countBacklogSemainePrec(zones);
+                List<AgentPerformanceRow> agentRows = new java.util.ArrayList<>();
+                List<ZoneChargeRow> zoneRows = new java.util.ArrayList<>();
+                ObservableList<AlertStatistiquesRow> alertRows = FXCollections.observableArrayList();
+
+                try {
+                    List<Utilisateur> agents = utilisateurService.getUtilisateursByRole("Agent");
+                    java.util.Map<Integer, String> zonesMap = new java.util.HashMap<>();
+                    zoneService.getAllZones().forEach(z -> zonesMap.put(z.getIdZone(), z.getNomZone()));
+                    for (Utilisateur agent : agents) {
+                        String agentZone = zonesMap.getOrDefault(agent.getIdZone(), "");
+                        if (!zones.contains(agentZone)) continue;
+                        
+                        int treated = signalementService.countByAgentAndStatut(agent.getIdUser(), "Termin\u00e9");
+                        int total = signalementService.countByAgent(agent.getIdUser());
+                        int taux = total > 0 ? (int) ((100.0 * treated) / total) : 0;
+                        agentRows.add(new AgentPerformanceRow(agent.getNom(), agentZone, taux));
+                    }
+
+                    for (String zone : zones) {
+                        int waiting = signalementService.countByZone(zone, "En attente");
+                        int inProgress = signalementService.countByZone(zone, "En cours") + signalementService.countByZone(zone, "Affect\u00e9");
+                        int zoneTotal = signalementService.countByZone(zone);
+                        int zoneTermines = signalementService.countByZone(zone, "Termin\u00e9");
+                        int taux = zoneTotal > 0 ? (int) ((100.0 * zoneTermines) / zoneTotal) : 0;
+                        zoneRows.add(new ZoneChargeRow(zone, waiting, inProgress, taux));
+                    }
+
+                    AnalyticsRulesService.AnalysisSnapshot snapshot = analyticsRulesService.computeAnalysisSnapshot();
+                    for (AnalyticsRulesService.AlertItem alert : snapshot.alerts) {
+                        if (alertRows.stream().noneMatch(r -> r.message().contains(alert.title))) {
+                            String severity = alert.severity == AnalyticsRulesService.AlertSeverity.CRITIQUE ? "Critique" :
+                                              alert.severity == AnalyticsRulesService.AlertSeverity.MAJEUR ? "Attention" : "Info";
+                            alertRows.add(new AlertStatistiquesRow(severity, alert.title + " - " + alert.detail));
+                        }
+                    }
+
+                } catch (Exception e) {
+                    System.err.println("Erreur calcul statistiques: " + e.getMessage());
+                }
+
+                final int finalCritiques = totalCritiques;
+                final int finalBacklog = totalBacklog;
+                final double finalTaux = tauxResolutionGlobal;
+                final double finalTempsMoyenRef = finalTempsMoyen;
+                final List<AgentPerformanceRow> finalAgentRows = agentRows;
+                final List<ZoneChargeRow> finalZoneRows = zoneRows;
+                final ObservableList<AlertStatistiquesRow> finalAlerts = alertRows;
+
+                javafx.application.Platform.runLater(() -> {
+                    try {
+                        // Mise à jour des métriques
+                        if (metricResolutionValue != null) {
+                            metricResolutionValue.setText(String.format("%.1f%%", finalTaux));
+                            if (finalTauxMoisPrec >= 0) {
+                                double delta = finalTaux - finalTauxMoisPrec;
+                                String arrow = delta >= 0 ? "\u2191" : "\u2193";
+                                String color = delta >= 0 ? "metric-trend-positive" : "metric-trend-critical";
+                                metricResolutionTrend.setText(String.format(java.util.Locale.US, "%s %+.1f%% vs mois dernier", arrow, delta));
+                                metricResolutionTrend.getStyleClass().removeAll("metric-trend-positive", "metric-trend-critical", "metric-trend-neutral");
+                                metricResolutionTrend.getStyleClass().add(color);
+                            } else {
+                                metricResolutionTrend.setText("Pas de donn\u00e9es mois pr\u00e9c\u00e9dent");
+                            }
+                        }
+                        if (metricAvgTimeValue != null) {
+                            if (finalTempsMoyenRef > 0) {
+                                metricAvgTimeValue.setText(String.format(java.util.Locale.US, "%.1f h", finalTempsMoyenRef));
+                                String tendance = finalTempsMoyenRef < 6
+                                    ? String.format(java.util.Locale.US, "\u2193 %.1f h — objectif < 6 h atteint", finalTempsMoyenRef)
+                                    : String.format(java.util.Locale.US, "\u2191 %.1f h — objectif < 6 h non atteint", finalTempsMoyenRef);
+                                metricAvgTimeTrend.setText(tendance);
+                            } else {
+                                metricAvgTimeValue.setText("N/A");
+                                metricAvgTimeTrend.setText("Aucun signalement termin\u00e9");
+                            }
+                        }
+                        if (metricCriticalValue != null) {
+                            metricCriticalValue.setText(String.valueOf(finalCritiques));
+                            metricCriticalValue.setStyle(finalCritiques > 0 ? "-fx-text-fill: #D32F2F;" : "-fx-text-fill: #2E7D32;");
+                            metricCriticalTrend.setText(finalCritiques72h > 0
+                                ? finalCritiques72h + " d\u00e9passent 72 h"
+                                : "Aucun d\u00e9passement 72 h");
+                        }
+                        if (metricBacklogValue != null) {
+                            metricBacklogValue.setText(String.valueOf(finalBacklog));
+                            int deltaBacklog = finalBacklog - backlogSemainePrec;
+                            if (deltaBacklog > 0) {
+                                metricBacklogTrend.setText("\u2191 +" + deltaBacklog + " vs semaine pass\u00e9e");
+                                metricBacklogTrend.getStyleClass().removeAll("metric-trend-positive", "metric-trend-critical", "metric-trend-neutral");
+                                metricBacklogTrend.getStyleClass().add("metric-trend-critical");
+                            } else if (deltaBacklog < 0) {
+                                metricBacklogTrend.setText("\u2193 " + deltaBacklog + " vs semaine pass\u00e9e");
+                                metricBacklogTrend.getStyleClass().removeAll("metric-trend-positive", "metric-trend-critical", "metric-trend-neutral");
+                                metricBacklogTrend.getStyleClass().add("metric-trend-positive");
+                            } else {
+                                metricBacklogTrend.setText("Stable vs semaine pass\u00e9e");
+                                metricBacklogTrend.getStyleClass().removeAll("metric-trend-positive", "metric-trend-critical", "metric-trend-neutral");
+                                metricBacklogTrend.getStyleClass().add("metric-trend-neutral");
+                            }
+                        }
+
+                        // Tables
+                        if (tablePerformanceAgents != null) {
+                            tablePerformanceAgents.setItems(FXCollections.observableArrayList(finalAgentRows));
+                        }
+                        if (tableChargeZone != null) {
+                            tableChargeZone.setItems(FXCollections.observableArrayList(finalZoneRows));
+                        }
+                        if (tableAlertsStatistiques != null) {
+                            tableAlertsStatistiques.setItems(finalAlerts);
+                        }
+
+                        // Graphique tendance
+                        if (trend7DaysChart != null) {
+                            refresh7DaysTrendChart();
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("Erreur MAJ UI statistiques: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                });
+                return null;
+            }
+        };
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private void refresh7DaysTrendChart() {
+        if (trend7DaysChart == null) return;
+
+        trend7DaysChart.getData().clear();
+        
+        javafx.scene.chart.XYChart.Series<String, Number> createdSeries = new javafx.scene.chart.XYChart.Series<>();
+        createdSeries.setName("Crées");
+        
+        javafx.scene.chart.XYChart.Series<String, Number> resolvedSeries = new javafx.scene.chart.XYChart.Series<>();
+        resolvedSeries.setName("Résolus");
+
+        String[] days = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
+        java.time.LocalDate today = java.time.LocalDate.now();
+        
+        for (int i = 6; i >= 0; i--) {
+            java.time.LocalDate d = today.minusDays(i);
+            int created = signalementService.countCreatedOnDate(d);
+            int resolved = signalementService.countResolvedOnDate(d);
+            
+            createdSeries.getData().add(new javafx.scene.chart.XYChart.Data<>(days[6-i], created));
+            resolvedSeries.getData().add(new javafx.scene.chart.XYChart.Data<>(days[6-i], resolved));
+        }
+
+        trend7DaysChart.getData().addAll(createdSeries, resolvedSeries);
+    }
+
     private void applyTheme() {
         if (rootPane == null) {
             return;
@@ -1656,6 +1832,90 @@ public class AdminDashboardController {
 
         public int nombreTraites() {
             return nombreTraites;
+        }
+    }
+
+    public static class AlertStatistiquesRow {
+        private final String severity;
+        private final String message;
+
+        public AlertStatistiquesRow(String severity, String message) {
+            this.severity = severity;
+            this.message = message;
+        }
+
+        public String severity() {
+            return severity;
+        }
+
+        public String message() {
+            return message;
+        }
+    }
+
+    public static class AgentPerformanceRow {
+        private final String nom;
+        private final String zone;
+        private final String barColor;
+        private final int tauxResolution;
+
+        public AgentPerformanceRow(String nom, String zone, int tauxResolution) {
+            this.nom = nom;
+            this.zone = zone;
+            this.tauxResolution = tauxResolution;
+            this.barColor = getColorForTaux(tauxResolution);
+        }
+
+        private static String getColorForTaux(int taux) {
+            if (taux >= 80) return "#4CAF50"; // Green
+            if (taux >= 60) return "#FFC107"; // Orange
+            return "#F44336"; // Red
+        }
+
+        public String nom() {
+            return nom;
+        }
+
+        public String zone() {
+            return zone;
+        }
+
+        public String barColor() {
+            return barColor;
+        }
+
+        public int tauxResolution() {
+            return tauxResolution;
+        }
+    }
+
+    public static class ZoneChargeRow {
+        private final String nom;
+        private final int enAttente;
+        private final int enCours;
+        private final int tauxResolution;
+
+        public ZoneChargeRow(String nom, int enAttente, int enCours, int tauxResolution) {
+            this.nom = nom;
+            this.enAttente = enAttente;
+            this.enCours = enCours;
+            this.tauxResolution = tauxResolution;
+        }
+
+        public String nom() {
+            return nom;
+        }
+
+        public int enAttente() {
+            return enAttente;
+        }
+
+        public int enCours() {
+            return enCours;
+        }
+
+        public int tauxResolution() {
+            return tauxResolution;
         }
     }
 

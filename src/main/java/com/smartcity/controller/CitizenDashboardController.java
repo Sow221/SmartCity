@@ -541,20 +541,19 @@ public class CitizenDashboardController {
         signalementMapView.getEngine().loadContent(html);
 
         // Bridge Java ← JavaScript (clic sur carte)
-        if (!mapBridgeInstalled) {
-            mapBridgeInstalled = true;
-            signalementMapView.getEngine().getLoadWorker().stateProperty().addListener((obs, o, n) -> {
-                if (n == javafx.concurrent.Worker.State.SUCCEEDED) {
-                    try {
-                        netscape.javascript.JSObject win =
-                            (netscape.javascript.JSObject) signalementMapView.getEngine().executeScript("window");
-                        win.setMember("javaCitizen", new MapBridgeCitizen());
-                    } catch (Exception ex) {
-                        logger.warn("Bridge carte citoyen non installe", ex);
-                    }
+        // Reinstaller le bridge a chaque chargement de carte
+        signalementMapView.getEngine().getLoadWorker().stateProperty().addListener((obs, o, n) -> {
+            if (n == javafx.concurrent.Worker.State.SUCCEEDED) {
+                try {
+                    netscape.javascript.JSObject win =
+                        (netscape.javascript.JSObject) signalementMapView.getEngine().executeScript("window");
+                    win.setMember("javaCitizen", new MapBridgeCitizen());
+                } catch (Exception ex) {
+                    logger.warn("Bridge carte citoyen non installe", ex);
                 }
-            });
-        }
+            }
+        });
+        mapBridgeInstalled = true;
 
         // QR code téléphone (fallback — fonctionne sur même WiFi)
         int citizenId = current.getIdUser();

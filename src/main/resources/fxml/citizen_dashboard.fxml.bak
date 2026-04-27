@@ -29,6 +29,9 @@
             stylesheets="@../css/design-system.css"
             styleClass="app-root">
 
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         HEADER CITOYEN (vert)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <top>
         <HBox alignment="CENTER_LEFT" spacing="14" styleClass="header-citizen">
             <padding><Insets left="20" right="20"/></padding>
@@ -44,22 +47,25 @@
             </StackPane>
             <Label fx:id="citizenNameLabel" styleClass="header-user" text=""/>
             <Button fx:id="themeToggleButton" text="Mode Sombre" onAction="#handleToggleTheme" styleClass="theme-toggle-button"/>
-            <Button text="Deconnexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
+            <Button text="DÃ©connexion" onAction="#handleDeconnexion" styleClass="logout-button"/>
         </HBox>
     </top>
 
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         SIDEBAR CITOYEN
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <left>
         <VBox styleClass="sidebar" prefWidth="220" spacing="4" minHeight="600">
             <padding><Insets top="24" right="12" bottom="24" left="12"/></padding>
 
             <Label text="NAVIGATION" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnCitizenDashboard" text="Tableau de bord" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowCitizenDashboard"/>
+            <Button fx:id="btnCitizenDashboard" text="ðŸ  Tableau de bord" styleClass="sidebar-button, sidebar-button-active" onAction="#handleShowCitizenDashboard"/>
 
             <Region prefHeight="8"/>
             <Label text="MES SIGNALEMENTS" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnAjouterSignalement" text="Nouveau signalement" styleClass="sidebar-button" onAction="#handleShowAjouterSignalement"/>
+            <Button fx:id="btnAjouterSignalement" text="âž• Nouveau signalement" styleClass="sidebar-button" onAction="#handleShowAjouterSignalement"/>
             <StackPane>
-                <Button fx:id="btnMesSignalements" text="Mes signalements" styleClass="sidebar-button" onAction="#handleShowMesSignalements" maxWidth="Infinity"/>
+                <Button fx:id="btnMesSignalements" text="ðŸ“‹ Mes signalements" styleClass="sidebar-button" onAction="#handleShowMesSignalements" maxWidth="Infinity"/>
                 <Label fx:id="badgeSignalements" text="" styleClass="notification-badge"
                        visible="false" managed="false"
                        StackPane.alignment="TOP_RIGHT"
@@ -68,25 +74,29 @@
 
             <Region VBox.vgrow="ALWAYS"/>
             <Label text="COMPTE" styleClass="sidebar-section-label"/>
-            <Button fx:id="btnMonProfil" text="Mon profil" styleClass="sidebar-button" onAction="#handleShowMonProfil"/>
+            <Button fx:id="btnMonProfil" text="ðŸ‘¤ Mon profil" styleClass="sidebar-button" onAction="#handleShowMonProfil"/> 
         </VBox>
     </left>
 
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+         CONTENU
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <center>
         <VBox styleClass="content-root" spacing="12">
             <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
 
+            <!-- Message flottant -->
             <Label fx:id="citizenMessageLabel" text="" styleClass="floating-message" visible="false" managed="false"/>
 
             <StackPane VBox.vgrow="ALWAYS">
 
-                <!-- PAGE DASHBOARD CITOYEN -->
+                <!-- â”€â”€â”€ PAGE DASHBOARD CITOYEN â”€â”€â”€ -->
                 <ScrollPane fx:id="pageCitizenDashboard" fitToWidth="true" styleClass="dash-scroll">
                 <VBox spacing="24" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
                         <VBox spacing="3">
                             <Label text="Tableau de bord" styleClass="page-title"/>
-                            <Label text="Suivez l'etat de vos signalements" styleClass="page-subtitle"/>
+                            <Label text="Suivez l'Ã©tat de vos signalements" styleClass="page-subtitle"/>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Button text="Actualiser" onAction="#chargerDonnees" styleClass="btn-outline-sm">
@@ -95,11 +105,12 @@
                         <Button text="Nouveau signalement" onAction="#handleShowAjouterSignalement" styleClass="action-button"/>
                     </HBox>
 
+                    <!-- Cards citoyen -->
                     <HBox spacing="16">
                         <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-blue" alignment="CENTER">
-                                    <Label text="S" style="-fx-font-size:18px;"/>
+                                    <Label text="ðŸ“‹" style="-fx-font-size:18px;"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardTotal" text="0" styleClass="stat-card-number"/>
@@ -110,7 +121,7 @@
                         <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-orange" alignment="CENTER">
-                                    <Label text="A" style="-fx-font-size:18px;"/>
+                                    <Label text="â³" style="-fx-font-size:18px;"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardAttente" text="0" styleClass="stat-card-number"/>
@@ -121,7 +132,7 @@
                         <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-purple" alignment="CENTER">
-                                    <Label text="C" style="-fx-font-size:18px;"/>
+                                    <Label text="ðŸ”„" style="-fx-font-size:18px;"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardEnCours" text="0" styleClass="stat-card-number"/>
@@ -132,54 +143,58 @@
                         <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" minWidth="130">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <StackPane styleClass="stat-card-icon-bg stat-card-icon-green" alignment="CENTER">
-                                    <Label text="OK" style="-fx-font-size:14px;-fx-font-weight:bold;"/>
+                                    <Label text="âœ…" style="-fx-font-size:18px;"/>
                                 </StackPane>
                                 <VBox spacing="2">
                                     <Label fx:id="citizenCardCollectes" text="0" styleClass="stat-card-number"/>
-                                    <Label text="Termines" styleClass="stat-card-label"/>
+                                    <Label text="TerminÃ©s" styleClass="stat-card-label"/>
                                 </VBox>
                             </HBox>
                         </VBox>
                     </HBox>
 
+                    <!-- Graphique + CTA -->
                     <HBox spacing="20" VBox.vgrow="ALWAYS">
                         <VBox styleClass="chart-card" HBox.hgrow="ALWAYS" spacing="10">
-                            <Label text="Repartition de mes signalements" styleClass="chart-card-title"/>
+                            <Label text="RÃ©partition de mes signalements" styleClass="chart-card-title"/>
                             <PieChart fx:id="citizenPieChart" prefHeight="260" VBox.vgrow="ALWAYS"/>
                         </VBox>
+                        <!-- Encart CTA -->
                         <VBox styleClass="cta-card" prefWidth="200" spacing="16" alignment="CENTER">
-                            <Label text="Contribuez a une ville plus propre" styleClass="cta-card-title" wrapText="true" textAlignment="CENTER"/>
-                            <Label text="Signalez les depots sauvages dans votre quartier et aidez les agents a intervenir rapidement." styleClass="cta-card-desc" wrapText="true" textAlignment="CENTER"/>
-                            <Button text="Nouveau signalement" prefHeight="40" onAction="#handleShowAjouterSignalement" styleClass="action-button" maxWidth="Infinity"/>
+                            <Label text="ðŸŒ" style="-fx-font-size:40px;"/>
+                            <Label text="Contribuez Ã  une ville plus propre" styleClass="cta-card-title" wrapText="true" textAlignment="CENTER"/>
+                            <Label text="Signalez les dÃ©pÃ´ts sauvages dans votre quartier et aidez les agents Ã  intervenir rapidement." styleClass="cta-card-desc" wrapText="true" textAlignment="CENTER"/>
+                        <Button text="Nouveau signalement" prefHeight="40" onAction="#handleShowAjouterSignalement" styleClass="action-button" maxWidth="Infinity"/>
                         </VBox>
                     </HBox>
                 </VBox>
                 </ScrollPane>
 
-                <!-- PAGE AJOUTER SIGNALEMENT -->
+                <!-- â”€â”€â”€ PAGE AJOUTER SIGNALEMENT â”€â”€â”€ -->
                 <ScrollPane fx:id="pageAjouterSignalement" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                     <VBox spacing="24" styleClass="page-box" alignment="TOP_CENTER">
                         <HBox alignment="CENTER_LEFT" spacing="12">
                             <VBox spacing="3">
                                 <Label text="Nouveau Signalement" styleClass="page-title"/>
-                                <Label text="Renseignez les informations du depot sauvage" styleClass="page-subtitle"/>
+                                <Label text="Renseignez les informations du dÃ©pÃ´t sauvage" styleClass="page-subtitle"/>
                             </VBox>
                         </HBox>
 
                         <HBox spacing="24" VBox.vgrow="ALWAYS">
+                            <!-- Formulaire gauche -->
                             <VBox spacing="16" HBox.hgrow="ALWAYS" maxWidth="420">
 
                                 <VBox spacing="6">
                                     <Label text="Description" styleClass="auth-field-label"/>
                                     <TextArea fx:id="descriptionSignalementArea"
                                               prefHeight="110" wrapText="true"
-                                              promptText="Decrivez le type et l'etat du depot..."
+                                              promptText="DÃ©crivez le type et l'Ã©tat du dÃ©pÃ´t..."
                                               styleClass="dash-textarea"/>
                                 </VBox>
 
                                 <HBox spacing="14">
                                     <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                        <Label text="Categorie" styleClass="auth-field-label"/>
+                                        <Label text="CatÃ©gorie" styleClass="auth-field-label"/>
                                         <ComboBox fx:id="categorieSignalementCombo" prefHeight="44" maxWidth="Infinity" styleClass="dash-combo"/>
                                     </VBox>
                                     <VBox spacing="6" HBox.hgrow="ALWAYS">
@@ -192,7 +207,7 @@
                                     <Label text="Photo (optionnel)" styleClass="auth-field-label"/>
                                     <HBox spacing="10">
                                         <TextField fx:id="photoSignalementField" prefHeight="44" HBox.hgrow="ALWAYS" styleClass="dash-field" promptText="Chemin vers la photo..."/>
-                                        <Button text="Choisir" prefHeight="44" onAction="#handleChoisirPhoto" styleClass="btn-outline-sm"/>
+                                        <Button text="ðŸ“· Choisir" prefHeight="44" onAction="#handleChoisirPhoto" styleClass="btn-outline-sm"/>
                                     </HBox>
                                 </VBox>
 
@@ -200,46 +215,52 @@
                                     <Label text="Position GPS" styleClass="auth-field-label"/>
                                     <HBox styleClass="position-indicator" alignment="CENTER_LEFT" spacing="10">
                                         <padding><Insets top="10" right="14" bottom="10" left="14"/></padding>
-                                        <Label text="&#128205;" style="-fx-font-size:16px;"/>
+                                        <Label text="ðŸ“" style="-fx-font-size:16px;"/>
                                         <Label fx:id="positionLabel" text="Cliquez sur la carte pour placer le marqueur" styleClass="position-indicator-text" wrapText="true"/>
                                     </HBox>
                                 </VBox>
 
                                 <HBox spacing="12">
-                                    <Button text="Enregistrer" prefHeight="40" onAction="#handleEnregistrerSignalement" styleClass="action-button" HBox.hgrow="ALWAYS"/>
+                            <Button text="Enregistrer" prefHeight="40" onAction="#handleEnregistrerSignalement" styleClass="action-button" HBox.hgrow="ALWAYS"/>
                                     <Button text="Annuler" prefHeight="40" onAction="#handleAnnulerSignalement" styleClass="btn-outline-sm"/>
                                 </HBox>
                             </VBox>
 
+                            <!-- Carte interactive pour placer le signalement -->
                             <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="stat-card" minWidth="340">
                                 <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
                                 <HBox alignment="CENTER_LEFT" spacing="10">
-                                    <Label text="Cliquez sur la carte pour localiser le dechet" styleClass="page-subtitle"
+                                    <Label text="ðŸ“ Cliquez sur la carte pour localiser le dÃ©chet" styleClass="page-subtitle"
                                            style="-fx-font-size:13px;-fx-font-weight:bold;" wrapText="true"/>
                                     <Region HBox.hgrow="ALWAYS"/>
-                                    <Button fx:id="btnRecentrerCarte" text="Recentrer" onAction="#handleRecentrerCarte" styleClass="btn-outline-sm"/>
+                                    <Button fx:id="btnRecentrerCarte" text="âŸ³ Recentrer" onAction="#handleRecentrerCarte" styleClass="btn-outline-sm"/>
                                 </HBox>
                                 <javafx.scene.web.WebView fx:id="signalementMapView" prefHeight="320" VBox.vgrow="ALWAYS"/>
                                 <HBox alignment="CENTER" spacing="10"
                                       style="-fx-background-color:#f0fdf4;-fx-background-radius:10;-fx-padding:10 16;">
-                                    <Label fx:id="gpsReceivedIcon" text="..." style="-fx-font-size:18px;"/>
+                                    <Label fx:id="gpsReceivedIcon" text="â³" style="-fx-font-size:18px;"/>
                                     <Label fx:id="gpsPositionStatusLabel"
                                            text="Cliquez sur la carte pour placer le marqueur"
                                            styleClass="position-indicator-text" wrapText="true"/>
                                 </HBox>
 
+                                <!-- QR Code & Lien GPS (fallback tÃ©lÃ©phone) -->
                                 <Region prefHeight="14"/>
                                 <VBox spacing="10" alignment="CENTER" style="-fx-background-color:#f8fafc;-fx-background-radius:10;-fx-padding:14 16;">
-                                    <Label fx:id="gpsStatusLabel" text="Ou scannez le QR code (meme WiFi requis)" styleClass="page-subtitle" style="-fx-font-size:12px;-fx-font-weight:bold;" wrapText="true" textAlignment="CENTER"/>
+                                    <Label fx:id="gpsStatusLabel" text="ðŸ“± Ou scannez le QR code (mÃªme WiFi requis)" styleClass="page-subtitle" style="-fx-font-size:12px;-fx-font-weight:bold;" wrapText="true" textAlignment="CENTER"/>
+                                    
+                                    <!-- QR Code Image -->
                                     <HBox alignment="CENTER">
                                         <ImageView fx:id="citizenQrCodeView" fitHeight="140" fitWidth="140" preserveRatio="true"
                                                    style="-fx-border-color:#e2e8f0;-fx-border-width:2;-fx-border-radius:8;"/>
                                     </HBox>
+                                    
+                                    <!-- Lien cliquable + copier -->
                                     <Label text="Lien GPS:" styleClass="auth-field-label" style="-fx-font-size:11px;"/>
                                     <HBox spacing="8" alignment="CENTER_LEFT">
-                                        <Label fx:id="citizenGpsUrlLabel" text="http://localhost:8081/gps/" styleClass="auth-link"
+                                        <Label fx:id="citizenGpsUrlLabel" text="http://localhost:8081/gps/" styleClass="auth-link" 
                                                style="-fx-font-size:11px; -fx-text-fill:#0f766e; -fx-underline:true;"/>
-                                        <Button text="Copier" prefHeight="28" onAction="#handleCopyGpsLink" styleClass="btn-outline-sm" style="-fx-font-size:11px;"/>
+                                        <Button text="ðŸ“‹ Copier" prefHeight="28" onAction="#handleCopyGpsLink" styleClass="btn-outline-sm" style="-fx-font-size:11px;"/>
                                     </HBox>
                                 </VBox>
                             </VBox>
@@ -247,7 +268,7 @@
                     </VBox>
                 </ScrollPane>
 
-                <!-- PAGE MES SIGNALEMENTS -->
+                <!-- â”€â”€â”€ PAGE MES SIGNALEMENTS â”€â”€â”€ -->
                 <ScrollPane fx:id="pageMesSignalements" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                 <VBox spacing="20" styleClass="page-box" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12">
@@ -262,7 +283,7 @@
                         <Label text="Date :" styleClass="filter-bar-label"/>
                         <javafx.scene.control.DatePicker fx:id="filterMesSignalementsDate" prefWidth="160" prefHeight="36" promptText="Date" styleClass="dash-datepicker"/>
                         <Button text="Filtrer" prefHeight="36" onAction="#handleFiltrerMesSignalements" styleClass="btn-outline-sm"/>
-                        <Button text="Reinitialiser" prefHeight="36" onAction="#handleResetFiltresMesSignalements" styleClass="btn-outline-sm"/>
+                        <Button text="RÃ©initialiser" prefHeight="36" onAction="#handleResetFiltresMesSignalements" styleClass="btn-outline-sm"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Button fx:id="btnSupprimerSignalement" text="Supprimer" onAction="#handleSupprimerSignalement" styleClass="danger-button">
                             <tooltip><Tooltip text="Supprimer le signalement selectionne"/></tooltip>
@@ -272,27 +293,27 @@
                         <columns>
                             <TableColumn fx:id="colMesId" text="ID" prefWidth="65"/>
                             <TableColumn fx:id="colMesDescription" text="Description" prefWidth="260"/>
-                            <TableColumn fx:id="colMesCategorie" text="Categorie" prefWidth="150"/>
+                            <TableColumn fx:id="colMesCategorie" text="CatÃ©gorie" prefWidth="150"/>
                             <TableColumn fx:id="colMesZone" text="Zone" prefWidth="140"/>
                             <TableColumn fx:id="colMesDate" text="Date" prefWidth="160"/>
                             <TableColumn fx:id="colMesStatut" text="Statut" prefWidth="140"/>
                         </columns>
                         <placeholder>
                             <VBox alignment="CENTER" spacing="10">
-                                <Label text="S" style="-fx-font-size:36px;"/>
+                                <Label text="ðŸ“­" style="-fx-font-size:36px;"/>
                                 <Label text="Aucun signalement pour le moment" styleClass="empty-state-title"/>
-                                <Label text="Creez votre premier signalement" styleClass="empty-state-desc"/>
+                                <Label text="CrÃ©ez votre premier signalement" styleClass="empty-state-desc"/>
                             </VBox>
                         </placeholder>
                     </TableView>
                 </VBox>
                 </ScrollPane>
 
-                <!-- PAGE PROFIL CITOYEN -->
+                <!-- â”€â”€â”€ PAGE PROFIL CITOYEN â”€â”€â”€ -->
                 <ScrollPane fx:id="pageMonProfil" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
                 <VBox spacing="24" styleClass="page-box" VBox.vgrow="ALWAYS" alignment="TOP_CENTER">
                     <Label text="Mon Profil" styleClass="page-title"/>
-                    <Label text="Gerez vos informations personnelles" styleClass="page-subtitle"/>
+                    <Label text="GÃ©rez vos informations personnelles" styleClass="page-subtitle"/>
 
                     <VBox styleClass="profile-card" maxWidth="520" spacing="20">
                         <HBox alignment="CENTER_LEFT" spacing="16">
@@ -321,7 +342,7 @@
                                 <ComboBox fx:id="profilZoneCombo" prefHeight="44" maxWidth="Infinity" styleClass="dash-combo"/>
                             </VBox>
                             <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="Telephone" styleClass="auth-field-label"/>
+                                <Label text="TÃ©lÃ©phone" styleClass="auth-field-label"/>
                                 <TextField fx:id="profilTelephoneField" styleClass="dash-field"/>
                             </VBox>
                         </HBox>
@@ -345,3 +366,6 @@
     </center>
 
 </BorderPane>
+
+
+

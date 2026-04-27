@@ -1066,51 +1066,182 @@ public class ReportsController {
 
     private void exportPdf(File file) throws IOException {
         try (PDDocument document = new PDDocument()) {
-            String reportBody = getReportContent();
-            List<String> lines = reportBody == null
-                    ? java.util.Collections.emptyList()
-                    : java.util.Arrays.asList(reportBody.split("\\R", -1));
+            PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
+            document.addPage(page);
+            float W = page.getMediaBox().getWidth();
+            float H = page.getMediaBox().getHeight();
+            float margin = 45f;
+            float y = H - 50f;
 
-            int pageNumber = 1;
-            PDPageContentStream content = createPdfPage(document, pageNumber);
-            float y = 745f;
+            try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
+                // --- Bande verte en-tete ---
+                cs.setNonStrokingColor(20, 83, 45);
+                cs.addRect(0, H - 70f, W, 70f);
+                cs.fill();
 
-            for (String rawLine : lines) {
-                String line = sanitizePdfText(rawLine).trim();
-                if (line.isBlank() || isReportSeparatorLine(line) || isReportHeaderMetadata(line)) {
-                    y -= 6f;
-                    continue;
+                // Titre
+                cs.setNonStrokingColor(255, 255, 255);
+                cs.beginText();
+                cs.setFont(PDType1Font.HELVETICA_BOLD, 18);
+                cs.newLineAtOffset(margin, H - 38f);
+                cs.showText("SmartCity - Rapport de gestion des dechets");
+                cs.endText();
+
+                // Sous-titre date
+                String periode = "";
+                if (startDatePicker.getValue() != null && endDatePicker.getValue() != null)
+                    periode = startDatePicker.getValue() + "  ->  " + endDatePicker.getValue();
+                else
+                    periode = java.time.LocalDate.now().toString();
+                cs.beginText();
+                cs.setFont(PDType1Font.HELVETICA, 10);
+                cs.newLineAtOffset(margin, H - 56f);
+                cs.showText("Periode : " + periode + "   |   Pikine & Guediawaye, Senegal");
+                cs.endText();
+
+                y = H - 90f;
+
+                // --- Section KPI ---
+                y = pdfSectionTitle(cs, "Indicateurs cles", margin, y, W);
+                String[][] kpis = {
+                    {"Total signalements", kpiTotal != null ? kpiTotal.getText() : "-"},
+                    {"Taux de resolution",  kpiTaux  != null ? kpiTaux.getText()  : "-"},
+                    {"Delai moyen",         kpiDelai != null ? kpiDelai.getText() : "-"},
+                    {"Urgents +24h",        kpiUrgents != null ? kpiUrgents.getText() : "-"},
+                    {"Backlog",             kpiBacklog != null ? kpiBacklog.getText() : "-"}
+                };
+                float colW = (W - 2 * margin) / 2f;
+                for (String[] kpi : kpis) {
+                    cs.setNonStrokingColor(248, 250, 252);
+                    cs.addRect(margin, y - 16f, W - 2 * margin, 18f);
+                    cs.fill();
+                    cs.setNonStrokingColor(30, 41, 59);
+                    cs.beginText();
+                    cs.setFont(PDType1Font.HELVETICA, 10);
+                    cs.newLineAtOffset(margin + 6f, y - 4f);
+                    cs.showText(kpi[0]);
+                    cs.endText();
+                    cs.setNonStrokingColor(20, 83, 45);
+                    cs.beginText();
+                    cs.setFont(PDType1Font.HELVETICA_BOLD, 10);
+                    cs.newLineAtOffset(margin + colW, y - 4f);
+                    cs.showText(kpi[1]);
+                    cs.endText();
+                    y -= 22f;
                 }
 
-                boolean section = line.matches("^\\d+\\.\\s+.*") || isUpperShortTitle(line);
-                boolean bullet = line.startsWith("-") || rawLine.startsWith("  ");
-                float fontSize = section ? 11f : 10f;
-                PDType1Font font = section ? PDType1Font.HELVETICA_BOLD : PDType1Font.HELVETICA;
-                float lineHeight = section ? 15f : 13f;
-                float indent = bullet ? 14f : 0f;
+                y -= 10f;
 
-                String printable = bullet && !line.startsWith("-") ? "- " + line : line;
-                int maxChars = section ? 84 : 98;
-                List<String> wrapped = wrapLines(printable, maxChars);
+                // --- Section Situation operationnelle ---
+                y = pdfSectionTitle(cs, "Situation operationnelle", margin, y, W);
+                String[][] situation = {
+                    {"En attente",  summaryAttente  != null ? summaryAttente.getText()  : "-"},
+                    {"En cours",    summaryEnCours  != null ? summaryEnCours.getText()  : "-"},
+                    {"Termines",    summaryTermine  != null ? summaryTermine.getText()  : "-"},
+                    {"Taux resolution", summaryTauxLabel != null ? summaryTauxLabel.getText() : "-"}
+                };
+                for (String[] row : situation) {
+                    cs.setNonStrokingColor(240, 253, 244);
+                    cs.addRect(margin, y - 16f, W - 2 * margin, 18f);
+                    cs.fill();
+                    cs.setNonStrokingColor(30, 41, 59);
+                    cs.beginText();
+                    cs.setFont(PDType1Font.HELVETICA, 10);
+                    cs.newLineAtOffset(margin + 6f, y - 4f);
+                    cs.showText(row[0]);
+                    cs.endText();
+                    cs.setNonStrokingColor(20, 83, 45);
+                    cs.beginText();
+                    cs.setFont(PDType1Font.HELVETICA_BOLD, 10);
+                    cs.newLineAtOffset(margin + colW, y - 4f);
+                    cs.showText(row[1]);
+                    cs.endText();
+                    y -= 22f;
+                }
 
-                for (String wrappedLine : wrapped) {
-                    if (y < 70f) {
-                        content.close();
-                        pageNumber++;
-                        content = createPdfPage(document, pageNumber);
-                        y = 745f;
+                y -= 10f;
+
+                // --- Section Top priorites ---
+                if (prioritiesTable != null && !prioritiesTable.getItems().isEmpty()) {
+                    y = pdfSectionTitle(cs, "Top priorites d action", margin, y, W);
+                    // En-tete tableau
+                    float[] cols = {40f, 90f, 60f, 80f, 110f, 100f};
+                    String[] headers = {"ID", "Zone", "Age (h)", "Statut", "Agent", "Priorite"};
+                    cs.setNonStrokingColor(20, 83, 45);
+                    cs.addRect(margin, y - 16f, W - 2 * margin, 18f);
+                    cs.fill();
+                    float cx = margin + 4f;
+                    for (int i = 0; i < headers.length; i++) {
+                        cs.setNonStrokingColor(255, 255, 255);
+                        cs.beginText();
+                        cs.setFont(PDType1Font.HELVETICA_BOLD, 9);
+                        cs.newLineAtOffset(cx, y - 4f);
+                        cs.showText(headers[i]);
+                        cs.endText();
+                        cx += cols[i];
                     }
-                    content.beginText();
-                    content.setFont(font, fontSize);
-                    content.newLineAtOffset(45f + indent, y);
-                    content.showText(sanitizePdfText(wrappedLine));
-                    content.endText();
-                    y -= lineHeight;
+                    y -= 20f;
+                    boolean alt = false;
+                    for (PriorityRow row : prioritiesTable.getItems()) {
+                        if (y < 60f) break;
+                        cs.setNonStrokingColor(alt ? 248 : 255, alt ? 250 : 255, alt ? 252 : 255);
+                        cs.addRect(margin, y - 14f, W - 2 * margin, 16f);
+                        cs.fill();
+                        String[] vals = {
+                            String.valueOf(row.idProperty().get()),
+                            sanitizePdfText(row.zoneProperty().get()),
+                            String.valueOf(row.ageHeuresProperty().get()),
+                            sanitizePdfText(row.statutProperty().get()),
+                            sanitizePdfText(row.agentProperty().get()),
+                            sanitizePdfText(row.actionProperty().get())
+                        };
+                        cx = margin + 4f;
+                        cs.setNonStrokingColor(30, 41, 59);
+                        for (int i = 0; i < vals.length; i++) {
+                            cs.beginText();
+                            cs.setFont(PDType1Font.HELVETICA, 8);
+                            cs.newLineAtOffset(cx, y - 3f);
+                            String v = vals[i].length() > 14 ? vals[i].substring(0, 13) + "." : vals[i];
+                            cs.showText(v);
+                            cs.endText();
+                            cx += cols[i];
+                        }
+                        y -= 18f;
+                        alt = !alt;
+                    }
                 }
+
+                // --- Pied de page ---
+                cs.setNonStrokingColor(20, 83, 45);
+                cs.addRect(0, 0, W, 28f);
+                cs.fill();
+                cs.setNonStrokingColor(255, 255, 255);
+                cs.beginText();
+                cs.setFont(PDType1Font.HELVETICA, 8);
+                cs.newLineAtOffset(margin, 10f);
+                cs.showText("SmartCity - Pikine & Guediawaye  |  Genere le " + java.time.LocalDate.now());
+                cs.endText();
+                cs.beginText();
+                cs.setFont(PDType1Font.HELVETICA, 8);
+                cs.newLineAtOffset(W - 80f, 10f);
+                cs.showText("Page 1 / 1");
+                cs.endText();
             }
-            content.close();
             document.save(file);
         }
+    }
+
+    private float pdfSectionTitle(PDPageContentStream cs, String title, float x, float y, float W) throws IOException {
+        cs.setNonStrokingColor(20, 83, 45);
+        cs.addRect(x, y - 16f, W - 2 * x, 1.5f);
+        cs.fill();
+        cs.setNonStrokingColor(20, 83, 45);
+        cs.beginText();
+        cs.setFont(PDType1Font.HELVETICA_BOLD, 11);
+        cs.newLineAtOffset(x, y - 12f);
+        cs.showText(title.toUpperCase());
+        cs.endText();
+        return y - 28f;
     }
 
     private void exportExcelXlsx(File file) throws IOException {

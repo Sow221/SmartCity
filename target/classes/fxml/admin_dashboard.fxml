@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.BarChart?>
 <?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.control.Button?>
@@ -342,50 +343,103 @@
                 </VBox>
                 </ScrollPane>
                 <ScrollPane fx:id="pageStatistiques" fitToWidth="true" styleClass="dash-scroll" visible="false" managed="false">
-                    <VBox spacing="18" styleClass="page-box" VBox.vgrow="ALWAYS">
+                    <VBox spacing="24" styleClass="page-box" VBox.vgrow="ALWAYS">
+                        <!-- HEADER -->
                         <HBox alignment="CENTER_LEFT" spacing="12">
                             <VBox spacing="3">
-                                <Label text="Analyse temps reel" styleClass="page-title"/>
-                                <Label text="Supervision terrain : carte live, KPI prioritaires, alertes" styleClass="page-subtitle"/>
+                                <Label text="Statistiques Pikine &amp; Guediawaye" styleClass="page-title"/>
+                                <Label text="Vue operationnelle temps reel - Performance agents et charge par zone" styleClass="page-subtitle"/>
                             </VBox>
                             <Region HBox.hgrow="ALWAYS"/>
                             <Button text="Actualiser" onAction="#chargerDonnees" styleClass="btn-outline-sm"/>
                         </HBox>
 
+                        <!-- LIGNE 1 : 4 METRIQUES -->
                         <HBox spacing="12">
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
-                                <Label fx:id="statCardTourneesActives" text="0" styleClass="stat-card-number"/>
-                                <Label text="Charge operationnelle active" styleClass="stat-card-label"/>
+                            <VBox styleClass="metric-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label fx:id="metricResolutionValue" text="87.3%" styleClass="metric-number"/>
+                                <Label text="Taux de resolution" styleClass="metric-label"/>
+                                <Label fx:id="metricResolutionTrend" text="↑ +4.1% vs mois dernier" styleClass="metric-trend-positive"/>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
-                                <Label fx:id="statCardCritiques72h" text="0" styleClass="stat-card-number"/>
-                                <Label text="Retards critiques globaux (>72h)" styleClass="stat-card-label"/>
+                            <VBox styleClass="metric-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label fx:id="metricAvgTimeValue" text="4.2 h" styleClass="metric-number"/>
+                                <Label text="Temps moyen traitement" styleClass="metric-label"/>
+                                <Label fx:id="metricAvgTimeTrend" text="↓ -0.8 h objectif &lt; 6 h" styleClass="metric-trend-positive"/>
                             </VBox>
-                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
-                                <Label fx:id="statCardTauxResolution" text="0%" styleClass="stat-card-number"/>
-                                <Label text="Taux de traitement global" styleClass="stat-card-label"/>
+                            <VBox styleClass="metric-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label fx:id="metricCriticalValue" text="3" styleClass="metric-number metric-critical"/>
+                                <Label text="Signalements critiques" styleClass="metric-label"/>
+                                <Label fx:id="metricCriticalTrend" text="dont 2 depassent 72 h" styleClass="metric-trend-critical"/>
+                            </VBox>
+                            <VBox styleClass="metric-card" HBox.hgrow="ALWAYS" spacing="4">
+                                <Label fx:id="metricBacklogValue" text="14" styleClass="metric-number"/>
+                                <Label text="Backlog actuel" styleClass="metric-label"/>
+                                <Label fx:id="metricBacklogTrend" text="stable vs semaine passee" styleClass="metric-trend-neutral"/>
                             </VBox>
                         </HBox>
 
-                        <VBox styleClass="chart-card" spacing="8">
-                            <Label text="Alertes terrain prioritaires (max 5)" styleClass="chart-card-title"/>
-                            <TableView fx:id="tableAlerts" prefHeight="190" styleClass="data-table">
-                                <columns>
-                                    <TableColumn fx:id="colAlertSeverity" text="Niveau" prefWidth="110"/>
-                                    <TableColumn fx:id="colAlertTitle" text="Alerte" prefWidth="240"/>
-                                    <TableColumn fx:id="colAlertDetail" text="Detail" prefWidth="350"/>
-                                    <TableColumn fx:id="colAlertAck" text="Action" prefWidth="100"/>
-                                </columns>
-                                <placeholder>
-                                    <Label text="Aucune alerte prioritaire active"/>
-                                </placeholder>
-                            </TableView>
-                        </VBox>
+                        <!-- LIGNE 2 : GRAPHIQUE + ALERTES -->
+                        <HBox spacing="12" VBox.vgrow="ALWAYS">
+                            <!-- GRAPHIQUE TENDANCE -->
+                            <VBox styleClass="chart-card" spacing="8" HBox.hgrow="ALWAYS" style="-fx-flex-grow: 2;">
+                                <Label text="Tendance — 7 derniers jours" styleClass="chart-card-title"/>
+                                <javafx.scene.chart.LineChart fx:id="trend7DaysChart" prefHeight="250" VBox.vgrow="ALWAYS">
+                                    <xAxis>
+                                        <javafx.scene.chart.CategoryAxis side="BOTTOM"/>
+                                    </xAxis>
+                                    <yAxis>
+                                        <javafx.scene.chart.NumberAxis side="LEFT"/>
+                                    </yAxis>
+                                </javafx.scene.chart.LineChart>
+                            </VBox>
+                            <!-- ALERTES -->
+                            <VBox styleClass="chart-card" spacing="8" HBox.hgrow="ALWAYS" style="-fx-flex-grow: 1;">
+                                <Label text="Alertes actives" styleClass="chart-card-title"/>
+                                <TableView fx:id="tableAlertsStatistiques" prefHeight="250" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colAlertStatSeverity" text="Niveau" prefWidth="80"/>
+                                        <TableColumn fx:id="colAlertStatMessage" text="Detail" prefWidth="200"/>
+                                    </columns>
+                                    <placeholder>
+                                        <Label text="Aucune alerte"/>
+                                    </placeholder>
+                                </TableView>
+                            </VBox>
+                        </HBox>
 
-                        <VBox styleClass="chart-card" spacing="10" VBox.vgrow="ALWAYS">
-                            <Label text="Carte live des agents" styleClass="chart-card-title"/>
-                            <WebView fx:id="agentLiveMapWebView" prefHeight="360"/>
-                        </VBox>
+                        <!-- LIGNE 3 : 2 TABLES -->
+                        <HBox spacing="12" VBox.vgrow="ALWAYS">
+                            <!-- TABLE PERFORMANCE AGENTS -->
+                            <VBox styleClass="chart-card" spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Performance agents — taux de resolution" styleClass="chart-card-title"/>
+                                <TableView fx:id="tablePerformanceAgents" prefHeight="220" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colAgentPerf" text="Agent" prefWidth="120"/>
+                                        <TableColumn fx:id="colAgentZonePerf" text="Zone" prefWidth="100"/>
+                                        <TableColumn fx:id="colAgentPerfBar" text="Perf." prefWidth="150"/>
+                                        <TableColumn fx:id="colAgentPerfValue" text="Taux" prefWidth="60"/>
+                                    </columns>
+                                    <placeholder>
+                                        <Label text="Aucun agent"/>
+                                    </placeholder>
+                                </TableView>
+                            </VBox>
+                            <!-- TABLE CHARGE PAR ZONE -->
+                            <VBox styleClass="chart-card" spacing="8" HBox.hgrow="ALWAYS">
+                                <Label text="Charge par zone" styleClass="chart-card-title"/>
+                                <TableView fx:id="tableChargeZone" prefHeight="220" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colZoneName" text="Zone" prefWidth="100"/>
+                                        <TableColumn fx:id="colZoneWaiting" text="En attente" prefWidth="90"/>
+                                        <TableColumn fx:id="colZoneInProgress" text="En cours" prefWidth="90"/>
+                                        <TableColumn fx:id="colZoneResolution" text="Resolution" prefWidth="100"/>
+                                    </columns>
+                                    <placeholder>
+                                        <Label text="Aucune donnee"/>
+                                    </placeholder>
+                                </TableView>
+                            </VBox>
+                        </HBox>
                     </VBox>
                 </ScrollPane>
 

@@ -479,6 +479,7 @@ public class AgentDashboardController {
     private boolean mapFallbackHandlersInstalled;
     private boolean mapBridgeInstalled;
     private boolean mapNeedsRefresh = true; // true = carte doit etre rechargee
+    private long lastNearbyAlertMs = 0;
 
 
     // Snapshot ids missions pour detecter les nouvelles affectations
@@ -864,20 +865,15 @@ public class AgentDashboardController {
         boolean hasNearby = distances.stream().anyMatch(d -> d.isNearby);
 
 
-        if (hasNearby && nearbyBeep != null) {
-
-
-            nearbyBeep.play();
-
-
-            showAgentMessage("MISSION A PROXIMITE ! Verifiez la carte.", true);
-
-
+        if (hasNearby) {
+            long nowMs = System.currentTimeMillis();
+            if (nowMs - lastNearbyAlertMs > 60000L) {
+                lastNearbyAlertMs = nowMs;
+                if (nearbyBeep != null) nearbyBeep.play();
+                showAgentMessage("Mission a proximite ! Verifiez la carte.", true);
+            }
         }
-
-
     }
-
 
 
 
@@ -3880,7 +3876,7 @@ public class AgentDashboardController {
 
 
                     .append("',fillOpacity:0.88,weight:2}).addTo(map).bindPopup('").append(popup)
-                    .append("').on('click',function(){if(window.javaAgent)window.javaAgent.selectMission(")
+                    .append("').on('click',function(e){this.openPopup();if(window.javaAgent)window.javaAgent.selectMission(")
                     .append(mission.getIdSignalement())
                     .append(");});");
 

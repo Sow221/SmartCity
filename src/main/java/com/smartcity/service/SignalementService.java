@@ -389,6 +389,78 @@ public class SignalementService {
             idAgent, SignalementStatut.TERMINE.dbValue());
     }
 
+    public int countByZone(String zoneNom, String statut) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone WHERE z.nomZone = ? AND s.statut = ?",
+            zoneNom, SignalementStatut.toDbValueOrSelf(statut));
+    }
+
+    public int countByAgent(int idAgent) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Affectation a WHERE a.idAgent = ?",
+            idAgent);
+    }
+
+    public int countByAgentAndStatut(int idAgent, String statut) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Affectation a JOIN Signalement s ON s.idSignalement = a.idSignalement "
+            + "WHERE a.idAgent = ? AND s.statut = ?",
+            idAgent, SignalementStatut.toDbValueOrSelf(statut));
+    }
+
+    public int countCritiquesByZone(String zoneNom) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone "
+            + "WHERE z.nomZone = ? AND s.statut = 'En attente' "
+            + "AND s.dateSignalement < DATE_SUB(NOW(), INTERVAL 72 HOUR)",
+            zoneNom);
+    }
+
+    /** Signalements d'une zone sur un mois donné */
+    public int countByZoneAndMonth(String zoneNom, LocalDate month) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone "
+            + "WHERE z.nomZone = ? AND YEAR(s.dateSignalement) = ? AND MONTH(s.dateSignalement) = ?",
+            zoneNom, month.getYear(), month.getMonthValue());
+    }
+
+    /** Signalements d'une zone, d'un mois et d'un statut donnés */
+    public int countByZoneMonthStatut(String zoneNom, LocalDate month, String statut) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone "
+            + "WHERE z.nomZone = ? AND YEAR(s.dateSignalement) = ? AND MONTH(s.dateSignalement) = ? AND s.statut = ?",
+            zoneNom, month.getYear(), month.getMonthValue(), SignalementStatut.toDbValueOrSelf(statut));
+    }
+
+    /** Backlog (non terminés) de la semaine précédente pour une liste de zones */
+    public int countBacklogSemainePrec(List<String> zones) {
+        if (zones == null || zones.isEmpty()) return 0;
+        int total = 0;
+        for (String zone : zones) {
+            total += countSimple(
+                "SELECT COUNT(*) FROM Signalement s JOIN Zone z ON s.idZone = z.idZone "
+                + "WHERE z.nomZone = ? AND s.statut != ? "
+                + "AND s.dateSignalement >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) "
+                + "AND s.dateSignalement < DATE_SUB(CURDATE(), INTERVAL 7 DAY)",
+                zone, SignalementStatut.TERMINE.dbValue());
+        }
+        return total;
+    }
+
+    public int countCreatedOnDate(LocalDate date) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Signalement WHERE DATE(dateSignalement) = ?",
+            Date.valueOf(date));
+    }
+
+    public int countResolvedOnDate(LocalDate date) {
+        return countSimple(
+            "SELECT COUNT(*) FROM Affectation a "
+            + "JOIN Signalement s ON s.idSignalement = a.idSignalement "
+            + "WHERE s.statut = ? AND DATE(a.dateCollecte) = ?",
+            SignalementStatut.TERMINE.dbValue(), Date.valueOf(date));
+    }
+
     // Méthode utilitaire pour compter
     private int countSimple(String query, Object... params) {
         try (Connection conn = getConn();
